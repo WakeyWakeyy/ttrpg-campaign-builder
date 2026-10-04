@@ -132,6 +132,19 @@ The public documentation is intentionally concise:
 - [Architecture Decisions](docs/decisions/) — selected decisions where the trade-off is worth preserving.
 
 
+## Running tests
+
+- `pnpm test` runs the fast Node-based unit tests in `tests/unit/` without external services.
+- `pnpm test:watch` watches the unit tests.
+- `pnpm test:integration` runs `tests/integration/` against real PostgreSQL.
+
+For integration tests, set `TEST_DATABASE_URL` in your shell to an existing,
+dedicated test database such as `ttrpg_campaign_builder_test` (see `.env.example`).
+This test setup does not load `TEST_DATABASE_URL` from local env files; set it explicitly in your shell. Missing or blank
+`TEST_DATABASE_URL` causes integration tests to fail; `DATABASE_URL` is never a
+fallback. The current smoke test runs `SELECT 1` through the database adapter and
+closes its pool afterward. It creates no tables or migrations.
+
 ## Project status
 
 Implementation bootstrap.

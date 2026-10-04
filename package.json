@@ -11,6 +11,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "test": "vitest run --config vitest.config.mjs",
+    "test:watch": "vitest --config vitest.config.mjs",
+    "test:integration": "vitest run --config vitest.integration.config.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
@@ -30,6 +33,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^5.0.3"
   }
 }
