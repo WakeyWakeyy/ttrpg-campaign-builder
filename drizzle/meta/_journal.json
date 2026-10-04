@@ -8,6 +8,13 @@
       "when": 1791144996268,
       "tag": "0000_flowery_sasquatch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791156056183,
+      "tag": "0001_ruleset_foundation",
+      "breakpoints": true
     }
   ]
 }

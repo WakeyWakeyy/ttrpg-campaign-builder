@@ -186,6 +186,12 @@ Authorization is explicit in application commands. The first version does not re
 
 ## Persistence model
 
+### Database-generated identifiers
+
+PostgreSQL 18 owns primary ID generation through native `uuidv7()` defaults.
+Existing identifiers are preserved when defaults change; application code does not
+generate primary IDs. A2 changes the A1 UUIDv4 defaults in a new migration.
+
 ### Campaign as ownership boundary
 
 Every first-class Campaign entity belongs to exactly one Campaign. Cross-Campaign structural and semantic links are invalid in the initial implementation.
@@ -294,6 +300,16 @@ Campaign Core stores campaign meaning. Ruleset adapters provide deterministic me
 Campaigns pin an immutable published Ruleset Version. A later application or rules update must not silently recalculate an established Campaign under a different version.
 
 Cross-ruleset Campaign conversion is outside the MVP.
+
+A2 stores Rulesets, their published Versions, and per-Version content source
+metadata in relational tables. Stable Ruleset keys and scoped Version/source keys
+support lookup without environment-specific UUIDs. Restrictive foreign keys prevent
+deleting referenced global metadata. The unique `(ruleset_id, id)` Version index
+lets A3 enforce Ruleset/Version agreement using a composite foreign key.
+
+Published Versions have no application mutation path. Immutability is a command
+boundary contract; A2 adds no UPDATE-blocking or automatic `updated_at` triggers.
+Publication dates are nullable for sources whose dates are unknown.
 
 ## AI boundary
 
