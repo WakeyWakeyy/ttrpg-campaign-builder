@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import { afterAll, afterEach, beforeEach, expect, test } from "vitest";
@@ -40,6 +40,8 @@ test("inserts a user account with generated identity and timestamps", async () =
   const [user] = await db.insert(userAccount).values({}).returning();
 
   expect(user.id).toEqual(expect.any(String));
+  expect((await db.execute(sql`SELECT uuid_extract_version(${user.id}::uuid) AS version`)).rows)
+    .toEqual([{ version: 7 }]);
   expect(user.createdAt).toBeInstanceOf(Date);
   expect(user.updatedAt).toBeInstanceOf(Date);
   expect(await db.select().from(userAccount).where(eq(userAccount.id, user.id)))
@@ -54,6 +56,8 @@ test("inserts an auth identity for an existing user", async () => {
     providerSubject: user.id,
   };
   const [identity] = await db.insert(authIdentity).values(values).returning();
+  expect((await db.execute(sql`SELECT uuid_extract_version(${identity.id}::uuid) AS version`)).rows)
+    .toEqual([{ version: 7 }]);
 
   expect(identity).toMatchObject({
     ...values,
