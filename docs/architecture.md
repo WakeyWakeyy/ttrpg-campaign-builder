@@ -231,15 +231,29 @@ purged. This also allows a single Campaign deletion to cascade through all owned
 registry and subtype rows. Self-parenting is rejected by a check; longer cycles
 remain an application validation responsibility, without recursive triggers.
 
-This persistence slice does not expose application commands. Creation must insert
-the registry and typed row in one transaction; foreign keys do not force every
-registry row to have a subtype. The integration tests prove rollback on subtype
-failure and the edit protocol: conditionally claim `expected_revision`, increment
-revision and update the typed row in the same transaction, rolling back both on
-failure. Revisions and `updated_at` are explicitly maintained by commands, not
-triggers. Future application commands must also resolve/authorize the Actor,
-validate hierarchy cycles with concurrency protection, and avoid revision changes
-for no-op edits. A4 does not implement those application workflows.
+A8 exposes the Location application boundary in `src/modules/locations`, using
+the trusted internal Actor and Campaign ownership for every query and command.
+Creation inserts the registry and typed row in one transaction; foreign keys do
+not force every registry row to have a subtype. Separate application integration
+tests prove rollback on real subtype insert/update failures while retaining the
+A4 persistence-protocol tests.
+
+Mutations lock the registry row, read current typed state in a subsequent statement,
+and check `expectedRevision` before no-op detection. Meaningful mutations advance
+revision and `updated_at` once in the same transaction. Current-revision no-ops
+perform no writes. Revisions and timestamps are maintained by commands, not triggers.
+Parent submissions first lock the owning Campaign row with `FOR UPDATE`, then
+validate same-Campaign ancestry with a recursive CTE before mutation. Transactions
+explicitly use READ COMMITTED so validation after waiting sees the latest committed
+hierarchy. Lock ordering is Campaign then entity; name/description-only edits do
+not acquire the Campaign lock. This serializes hierarchy changes per Campaign
+without globally serializing ordinary content edits.
+
+Archive preserves deletion state, Trash preserves archive state and uses exact
+30-day UTC retention, and Restore clears deletion fields while preserving archive
+state. Repeated lifecycle requests are no-ops when the revision still matches;
+repeated Trash never resets retention. No Unarchive or purge execution is exposed.
+The next proof step is minimal UI and Playwright coverage of the full journey.
 
 ### Same-Campaign integrity
 

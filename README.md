@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof in progress · persistence and technical safety foundation through A5 complete · A6 internal authentication/Actor boundary complete · A7 Campaign authorization + first queries/commands complete · **Next:** A8 — Location application commands + revision/lifecycle behavior · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof in progress · persistence and technical safety foundation through A5 complete · A6 internal authentication/Actor boundary complete · A7 Campaign application boundary complete · A8 Location application commands + revision/lifecycle behavior complete · **Next:** minimal UI + Playwright proof · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary is also complete. A7 — Campaign authorization + first Campaign queries/commands is complete. The next implementation slice is **A8 — Location application commands + revision/lifecycle behavior**. The full architecture-proof vertical slice remains in progress:
+The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary, A7 — Campaign application boundary, and A8 — Location application commands + revision/lifecycle behavior are complete. The next implementation slice is **minimal UI + Playwright proof**. The full architecture-proof vertical slice remains in progress:
 
 ```text
 Sign in
@@ -195,12 +195,26 @@ A6 — Authentication / Actor Boundary is complete: Clerk authentication resolve
 
 A7 is complete: owner-scoped Campaign queries and atomic Campaign creation with a Ruleset Version pin and Compass.
 
-Next: **A8 — Location application commands + revision/lifecycle behavior**.
+A8 is complete: `src/modules/locations` exposes owner-scoped `listOwnedLocations`
+and `getOwnedLocation`, atomic `createLocation`, revision-safe `editLocation`, and
+`archiveLocation`, `trashLocation`, `restoreLocation`. Every function takes the
+database and trusted internal Actor. Listing and creation take a Campaign ID;
+direct access takes a Location ID. Queries include all lifecycle states.
+Edits take `expectedRevision` in their input; lifecycle commands take it as the
+fourth argument. Omitted edit fields stay unchanged; nullable fields accept `null`.
+Missing, malformed and non-owned direct IDs share `LocationNotFoundError`.
+Invalid input, parent hierarchy and stale revisions have distinct typed errors.
 
-Campaign UI, remaining Campaign commands, application-level
-optimistic concurrency, the full Archive → Trash → Restore application flow, and Playwright
-are still pending. The completed database foundation is not yet an end-to-end
-Campaign workflow.
+Parent changes serialize on the owning Campaign row and validate ancestor links
+after acquiring that lock. Ordinary content edits lock only the entity. Real edits
+and lifecycle transitions increment revision once and update the timestamp;
+current-revision no-ops write nothing, and stale no-ops still conflict. Trash keeps
+archive state and an exact 30-day UTC retention window; repeated Trash never
+restarts it. Restore clears deletion fields and preserves archive state.
+
+Next: **minimal UI + Playwright proof**. Campaign UI, remaining Campaign commands,
+and end-to-end browser flows are still pending. The completed application boundary
+is not yet an end-to-end Campaign workflow.
 
 ## Licensing
 
