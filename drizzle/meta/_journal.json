@@ -29,6 +29,13 @@
       "when": 1791163044193,
       "tag": "0003_campaign_entity_location",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791167009365,
+      "tag": "0004_technical_operation_safety",
+      "breakpoints": true
     }
   ]
 }

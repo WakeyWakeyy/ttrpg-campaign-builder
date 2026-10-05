@@ -317,6 +317,24 @@ High-impact multi-row operations that may safely be retried after network or pro
 
 A persisted command execution boundary prevents a successful operation from being applied twice because the HTTP response was lost.
 
+A5 provides persistence only. `command_execution` scopes an idempotency key by
+internal user and command kind, with separate partial unique indexes for user-only
+and Campaign-scoped commands. Future application logic must compare
+`request_fingerprint` and reject a reused key with a different request; the database
+does not compare fingerprints or authorize Campaign access. Status is limited to
+`IN_PROGRESS` (no completion timestamp) and `SUCCEEDED` (completion timestamp
+required), with an optional positive result schema version and JSON result.
+Referenced users cannot be deleted while execution records remain. Permanent
+Campaign deletion cascades to its Campaign-scoped executions, which have no value
+after the Campaign ceases to exist; user-scoped executions and the user account
+remain.
+
+`change_set` and ordered `change_set_entry` rows support selective technical undo.
+They require no command-execution link and contain no AI proposal references.
+Future undo must be atomic: if any affected object has diverged from its expected
+state/revision, the entire undo aborts. Actual command execution, fingerprint
+comparison, undo workflows, and cleanup remain pending.
+
 ## Ruleset boundary
 
 Campaign Core stores campaign meaning. Ruleset adapters provide deterministic mechanics and reference data.

@@ -203,6 +203,23 @@ Technical undo/history is separate from Timeline.
 
 Selected high-impact application operations can record Change Sets with before/after snapshots and conflict detection. These exist to safely reverse software operations, not to represent campaign fiction.
 
+A5 persists `change_set` with Campaign ownership, internal creator provenance,
+and paired reversion timestamp/user fields. It has no soft-delete fields; deleting
+its Campaign cascades to Change Sets and their entries. User references restrict
+deletion. A Change Set does not require a command execution or AI proposal.
+
+Each `change_set_entry` has a positive, unique order within its Change Set and a
+positive snapshot schema version (default 1). INSERT requires only an after
+snapshot, UPDATE requires both, and DELETE requires only a before snapshot.
+Snapshots must be JSON objects and are technical, versioned undo payloads, not
+generic database copies or a full history/event-sourcing model. An optional
+expected current revision must be positive. At least one of `entity_id` or
+`object_id` identifies the target alongside a non-empty `object_kind`; neither ID
+references live domain rows, so entries can describe created or removed objects.
+
+Actual undo is pending. It will apply atomically or abort entirely if any affected
+object has diverged; A5 stores the foundation without executing that workflow.
+
 ## Relationships
 
 ### Structural relationships

@@ -5,6 +5,7 @@ import {
   foreignKey,
   integer,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -254,4 +255,73 @@ export const location = pgTable("location", {
   }).onDelete("no action"),
   // Longer cycles are validated by the application, not recursive DB triggers.
   check("location_parent_not_self", sql`${table.parentLocationId} <> ${table.id}`),
+]);
+
+// Important retryable commands only; fingerprint comparison belongs to application logic.
+export const commandExecution = pgTable("command_execution", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  scopeUserId: uuid("scope_user_id").notNull().references(() => userAccount.id, { onDelete: "restrict" }),
+  scopeCampaignId: uuid("scope_campaign_id").references(() => campaign.id, { onDelete: "cascade" }),
+  commandKind: text("command_kind").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  requestFingerprint: text("request_fingerprint").notNull(),
+  status: text("status").notNull(),
+  resultSchemaVersion: integer("result_schema_version"),
+  resultJson: jsonb("result_json"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
+}, (table) => [
+  uniqueIndex("command_execution_user_idempotency_unique")
+    .on(table.scopeUserId, table.commandKind, table.idempotencyKey).where(sql`${table.scopeCampaignId} IS NULL`),
+  uniqueIndex("command_execution_campaign_idempotency_unique")
+    .on(table.scopeUserId, table.scopeCampaignId, table.commandKind, table.idempotencyKey).where(sql`${table.scopeCampaignId} IS NOT NULL`),
+  check("command_execution_status_check", sql`${table.status} IN ('IN_PROGRESS', 'SUCCEEDED')`),
+  check("command_execution_command_kind_nonempty", sql`length(btrim(${table.commandKind})) > 0`),
+  check("command_execution_idempotency_key_nonempty", sql`length(btrim(${table.idempotencyKey})) > 0`),
+  check("command_execution_request_fingerprint_nonempty", sql`length(btrim(${table.requestFingerprint})) > 0`),
+  check("command_execution_result_schema_version_positive", sql`${table.resultSchemaVersion} > 0`),
+  check("command_execution_completion_check", sql`
+    (${table.status} = 'IN_PROGRESS' AND ${table.completedAt} IS NULL) OR
+    (${table.status} = 'SUCCEEDED' AND ${table.completedAt} IS NOT NULL)`),
+]);
+
+export const changeSet = pgTable("change_set", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull().references(() => campaign.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  createdByUserId: uuid("created_by_user_id").notNull().references(() => userAccount.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  revertedAt: timestamp("reverted_at", { withTimezone: true, mode: "date" }),
+  revertedByUserId: uuid("reverted_by_user_id").references(() => userAccount.id, { onDelete: "restrict" }),
+}, (table) => [
+  check("change_set_kind_nonempty", sql`length(btrim(${table.kind})) > 0`),
+  check("change_set_reverted_pair_check", sql`(${table.revertedAt} IS NULL) = (${table.revertedByUserId} IS NULL)`),
+]);
+
+// Versioned selective undo payloads deliberately do not reference live domain rows.
+export const changeSetEntry = pgTable("change_set_entry", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  changeSetId: uuid("change_set_id").notNull().references(() => changeSet.id, { onDelete: "cascade" }),
+  entityId: uuid("entity_id"),
+  objectKind: text("object_kind").notNull(),
+  objectId: uuid("object_id"),
+  operation: text("operation").notNull(),
+  snapshotSchemaVersion: integer("snapshot_schema_version").default(1).notNull(),
+  beforeJson: jsonb("before_json"),
+  afterJson: jsonb("after_json"),
+  expectedCurrentRevision: integer("expected_current_revision"),
+  applyOrder: integer("apply_order").notNull(),
+}, (table) => [
+  uniqueIndex("change_set_entry_apply_order_unique").on(table.changeSetId, table.applyOrder),
+  check("change_set_entry_object_kind_nonempty", sql`length(btrim(${table.objectKind})) > 0`),
+  check("change_set_entry_object_identity_check", sql`${table.entityId} IS NOT NULL OR ${table.objectId} IS NOT NULL`),
+  check("change_set_entry_snapshot_schema_version_positive", sql`${table.snapshotSchemaVersion} > 0`),
+  check("change_set_entry_expected_current_revision_positive", sql`${table.expectedCurrentRevision} > 0`),
+  check("change_set_entry_apply_order_positive", sql`${table.applyOrder} > 0`),
+  check("change_set_entry_before_object_check", sql`jsonb_typeof(${table.beforeJson}) = 'object'`),
+  check("change_set_entry_after_object_check", sql`jsonb_typeof(${table.afterJson}) = 'object'`),
+  check("change_set_entry_operation_snapshot_check", sql`
+    (${table.operation} = 'INSERT' AND ${table.beforeJson} IS NULL AND ${table.afterJson} IS NOT NULL) OR
+    (${table.operation} = 'UPDATE' AND ${table.beforeJson} IS NOT NULL AND ${table.afterJson} IS NOT NULL) OR
+    (${table.operation} = 'DELETE' AND ${table.beforeJson} IS NOT NULL AND ${table.afterJson} IS NULL)`),
 ]);
