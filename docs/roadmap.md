@@ -4,18 +4,28 @@ This roadmap is an implementation sequence, not a promise of dates. Later work m
 
 ## 1. Architecture proof — current
 
-Prove the write path before expanding the domain:
+Completed foundation through A3:
 
-- project bootstrap;
-- PostgreSQL + Drizzle migration harness;
-- provider-neutral internal identity;
-- ruleset / immutable Ruleset Version foundation;
-- Campaign ownership and pinning;
-- shared `campaign_entity` registry;
-- first typed entity: Location;
+- app bootstrap;
+- PostgreSQL 18 + Drizzle migrations;
+- unit tests and real PostgreSQL integration tests;
+- provider-neutral identity persistence;
+- Ruleset / immutable Ruleset Version foundation;
+- Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
+- Campaign Compass persistence;
+- Campaign archive/trash database invariants;
+- CI validation and protected `main`.
+
+**Next implementation slice: A4 — `campaign_entity` + Location.** This adds the shared Campaign entity registry and the first typed entity.
+
+Still pending before the architecture proof is complete:
+
+- `campaign_entity` and Location (A4);
+- Clerk integration;
+- Campaign CRUD/UI;
+- application command layer and authorization;
 - optimistic concurrency;
-- Archive → Trash → Restore;
-- real PostgreSQL integration tests;
+- full Archive → Trash → Restore application flow;
 - minimal Playwright journey.
 
 Exit condition: the end-to-end slice is green and the database rejects the integrity failures the application claims to prevent.
@@ -27,7 +37,7 @@ Build the first product-facing workflow:
 - Dashboard;
 - Create Campaign;
 - optional guided Campaign Wizard;
-- Campaign Compass;
+- Campaign Compass UI over the existing persistence foundation;
 - Blueprint Draft;
 - Blueprint Review and partial acceptance;
 - transactional Blueprint → Campaign materialization;
