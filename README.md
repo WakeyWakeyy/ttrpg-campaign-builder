@@ -134,6 +134,41 @@ The public documentation is intentionally concise:
 
 ## Running tests
 
+### Minimal browser UI (A9)
+
+Set `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`
+in `.env.local`, apply the existing migrations with `pnpm db:migrate`, then run
+`pnpm dev`. No new migration or additional dependency is needed for A9.
+
+`/` offers Clerk sign-in, the owner's Campaign list, and Campaign creation from
+a name and original premise. The server resolves the persisted `dnd-5e-2024`
+Ruleset Version `5.2.1`; a missing seed produces an unavailable message.
+`/campaigns/[campaignId]` lists all Location lifecycle states and offers creation.
+`/locations/[locationId]` provides editing, Archive, Trash, and Restore.
+The Clerk user menu includes identity and sign-out controls.
+
+Server Components and Server Actions resolve `requireActor(db)` before calling
+the existing application boundaries. A lazy process-wide database pool serves
+requests. The only form client state is pending/error feedback; accepted commands
+revalidate and redirect to persisted server state. Location forms submit the
+rendered revision. A conflict disables further submissions until explicit reload,
+without fetching a new revision and silently retrying. Archive/Trash/Restore
+semantics remain in the A8 commands; no Unarchive is exposed.
+
+Manual smoke checklist with configured Clerk credentials:
+
+1. Sign in; create a Campaign with a name and original premise; return home and
+   verify it appears in the list, then open it.
+2. Create a Location, edit its name/description, save, and reload to verify it persisted.
+3. Archive it, then Trash it, then Restore it. Verify it remains **Archived** in
+   both the Location detail and Campaign list.
+4. Open the same Location in two tabs. Save a change in one; submit the older
+   form in the other. Verify the visible conflict message and Reload control,
+   and verify the first tab's accepted content was not overwritten.
+5. Sign out through the user menu; verify the signed-out entry is shown.
+
+Browser automation remains the separate A10 checkpoint.
+
 ### Authentication boundary (A6)
 
 Server transports call `requireActor(db)` from
