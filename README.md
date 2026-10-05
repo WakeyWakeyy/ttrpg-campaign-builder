@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** implementation bootstrap · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof in progress · persistence foundation complete through A3 · **Next:** A4 — `campaign_entity` + Location · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The project is entering implementation. The first engineering milestone is intentionally small and exists to prove the core architecture end to end:
+The persistence foundation is complete through A3. The next implementation slice is **A4 — `campaign_entity` + Location**. The full architecture-proof milestone remains in progress:
 
 ```text
 Sign in
@@ -47,7 +47,7 @@ Sign in
   → Restore
 ```
 
-This slice validates ownership, migrations, transaction boundaries, typed campaign entities, optimistic concurrency, authorization, and lifecycle behavior before the broader campaign workflow is implemented.
+Completing this milestone will validate ownership, migrations, transaction boundaries, typed campaign entities, optimistic concurrency, authorization, and lifecycle behavior before the broader campaign workflow is implemented.
 
 ## Planned MVP
 
@@ -81,10 +81,10 @@ Initial implementation stack:
 - Drizzle ORM / Drizzle Kit
 - Zod
 - pnpm
-- Clerk behind a provider-neutral internal identity boundary
+- Clerk behind a provider-neutral internal identity boundary (integration planned)
 - Vitest
 - real PostgreSQL integration tests
-- Playwright
+- Playwright (planned)
 
 Some deliberate constraints:
 
@@ -100,7 +100,7 @@ See [Architecture](docs/architecture.md) for the reasoning and boundaries behind
 
 ## Data model in one idea
 
-Campaign entities share a common identity through `campaign_entity`, while their actual data stays in typed relational tables such as `location`, `npc`, and `quest`.
+The planned model gives Campaign entities a common identity through `campaign_entity`, while their actual data stays in typed relational tables such as `location`, `npc`, and `quest`. The registry and Location are the next implementation slice.
 
 This gives heterogeneous relationships and lifecycle operations a stable target without turning the database into an EAV model.
 
@@ -142,14 +142,33 @@ For integration tests, set `TEST_DATABASE_URL` in your shell to an existing,
 dedicated test database such as `ttrpg_campaign_builder_test` (see `.env.example`).
 This test setup does not load `TEST_DATABASE_URL` from local env files; set it explicitly in your shell. Missing or blank
 `TEST_DATABASE_URL` causes integration tests to fail; `DATABASE_URL` is never a
-fallback. The current smoke test runs `SELECT 1` through the database adapter and
-closes its pool afterward. It creates no tables or migrations.
+fallback. Before running the suite, apply the committed migrations with
+`pnpm db:migrate`, setting `DATABASE_URL` to the dedicated test database for that
+command.
+
+The suite covers identity, Ruleset and Campaign persistence, ownership, Ruleset
+Version pinning, Campaign Compass, and archive/trash database invariants. It also
+replays committed migrations from an empty schema and checks upgrades with existing
+data. Integration tests require PostgreSQL 18.
 
 ## Project status
 
-Implementation bootstrap.
+Completed through A3:
 
-The immediate goal is to make the architecture-proof vertical slice pass against a real PostgreSQL database before expanding the schema and product surface.
+- app bootstrap, PostgreSQL 18, and Drizzle migrations;
+- unit tests and real PostgreSQL integration tests;
+- provider-neutral identity persistence;
+- Ruleset / immutable Ruleset Version foundation;
+- Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
+- Campaign Compass persistence and Campaign archive/trash database invariants;
+- CI validation and protected `main`.
+
+Next: **A4 — `campaign_entity` + Location**.
+
+Clerk integration, Campaign CRUD/UI, the application command layer, optimistic
+concurrency, the full Archive → Trash → Restore application flow, and Playwright
+are still pending. The completed database foundation is not yet an end-to-end
+Campaign workflow.
 
 ## Licensing
 
