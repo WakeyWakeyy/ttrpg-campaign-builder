@@ -4,7 +4,7 @@ This roadmap is an implementation sequence, not a promise of dates. Later work m
 
 ## 1. Architecture proof — current
 
-Completed foundation through A3:
+The architecture-proof vertical slice is still in progress. Completed foundation through A4:
 
 - app bootstrap;
 - PostgreSQL 18 + Drizzle migrations;
@@ -14,17 +14,18 @@ Completed foundation through A3:
 - Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
 - Campaign Compass persistence;
 - Campaign archive/trash database invariants;
+- shared `campaign_entity` registry and typed Location persistence, with same-Campaign constraints and database tests for atomic creation, revision safety, and lifecycle behavior;
 - CI validation and protected `main`.
 
-**Next implementation slice: A4 — `campaign_entity` + Location.** This adds the shared Campaign entity registry and the first typed entity.
+**Next implementation slice: A5 — Technical operation safety.** A4 — `campaign_entity` + Location is complete.
 
 Still pending before the architecture proof is complete:
 
-- `campaign_entity` and Location (A4);
+- technical operation safety (A5);
 - Clerk integration;
 - Campaign CRUD/UI;
 - application command layer and authorization;
-- optimistic concurrency;
+- application-level optimistic concurrency;
 - full Archive → Trash → Restore application flow;
 - minimal Playwright journey.
 

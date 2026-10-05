@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof in progress · persistence foundation complete through A3 · **Next:** A4 — `campaign_entity` + Location · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof in progress · Campaign and Location persistence foundation complete · **Next:** technical operation safety · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The persistence foundation is complete through A3. The next implementation slice is **A4 — `campaign_entity` + Location**. The full architecture-proof milestone remains in progress:
+The persistence foundation includes Campaigns, a shared entity registry, and typed Locations (A4 complete). The next implementation slice is **A5 — Technical operation safety**. The full architecture-proof vertical slice remains in progress:
 
 ```text
 Sign in
@@ -100,7 +100,7 @@ See [Architecture](docs/architecture.md) for the reasoning and boundaries behind
 
 ## Data model in one idea
 
-The planned model gives Campaign entities a common identity through `campaign_entity`, while their actual data stays in typed relational tables such as `location`, `npc`, and `quest`. The registry and Location are the next implementation slice.
+Campaign entities share a common identity through `campaign_entity`, while their actual data stays in typed relational tables. The registry and `location` are implemented; `npc` and `quest` are planned.
 
 This gives heterogeneous relationships and lifecycle operations a stable target without turning the database into an EAV model.
 
@@ -147,13 +147,14 @@ fallback. Before running the suite, apply the committed migrations with
 command.
 
 The suite covers identity, Ruleset and Campaign persistence, ownership, Ruleset
-Version pinning, Campaign Compass, and archive/trash database invariants. It also
+Version pinning, Campaign Compass, the shared entity registry, Location integrity,
+revision-safe SQL updates, and archive/trash/restore database behavior. It also
 replays committed migrations from an empty schema and checks upgrades with existing
 data. Integration tests require PostgreSQL 18.
 
 ## Project status
 
-Completed through A3:
+Completed persistence and tooling foundation (through A4):
 
 - app bootstrap, PostgreSQL 18, and Drizzle migrations;
 - unit tests and real PostgreSQL integration tests;
@@ -161,12 +162,13 @@ Completed through A3:
 - Ruleset / immutable Ruleset Version foundation;
 - Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
 - Campaign Compass persistence and Campaign archive/trash database invariants;
+- shared `campaign_entity` registry and typed Location persistence, with same-Campaign constraints and database tests for atomic creation, revision safety, and lifecycle behavior;
 - CI validation and protected `main`.
 
-Next: **A4 — `campaign_entity` + Location**.
+Next: **A5 — Technical operation safety**.
 
-Clerk integration, Campaign CRUD/UI, the application command layer, optimistic
-concurrency, the full Archive → Trash → Restore application flow, and Playwright
+Clerk integration, Campaign CRUD/UI, the application command layer, application-level
+optimistic concurrency, the full Archive → Trash → Restore application flow, and Playwright
 are still pending. The completed database foundation is not yet an end-to-end
 Campaign workflow.
 
