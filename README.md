@@ -81,7 +81,7 @@ Initial implementation stack:
 - Drizzle ORM / Drizzle Kit
 - Zod
 - pnpm
-- Clerk behind a provider-neutral internal identity boundary (integration planned)
+- Clerk behind a provider-neutral internal identity boundary
 - Vitest
 - real PostgreSQL integration tests
 - Playwright (planned)
@@ -134,6 +134,31 @@ The public documentation is intentionally concise:
 
 ## Running tests
 
+### Authentication boundary (A6)
+
+Server transports call `requireActor(db)` from
+`src/infrastructure/auth/clerk/require-actor.ts` before entering feature code.
+It awaits Clerk authentication and resolves `(provider, provider_subject)` through
+the Identity application boundary to an `Actor` containing only the internal
+`user_account.id` as `userId`. Missing authentication throws `UnauthenticatedError`
+with code `UNAUTHENTICATED`; infrastructure errors propagate separately.
+
+The identity resolver owns account/mapping creation in one transaction. The
+existing unique index chooses the winner of concurrent first resolutions; losing
+transactions roll back their accounts and then read the committed mapping.
+Call it with the database before starting a feature command transaction. Provider
+claims must come from the trusted auth adapter, never from submitted form data.
+
+Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local`
+to serve authenticated requests. `src/proxy.ts` installs the Clerk request
+context on Next.js 16; it does not implement Campaign authorization or sign-in UI.
+Unit tests mock Clerk and the build does not require live Clerk credentials.
+The lockfile resolves Clerk 7.9.10 and Next.js 16.3.8, which satisfies Clerk's
+published Next.js peer range; no Next.js dependency adjustment was needed.
+See the [Clerk proxy documentation](https://clerk.com/docs/reference/nextjs/clerk-middleware).
+
+### Test commands
+
 - `pnpm test` runs the fast Node-based unit tests in `tests/unit/` without external services.
 - `pnpm test:watch` watches the unit tests.
 - `pnpm test:integration` runs `tests/integration/` against real PostgreSQL.
@@ -167,7 +192,7 @@ Completed persistence and tooling foundation (through A4):
 
 Next: **A5 — Technical operation safety**.
 
-Clerk integration, Campaign CRUD/UI, the application command layer, application-level
+Campaign CRUD/UI, Campaign application commands, application-level
 optimistic concurrency, the full Archive → Trash → Restore application flow, and Playwright
 are still pending. The completed database foundation is not yet an end-to-end
 Campaign workflow.
