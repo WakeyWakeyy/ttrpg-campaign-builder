@@ -136,9 +136,19 @@ The public documentation is intentionally concise:
 
 ### Minimal browser UI (A9)
 
-Set `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`
-in `.env.local`, apply the existing migrations with `pnpm db:migrate`, then run
-`pnpm dev`. No new migration or additional dependency is needed for A9.
+For Next.js, `DATABASE_URL` and the Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+and `CLERK_SECRET_KEY`) may live in `.env.local`.
+
+Before applying the existing migrations, make `DATABASE_URL` available to
+drizzle-kit. `drizzle.config.ts` uses `dotenv/config`, which does not load
+Next.js's `.env.local`. For example, set it in the PowerShell session:
+
+```powershell
+$env:DATABASE_URL="postgresql://app:local_password@localhost:5432/ttrpg_campaign_builder"
+pnpm db:migrate
+```
+
+Then run `pnpm dev`. No new migration or additional dependency is needed for A9.
 
 `/` offers Clerk sign-in, the owner's Campaign list, and Campaign creation from
 a name and original premise. The server resolves the persisted `dnd-5e-2024`
