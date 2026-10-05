@@ -217,6 +217,30 @@ This is not an EAV model. Typed tables keep typed columns and constraints.
 
 The shared identity gives heterogeneous relationships, knowledge links, timeline links, provenance, lifecycle, and concurrency a stable target.
 
+A4 implements the registry and Location only. The registry owns a positive
+revision (initially 1), timestamps, independent Archive/Trash fields and creator
+provenance through `created_by_user_id`, an internal `user_account` foreign key.
+The supported discriminator is currently `LOCATION`; adding another subtype must
+extend subtype agreement constraints. No provider IDs or future operation tables
+are introduced.
+
+Location has no independent ID default. Its `(campaign_id, id)` foreign key targets
+the registry; its optional parent targets the same pair on Location. Parent deletion
+uses `NO ACTION`: children must be explicitly detached or moved before a parent is
+purged. This also allows a single Campaign deletion to cascade through all owned
+registry and subtype rows. Self-parenting is rejected by a check; longer cycles
+remain an application validation responsibility, without recursive triggers.
+
+This persistence slice does not expose application commands. Creation must insert
+the registry and typed row in one transaction; foreign keys do not force every
+registry row to have a subtype. The integration tests prove rollback on subtype
+failure and the edit protocol: conditionally claim `expected_revision`, increment
+revision and update the typed row in the same transaction, rolling back both on
+failure. Revisions and `updated_at` are explicitly maintained by commands, not
+triggers. Future application commands must also resolve/authorize the Actor,
+validate hierarchy cycles with concurrency protection, and avoid revision changes
+for no-op edits. A4 does not implement those application workflows.
+
 ### Same-Campaign integrity
 
 Typed first-class tables carry `campaign_id` as well as the shared entity ID. Structural links use same-Campaign composite foreign keys where practical.

@@ -4,6 +4,7 @@ import {
   date,
   foreignKey,
   integer,
+  index,
   pgTable,
   text,
   timestamp,
@@ -203,4 +204,54 @@ export const campaignCompassGuideline = pgTable("campaign_compass_guideline", {
   sortOrder: integer("sort_order"),
 }, (table) => [
   check("campaign_compass_guideline_kind_check", sql`${table.kind} IN ('theme', 'gm_priority', 'boundary', 'style', 'other')`),
+]);
+
+export const campaignEntity = pgTable("campaign_entity", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull()
+    .references(() => campaign.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  revision: integer("revision").default(1).notNull(),
+  createdByUserId: uuid("created_by_user_id").notNull()
+    .references(() => userAccount.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+  purgeAfter: timestamp("purge_after", { withTimezone: true, mode: "date" }),
+}, (table) => [
+  uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
+  // A4 has exactly one supported subtype. Extend this check with future subtypes.
+  check("campaign_entity_type_check", sql`${table.entityType} = 'LOCATION'`),
+  check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
+  check("campaign_entity_trash_retention_check", sql`
+    (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
+    (${table.deletedAt} IS NOT NULL AND ${table.purgeAfter} IS NOT NULL
+      AND isfinite(${table.deletedAt})
+      AND ${table.purgeAfter} = ((${table.deletedAt} AT TIME ZONE 'UTC') + interval '30 days') AT TIME ZONE 'UTC')
+  `),
+]);
+
+export const location = pgTable("location", {
+  // Identity comes from the registry, never a second generated ID.
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentLocationId: uuid("parent_location_id"),
+}, (table) => [
+  uniqueIndex("location_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("location_campaign_parent_idx").on(table.campaignId, table.parentLocationId),
+  foreignKey({
+    name: "location_campaign_entity_fk",
+    columns: [table.campaignId, table.id],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id],
+  }).onDelete("cascade"),
+  foreignKey({
+    name: "location_parent_same_campaign_fk",
+    columns: [table.campaignId, table.parentLocationId],
+    foreignColumns: [table.campaignId, table.id],
+  }).onDelete("no action"),
+  // Longer cycles are validated by the application, not recursive DB triggers.
+  check("location_parent_not_self", sql`${table.parentLocationId} <> ${table.id}`),
 ]);
