@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof in progress · Campaign and Location persistence foundation complete · **Next:** technical operation safety · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof in progress · persistence and technical safety foundation through A5 complete · A6 internal authentication/Actor boundary complete · **Next:** A7 — Campaign authorization + first Campaign queries/commands · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The persistence foundation includes Campaigns, a shared entity registry, and typed Locations (A4 complete). The next implementation slice is **A5 — Technical operation safety**. The full architecture-proof vertical slice remains in progress:
+The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary is also complete. The next implementation slice is **A7 — Campaign authorization + first Campaign queries/commands**. The full architecture-proof vertical slice remains in progress:
 
 ```text
 Sign in
@@ -81,7 +81,7 @@ Initial implementation stack:
 - Drizzle ORM / Drizzle Kit
 - Zod
 - pnpm
-- Clerk behind a provider-neutral internal identity boundary (integration planned)
+- Clerk behind a provider-neutral internal identity boundary
 - Vitest
 - real PostgreSQL integration tests
 - Playwright (planned)
@@ -134,6 +134,31 @@ The public documentation is intentionally concise:
 
 ## Running tests
 
+### Authentication boundary (A6)
+
+Server transports call `requireActor(db)` from
+`src/infrastructure/auth/clerk/require-actor.ts` before entering feature code.
+It awaits Clerk authentication and resolves `(provider, provider_subject)` through
+the Identity application boundary to an `Actor` containing only the internal
+`user_account.id` as `userId`. Missing authentication throws `UnauthenticatedError`
+with code `UNAUTHENTICATED`; infrastructure errors propagate separately.
+
+The identity resolver owns account/mapping creation in one transaction. The
+existing unique index chooses the winner of concurrent first resolutions; losing
+transactions roll back their accounts and then read the committed mapping.
+Call it with the database before starting a feature command transaction. Provider
+claims must come from the trusted auth adapter, never from submitted form data.
+
+Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local`
+to serve authenticated requests. `src/proxy.ts` installs the Clerk request
+context on Next.js 16; it does not implement Campaign authorization or sign-in UI.
+Unit tests mock Clerk and the build does not require live Clerk credentials.
+The lockfile resolves Clerk 7.9.10 and Next.js 16.3.8, which satisfies Clerk's
+published Next.js peer range; no Next.js dependency adjustment was needed.
+See the [Clerk proxy documentation](https://clerk.com/docs/reference/nextjs/clerk-middleware).
+
+### Test commands
+
 - `pnpm test` runs the fast Node-based unit tests in `tests/unit/` without external services.
 - `pnpm test:watch` watches the unit tests.
 - `pnpm test:integration` runs `tests/integration/` against real PostgreSQL.
@@ -154,7 +179,7 @@ data. Integration tests require PostgreSQL 18.
 
 ## Project status
 
-Completed persistence and tooling foundation (through A4):
+Completed persistence, technical safety, and tooling foundation (through A5):
 
 - app bootstrap, PostgreSQL 18, and Drizzle migrations;
 - unit tests and real PostgreSQL integration tests;
@@ -163,11 +188,14 @@ Completed persistence and tooling foundation (through A4):
 - Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
 - Campaign Compass persistence and Campaign archive/trash database invariants;
 - shared `campaign_entity` registry and typed Location persistence, with same-Campaign constraints and database tests for atomic creation, revision safety, and lifecycle behavior;
+- Technical Operation Safety persistence foundation;
 - CI validation and protected `main`.
 
-Next: **A5 — Technical operation safety**.
+A6 — Authentication / Actor Boundary is complete: Clerk authentication resolves to an internal Actor through the provider-neutral identity boundary.
 
-Clerk integration, Campaign CRUD/UI, the application command layer, application-level
+Next: **A7 — Campaign authorization + first Campaign queries/commands**.
+
+Campaign CRUD/UI, Campaign application commands, application-level
 optimistic concurrency, the full Archive → Trash → Restore application flow, and Playwright
 are still pending. The completed database foundation is not yet an end-to-end
 Campaign workflow.
