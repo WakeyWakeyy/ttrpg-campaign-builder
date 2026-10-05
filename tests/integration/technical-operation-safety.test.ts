@@ -68,13 +68,17 @@ test("command defaults, completion transitions, schema versions and required tex
   }
 });
 
-test("command scope foreign keys and restrictive deletion preserve scope", async () => {
+test("command scope foreign keys restrict user deletion and cascade Campaign deletion", async () => {
   const a = await scope();
   const actor = await user();
   const row = await command(actor, a.id);
+  const userScoped = await command(actor);
   for (const column of ['scope_user_id', 'scope_campaign_id']) await violation(`UPDATE command_execution SET ${column} = $2 WHERE id = $1`, [row.id, randomUUID()], '23503');
   await violation("DELETE FROM user_account WHERE id = $1", [actor], '23001', 'command_execution_scope_user_id_user_account_id_fk');
-  await violation("DELETE FROM campaign WHERE id = $1", [a.id], '23001', 'command_execution_scope_campaign_id_campaign_id_fk');
+  await client.query("DELETE FROM campaign WHERE id = $1", [a.id]);
+  expect((await client.query("SELECT id FROM command_execution WHERE id = $1", [row.id])).rowCount).toBe(0);
+  expect((await client.query("SELECT * FROM command_execution WHERE id = $1", [userScoped.id])).rows).toEqual([userScoped]);
+  expect((await client.query("SELECT id FROM user_account WHERE id = ANY($1::uuid[])", [[actor, a.user]])).rowCount).toBe(2);
 });
 
 test("Change Set provenance, reversion pair and foreign keys", async () => {

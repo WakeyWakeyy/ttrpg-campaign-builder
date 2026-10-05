@@ -261,7 +261,7 @@ export const location = pgTable("location", {
 export const commandExecution = pgTable("command_execution", {
   id: uuid("id").default(sql`uuidv7()`).primaryKey(),
   scopeUserId: uuid("scope_user_id").notNull().references(() => userAccount.id, { onDelete: "restrict" }),
-  scopeCampaignId: uuid("scope_campaign_id").references(() => campaign.id, { onDelete: "restrict" }),
+  scopeCampaignId: uuid("scope_campaign_id").references(() => campaign.id, { onDelete: "cascade" }),
   commandKind: text("command_kind").notNull(),
   idempotencyKey: text("idempotency_key").notNull(),
   requestFingerprint: text("request_fingerprint").notNull(),

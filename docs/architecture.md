@@ -324,8 +324,10 @@ and Campaign-scoped commands. Future application logic must compare
 does not compare fingerprints or authorize Campaign access. Status is limited to
 `IN_PROGRESS` (no completion timestamp) and `SUCCEEDED` (completion timestamp
 required), with an optional positive result schema version and JSON result.
-Referenced users and Campaigns cannot be deleted while execution records remain;
-retention and explicit purge handling are future workflow decisions.
+Referenced users cannot be deleted while execution records remain. Permanent
+Campaign deletion cascades to its Campaign-scoped executions, which have no value
+after the Campaign ceases to exist; user-scoped executions and the user account
+remain.
 
 `change_set` and ordered `change_set_entry` rows support selective technical undo.
 They require no command-execution link and contain no AI proposal references.
