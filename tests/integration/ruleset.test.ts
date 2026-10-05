@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import { afterAll, afterEach, beforeEach, expect, test } from "vitest";
 import { createDatabase } from "../../src/infrastructure/db";
 import { ruleset, rulesetVersion, rulesetContentSource } from "../../src/infrastructure/db/schema";
+import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
 
 const connectionString = process.env.TEST_DATABASE_URL;
 if (!connectionString?.trim()) {
@@ -31,6 +32,23 @@ afterEach(async () => {
 });
 
 afterAll(async () => { await pool.end(); });
+
+test("supported Ruleset lookup returns the persisted seeded version ID", async () => {
+  const version = await getSupportedRulesetVersion(db);
+  const [expected] = await db.select({ id: rulesetVersion.id }).from(rulesetVersion)
+    .innerJoin(ruleset, eq(ruleset.id, rulesetVersion.rulesetId))
+    .where(eq(ruleset.key, "dnd-5e-2024"));
+  expect(version).toEqual(expected);
+});
+
+test("supported Ruleset lookup does not fall back to another version", async () => {
+  const version = await getSupportedRulesetVersion(db);
+  expect(version).not.toBeNull();
+  // The transaction rolls back this test-only change to published metadata.
+  await db.update(rulesetVersion).set({ version: "unsupported-test-version" })
+    .where(eq(rulesetVersion.id, version!.id));
+  expect(await getSupportedRulesetVersion(db)).toBeNull();
+});
 
 async function newRuleset() {
   const [row] = await db.insert(ruleset).values({
