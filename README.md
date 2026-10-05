@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** foundation complete through A3 · **Next:** A4 — `campaign_entity` + Location · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof in progress · persistence foundation complete through A3 · **Next:** A4 — `campaign_entity` + Location · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
