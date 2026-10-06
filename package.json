@@ -16,7 +16,8 @@
     "test:watch": "vitest --config vitest.config.mjs",
     "test:integration": "vitest run --config vitest.integration.config.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@clerk/nextjs": "7.9.10",
@@ -27,6 +28,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.42",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
