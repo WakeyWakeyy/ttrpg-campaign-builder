@@ -5,9 +5,18 @@ import { InvalidLocationInputError, InvalidLocationParentError, LocationNotFound
 import { ArcNotFoundError, ArcRevisionConflictError, InvalidArcInputError } from "@/modules/arcs";
 import { InvalidQuestArcError, InvalidQuestInputError, InvalidQuestParentError, QuestNotFoundError, QuestRevisionConflictError } from "@/modules/quests";
 import { InvalidNpcInputError, NpcNotFoundError, NpcRevisionConflictError } from "@/modules/npcs";
+import { InvalidPlayerCharacterInputError, PlayerCharacterNotFoundError, PlayerCharacterRevisionConflictError } from "@/modules/player-characters";
+import { InvalidPartyInputError, InvalidPartyMemberError, PartyNotFoundError, PartyRevisionConflictError } from "@/modules/parties";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof PlayerCharacterRevisionConflictError) return { message: "This character changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof PlayerCharacterNotFoundError) return { message: "Character not found or unavailable." };
+  if (error instanceof InvalidPlayerCharacterInputError) return { message: "Enter a character name and check the details. If this continues, reload the page." };
+  if (error instanceof PartyRevisionConflictError) return { message: "This party changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof PartyNotFoundError) return { message: "Party not found or unavailable." };
+  if (error instanceof InvalidPartyMemberError) return { message: "One of the selected characters is unavailable in this campaign." };
+  if (error instanceof InvalidPartyInputError) return { message: "Enter a party name and check its description. If this continues, reload the page." };
   if (error instanceof NpcRevisionConflictError) return { message: "This NPC changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof NpcNotFoundError) return { message: "NPC not found or unavailable." };
   if (error instanceof InvalidNpcInputError) return { message: "Enter an NPC name and check its details. If this continues, reload the page." };
