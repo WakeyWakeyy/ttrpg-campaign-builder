@@ -18,30 +18,62 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const locations = await listOwnedLocations(db, actor, campaignId);
     return { campaign, compass, locations };
   })().catch(readError);
-  return <main>
+  const activeLocations = data.locations.filter(location => !location.deletedAt && !location.archivedAt).length;
+  const archivedLocations = data.locations.filter(location => !location.deletedAt && location.archivedAt).length;
+  const trashedLocations = data.locations.filter(location => location.deletedAt).length;
+  const campaignStatus = data.campaign.deletedAt ? "In trash" : data.campaign.archivedAt ? "Archived" : "Active";
+  return <main className="workspace-page">
     <Link href="/">All campaigns</Link>
-    <h1>{data.campaign.name}</h1>
-    <section aria-labelledby="compass-heading">
-      <h2 id="compass-heading">Campaign Compass</h2>
-      <h3>Original premise</h3><p style={{ whiteSpace: "pre-wrap" }}>{data.compass.originalPremise}</p>
-      {data.compass.originalNotes && <><h3>Original notes</h3><p style={{ whiteSpace: "pre-wrap" }}>{data.compass.originalNotes}</p></>}
-      <ActionForm action={editCompassAction.bind(null, campaignId)} reloadLabel="Reload compass">
-        <input type="hidden" name="expectedRevision" value={data.compass.revision} />
-        <label htmlFor="currentPremise">Current premise</label><textarea id="currentPremise" name="currentPremise" defaultValue={data.compass.currentPremise} rows={5} required />
-        <label htmlFor="setting">Setting (optional)</label><input id="setting" name="setting" defaultValue={data.compass.setting ?? ""} />
-        <label htmlFor="tone">Tone (optional)</label><input id="tone" name="tone" defaultValue={data.compass.tone ?? ""} />
-        <button type="submit">Save compass</button>
-      </ActionForm>
-    </section>
-    <h2>Locations</h2>
-    {data.locations.length ? <ul>{data.locations.map(location => <li key={location.id}>
-      <Link href={`/locations/${location.id}`}>{location.name}</Link>{" "}<LocationStatus location={location} />
-    </li>)}</ul> : <p>No locations yet.</p>}
-    <h2>Create location</h2>
-    <ActionForm action={createLocationAction.bind(null, campaignId)}>
-      <label htmlFor="name">Name</label><input id="name" name="name" required />
-      <label htmlFor="description">Description (optional)</label><textarea id="description" name="description" rows={5} />
-      <button type="submit">Create location</button>
-    </ActionForm>
+    <div className="workspace-heading">
+      <div>
+        <p className="workspace-eyebrow">Campaign workspace</p>
+        <h1>{data.campaign.name}</h1>
+        {data.campaign.description && <p>{data.campaign.description}</p>}
+      </div>
+      <span className="status">{campaignStatus}</span>
+    </div>
+    <div className="workspace-layout">
+      <nav className="workspace-nav" aria-label="Campaign sections">
+        <h2>In this campaign</h2>
+        <a href="#overview">Overview</a>
+        <a href="#compass">Campaign Compass</a>
+        <a href="#locations">Locations</a>
+      </nav>
+      <div className="workspace-content">
+        <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
+          <h2 id="overview-heading">Overview</h2>
+          <p>Keep the campaign&apos;s direction and places together as it grows.</p>
+          <dl className="workspace-stats">
+            <div><dt>Active locations</dt><dd>{activeLocations}</dd></div>
+            <div><dt>Archived</dt><dd>{archivedLocations}</dd></div>
+            <div><dt>In trash</dt><dd>{trashedLocations}</dd></div>
+          </dl>
+        </section>
+        <section id="compass" aria-labelledby="compass-heading" className="workspace-section">
+          <h2 id="compass-heading">Campaign Compass</h2>
+          <h3>Original premise</h3><p className="preserve-lines">{data.compass.originalPremise}</p>
+          {data.compass.originalNotes && <><h3>Original notes</h3><p className="preserve-lines">{data.compass.originalNotes}</p></>}
+          <ActionForm action={editCompassAction.bind(null, campaignId)} reloadLabel="Reload compass">
+            <input type="hidden" name="expectedRevision" value={data.compass.revision} />
+            <label htmlFor="currentPremise">Current premise</label><textarea id="currentPremise" name="currentPremise" defaultValue={data.compass.currentPremise} rows={5} required />
+            <label htmlFor="setting">Setting (optional)</label><input id="setting" name="setting" defaultValue={data.compass.setting ?? ""} />
+            <label htmlFor="tone">Tone (optional)</label><input id="tone" name="tone" defaultValue={data.compass.tone ?? ""} />
+            <button type="submit">Save compass</button>
+          </ActionForm>
+        </section>
+        <section id="locations" aria-labelledby="locations-heading" className="workspace-section">
+          <h2 id="locations-heading">Locations</h2>
+          {data.locations.length ? <ul className="workspace-location-list">{data.locations.map(location => <li key={location.id}>
+            <Link href={`/locations/${location.id}`}>{location.name}</Link>{" "}<LocationStatus location={location} />
+          </li>)}</ul> : <p>No locations yet. Add the first place your players might visit.</p>}
+          <h3>Create location</h3>
+          <ActionForm action={createLocationAction.bind(null, campaignId)}>
+            <label htmlFor="name">Name</label><input id="name" name="name" required />
+            <label htmlFor="description">Description (optional)</label><textarea id="description" name="description" rows={5} />
+            <button type="submit">Create location</button>
+          </ActionForm>
+        </section>
+      </div>
+    </div>
   </main>;
 }

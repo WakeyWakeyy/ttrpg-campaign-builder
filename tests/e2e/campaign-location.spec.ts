@@ -26,6 +26,16 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     await page.getByRole("link", { name: "All campaigns" }).click();
     await page.getByRole("link", { name: "A10 campaign", exact: true }).click();
     await expect(page.getByRole("heading", { name: "A10 campaign", exact: true })).toBeVisible();
+    const workspaceNav = page.getByRole("navigation", { name: "Campaign sections" });
+    await expect(workspaceNav.getByRole("link", { name: "Overview" })).toBeVisible();
+    await expect(workspaceNav.getByRole("link", { name: "Campaign Compass" })).toBeVisible();
+    await workspaceNav.getByRole("link", { name: "Locations" }).click();
+    await expect(page).toHaveURL(new RegExp(`/campaigns/${campaignId}#locations$`));
+    await expect(page.getByRole("region", { name: "Locations" })).toContainText("No locations yet");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(workspaceNav.getByRole("link", { name: "Locations" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByLabel("Name", { exact: true }).fill("Harbor");
     await page.getByLabel("Description (optional)").fill("Original description");
     await page.getByRole("button", { name: "Create location", exact: true }).click();

@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof complete through A10 · A11–A13 Campaign creation and Compass complete · A14 Blueprint Draft complete · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof complete through A10 · Campaign creation, Blueprint Review, and Campaign Workspace shell complete through A16 · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
