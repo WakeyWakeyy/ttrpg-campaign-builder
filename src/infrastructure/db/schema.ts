@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -335,6 +335,50 @@ export const npc = pgTable("npc", {
     foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
   check("npc_entity_type_check", sql`${table.entityType} = 'NPC'`),
   check("npc_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const playerCharacter = pgTable("player_character", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("PLAYER_CHARACTER").notNull(),
+  name: text("name").notNull(),
+  playerName: text("player_name"),
+  description: text("description"),
+  currentState: text("current_state"),
+}, table => [
+  uniqueIndex("player_character_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("player_character_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "player_character_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("player_character_entity_type_check", sql`${table.entityType} = 'PLAYER_CHARACTER'`),
+  check("player_character_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const party = pgTable("party", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("PARTY").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+}, table => [
+  uniqueIndex("party_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("party_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "party_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("party_entity_type_check", sql`${table.entityType} = 'PARTY'`),
+  check("party_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const partyMember = pgTable("party_member", {
+  campaignId: uuid("campaign_id").notNull(),
+  partyId: uuid("party_id").notNull(),
+  playerCharacterId: uuid("player_character_id").notNull(),
+}, table => [
+  primaryKey({ columns: [table.partyId, table.playerCharacterId] }),
+  foreignKey({ name: "party_member_party_fk", columns: [table.campaignId, table.partyId],
+    foreignColumns: [party.campaignId, party.id] }).onDelete("cascade"),
+  foreignKey({ name: "party_member_player_character_fk", columns: [table.campaignId, table.playerCharacterId],
+    foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("cascade"),
 ]);
 
 export const quest = pgTable("quest", {

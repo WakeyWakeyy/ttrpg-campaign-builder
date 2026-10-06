@@ -10,6 +10,8 @@ import { archiveLocation, createLocation, editLocation, restoreLocation, trashLo
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
+import { archivePlayerCharacter, createPlayerCharacter, editPlayerCharacter, restorePlayerCharacter, trashPlayerCharacter } from "@/modules/player-characters";
+import { archiveParty, createParty, editParty, restoreParty, trashParty } from "@/modules/parties";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
 
@@ -181,6 +183,76 @@ export async function updateNpcAction(npcId: string, _state: ActionState, form: 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/npcs/${npcId}`);
   redirect(`/npcs/${npcId}`);
+}
+
+function playerCharacterInput(form: FormData) {
+  return { name: text(form, "name"), playerName: text(form, "playerName") || null,
+    description: text(form, "description") || null, currentState: text(form, "currentState") || null };
+}
+
+export async function createPlayerCharacterAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    id = (await createPlayerCharacter(db, actor, { campaignId, ...playerCharacterInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/player-characters/${id}`);
+}
+
+export async function updatePlayerCharacterAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editPlayerCharacter(db, actor, id, { expectedRevision: revision, ...playerCharacterInput(form) })
+      : intent === "archive" ? await archivePlayerCharacter(db, actor, id, revision)
+      : intent === "trash" ? await trashPlayerCharacter(db, actor, id, revision)
+      : intent === "restore" ? await restorePlayerCharacter(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a character action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/player-characters/${id}`);
+  redirect(`/player-characters/${id}`);
+}
+
+function partyInput(form: FormData) {
+  return { name: text(form, "name"), description: text(form, "description") || null,
+    playerCharacterIds: form.getAll("playerCharacterIds").filter((id): id is string => typeof id === "string") };
+}
+
+export async function createPartyAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    id = (await createParty(db, actor, { campaignId, ...partyInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/parties/${id}`);
+}
+
+export async function updatePartyAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editParty(db, actor, id, { expectedRevision: revision, ...partyInput(form) })
+      : intent === "archive" ? await archiveParty(db, actor, id, revision)
+      : intent === "trash" ? await trashParty(db, actor, id, revision)
+      : intent === "restore" ? await restoreParty(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a party action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/parties/${id}`);
+  redirect(`/parties/${id}`);
 }
 
 function questInput(form: FormData) {
