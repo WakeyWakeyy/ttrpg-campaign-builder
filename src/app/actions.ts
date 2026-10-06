@@ -8,6 +8,7 @@ import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modu
 import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
+import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
 
@@ -144,6 +145,43 @@ export async function updateArcAction(arcId: string, _state: ActionState, form: 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/arcs/${arcId}`);
   redirect(`/arcs/${arcId}`);
+}
+
+function questInput(form: FormData) {
+  return { name: text(form, "name"), description: text(form, "description") || null,
+    status: text(form, "status") as QuestStatus,
+    parentQuestId: text(form, "parentQuestId") || null,
+    arcIds: form.getAll("arcIds").filter((id): id is string => typeof id === "string") };
+}
+
+export async function createQuestAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    id = (await createQuest(db, actor, { campaignId, ...questInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/quests/${id}`);
+}
+
+export async function updateQuestAction(questId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editQuest(db, actor, questId, { expectedRevision: revision, ...questInput(form) })
+      : intent === "archive" ? await archiveQuest(db, actor, questId, revision)
+      : intent === "trash" ? await trashQuest(db, actor, questId, revision)
+      : intent === "restore" ? await restoreQuest(db, actor, questId, revision) : null;
+    if (!updated) return { message: "Choose a quest action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/quests/${questId}`);
+  redirect(`/quests/${questId}`);
 }
 
 export async function editCompassAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
