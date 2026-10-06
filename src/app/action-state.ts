@@ -8,9 +8,13 @@ import { InvalidNpcInputError, NpcNotFoundError, NpcRevisionConflictError } from
 import { InvalidPlayerCharacterInputError, PlayerCharacterNotFoundError, PlayerCharacterRevisionConflictError } from "@/modules/player-characters";
 import { InvalidPartyInputError, InvalidPartyMemberError, PartyNotFoundError, PartyRevisionConflictError } from "@/modules/parties";
 import { FactionNotFoundError, FactionRevisionConflictError, InvalidFactionInputError, InvalidFactionMembershipError } from "@/modules/factions";
+import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevisionConflictError } from "@/modules/travel-routes";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof TravelRouteRevisionConflictError) return { message: "This route changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof TravelRouteNotFoundError) return { message: "Route not found or unavailable." };
+  if (error instanceof InvalidTravelRouteInputError) return { message: "Enter a route name and choose two available locations in this campaign." };
   if (error instanceof FactionRevisionConflictError) return { message: "This faction changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof FactionNotFoundError) return { message: "Faction not found or unavailable." };
   if (error instanceof InvalidFactionMembershipError) return { message: "Choose an available character in this campaign and check the membership details." };
