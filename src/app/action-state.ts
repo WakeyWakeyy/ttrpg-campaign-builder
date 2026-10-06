@@ -3,9 +3,15 @@ import { BlueprintAlreadyMaterializedError, BlueprintIdempotencyConflictError, B
 import { UnauthenticatedError } from "@/modules/identity";
 import { InvalidLocationInputError, InvalidLocationParentError, LocationNotFoundError, LocationRevisionConflictError } from "@/modules/locations";
 import { ArcNotFoundError, ArcRevisionConflictError, InvalidArcInputError } from "@/modules/arcs";
+import { InvalidQuestArcError, InvalidQuestInputError, InvalidQuestParentError, QuestNotFoundError, QuestRevisionConflictError } from "@/modules/quests";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof QuestRevisionConflictError) return { message: "This quest changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof QuestNotFoundError) return { message: "Quest not found or unavailable." };
+  if (error instanceof InvalidQuestParentError) return { message: "That parent quest is unavailable or would create a cycle." };
+  if (error instanceof InvalidQuestArcError) return { message: "One of the selected arcs is unavailable." };
+  if (error instanceof InvalidQuestInputError) return { message: "Check the quest name, description, and status. If this continues, reload the page." };
   if (error instanceof ArcRevisionConflictError) return { message: "This arc changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof ArcNotFoundError) return { message: "Arc not found or unavailable." };
   if (error instanceof InvalidArcInputError) return { message: "Enter an arc name and check its description. If this continues, reload the page." };

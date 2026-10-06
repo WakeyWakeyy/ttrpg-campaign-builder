@@ -7,6 +7,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -265,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -308,6 +309,7 @@ export const arc = pgTable("arc", {
   name: text("name").notNull(),
   description: text("description"),
 }, table => [
+  uniqueIndex("arc_campaign_id_id_unique").on(table.campaignId, table.id),
   index("arc_campaign_idx").on(table.campaignId),
   foreignKey({
     name: "arc_campaign_entity_fk",
@@ -316,6 +318,39 @@ export const arc = pgTable("arc", {
   }).onDelete("cascade"),
   check("arc_entity_type_check", sql`${table.entityType} = 'ARC'`),
   check("arc_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const quest = pgTable("quest", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("QUEST").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").default("OPEN").notNull(),
+  parentQuestId: uuid("parent_quest_id"),
+}, table => [
+  uniqueIndex("quest_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("quest_campaign_parent_idx").on(table.campaignId, table.parentQuestId),
+  foreignKey({ name: "quest_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  foreignKey({ name: "quest_parent_same_campaign_fk", columns: [table.campaignId, table.parentQuestId],
+    foreignColumns: [table.campaignId, table.id] }).onDelete("no action"),
+  check("quest_entity_type_check", sql`${table.entityType} = 'QUEST'`),
+  check("quest_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("quest_parent_not_self", sql`${table.parentQuestId} <> ${table.id}`),
+  check("quest_status_check", sql`${table.status} IN ('OPEN', 'RESOLVED', 'FAILED', 'POSTPONED', 'ABANDONED')`),
+]);
+
+export const arcQuest = pgTable("arc_quest", {
+  campaignId: uuid("campaign_id").notNull(),
+  arcId: uuid("arc_id").notNull(),
+  questId: uuid("quest_id").notNull(),
+}, table => [
+  primaryKey({ columns: [table.arcId, table.questId] }),
+  foreignKey({ name: "arc_quest_arc_fk", columns: [table.campaignId, table.arcId],
+    foreignColumns: [arc.campaignId, arc.id] }).onDelete("cascade"),
+  foreignKey({ name: "arc_quest_quest_fk", columns: [table.campaignId, table.questId],
+    foreignColumns: [quest.campaignId, quest.id] }).onDelete("cascade"),
 ]);
 
 // Important retryable commands only; fingerprint comparison belongs to application logic.

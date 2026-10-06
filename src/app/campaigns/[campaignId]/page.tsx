@@ -4,8 +4,9 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
 import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedArcs } from "@/modules/arcs";
+import { listOwnedQuests } from "@/modules/quests";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createLocationAction, editCompassAction } from "../../actions";
+import { createArcAction, createLocationAction, createQuestAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -19,9 +20,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const compass = await getOwnedCompass(db, actor, campaignId);
     const locations = await listOwnedLocations(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
-    return { campaign, compass, locations, arcs };
+    const quests = await listOwnedQuests(db, actor, campaignId);
+    return { campaign, compass, locations, arcs, quests };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
+  const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
   const activeLocations = data.locations.filter(location => !location.deletedAt && !location.archivedAt).length;
   const archivedLocations = data.locations.filter(location => !location.deletedAt && location.archivedAt).length;
   const trashedLocations = data.locations.filter(location => location.deletedAt).length;
@@ -42,6 +45,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#overview">Overview</a>
         <a href="#compass">Campaign Compass</a>
         <a href="#arcs">Arcs</a>
+        <a href="#quests">Quests</a>
         <a href="#locations">Locations</a>
       </nav>
       <div className="workspace-content">
@@ -50,6 +54,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           <p>Keep the campaign&apos;s direction, story arcs, and places together as it grows.</p>
           <dl className="workspace-stats">
             <div><dt>Active arcs</dt><dd>{activeArcs}</dd></div>
+            <div><dt>Active quests</dt><dd>{activeQuests}</dd></div>
             <div><dt>Active locations</dt><dd>{activeLocations}</dd></div>
             <div><dt>Archived locations</dt><dd>{archivedLocations}</dd></div>
             <div><dt>Locations in trash</dt><dd>{trashedLocations}</dd></div>
@@ -69,7 +74,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         </section>
         <section id="arcs" aria-labelledby="arcs-heading" className="workspace-section">
           <h2 id="arcs-heading">Arcs</h2>
-          <p>Group a long-running story thread here. Quests can join arcs when Quest support arrives.</p>
+          <p>Group long-running story threads and connect them to quests.</p>
           {data.arcs.length ? <ul className="workspace-location-list">{data.arcs.map(arc => <li key={arc.id}>
             <Link href={`/arcs/${arc.id}`}>{arc.name}</Link>{" "}<ArcStatus arc={arc} />
           </li>)}</ul> : <p>No arcs yet.</p>}
@@ -78,6 +83,24 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <label htmlFor="arc-name">Name</label><input id="arc-name" name="name" required />
             <label htmlFor="arc-description">Description (optional)</label><textarea id="arc-description" name="description" rows={5} />
             <button type="submit">Create arc</button>
+          </ActionForm>
+        </section>
+        <section id="quests" aria-labelledby="quests-heading" className="workspace-section">
+          <h2 id="quests-heading">Quests</h2>
+          <p>Track goals and plot threads as the story changes.</p>
+          {data.quests.length ? <ul className="workspace-location-list">{data.quests.map(quest => <li key={quest.id}>
+            <Link href={`/quests/${quest.id}`}>{quest.name}</Link> · {quest.status.toLowerCase()}
+            {quest.deletedAt ? " · Trashed" : quest.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No quests yet.</p>}
+          <h3>Create quest</h3>
+          <ActionForm action={createQuestAction.bind(null, campaignId)}>
+            <label htmlFor="quest-name">Name</label><input id="quest-name" name="name" required />
+            <label htmlFor="quest-description">Description (optional)</label><textarea id="quest-description" name="description" rows={5} />
+            <input type="hidden" name="status" value="OPEN" />
+            <label htmlFor="quest-parent">Parent quest (optional)</label>
+            <select id="quest-parent" name="parentQuestId"><option value="">None</option>{data.quests.filter(quest => !quest.deletedAt).map(quest => <option key={quest.id} value={quest.id}>{quest.name}</option>)}</select>
+            <fieldset><legend>Arcs (optional)</legend>{data.arcs.filter(arc => !arc.deletedAt).map(arc => <label key={arc.id}><input type="checkbox" name="arcIds" value={arc.id} /> {arc.name}</label>)}</fieldset>
+            <button type="submit">Create quest</button>
           </ActionForm>
         </section>
         <section id="locations" aria-labelledby="locations-heading" className="workspace-section">
