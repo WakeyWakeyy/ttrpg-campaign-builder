@@ -4,9 +4,13 @@ import { UnauthenticatedError } from "@/modules/identity";
 import { InvalidLocationInputError, InvalidLocationParentError, LocationNotFoundError, LocationRevisionConflictError } from "@/modules/locations";
 import { ArcNotFoundError, ArcRevisionConflictError, InvalidArcInputError } from "@/modules/arcs";
 import { InvalidQuestArcError, InvalidQuestInputError, InvalidQuestParentError, QuestNotFoundError, QuestRevisionConflictError } from "@/modules/quests";
+import { InvalidNpcInputError, NpcNotFoundError, NpcRevisionConflictError } from "@/modules/npcs";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof NpcRevisionConflictError) return { message: "This NPC changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof NpcNotFoundError) return { message: "NPC not found or unavailable." };
+  if (error instanceof InvalidNpcInputError) return { message: "Enter an NPC name and check its details. If this continues, reload the page." };
   if (error instanceof QuestRevisionConflictError) return { message: "This quest changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof QuestNotFoundError) return { message: "Quest not found or unavailable." };
   if (error instanceof InvalidQuestParentError) return { message: "That parent quest is unavailable or would create a cycle." };

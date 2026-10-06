@@ -5,8 +5,9 @@ import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
 import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
+import { listOwnedNpcs } from "@/modules/npcs";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createLocationAction, createQuestAction, editCompassAction } from "../../actions";
+import { createArcAction, createLocationAction, createNpcAction, createQuestAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -21,10 +22,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const locations = await listOwnedLocations(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
-    return { campaign, compass, locations, arcs, quests };
+    const npcs = await listOwnedNpcs(db, actor, campaignId);
+    return { campaign, compass, locations, arcs, quests, npcs };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
+  const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeLocations = data.locations.filter(location => !location.deletedAt && !location.archivedAt).length;
   const archivedLocations = data.locations.filter(location => !location.deletedAt && location.archivedAt).length;
   const trashedLocations = data.locations.filter(location => location.deletedAt).length;
@@ -46,6 +49,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#compass">Campaign Compass</a>
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
+        <a href="#npcs">NPCs</a>
         <a href="#locations">Locations</a>
       </nav>
       <div className="workspace-content">
@@ -55,6 +59,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           <dl className="workspace-stats">
             <div><dt>Active arcs</dt><dd>{activeArcs}</dd></div>
             <div><dt>Active quests</dt><dd>{activeQuests}</dd></div>
+            <div><dt>Active NPCs</dt><dd>{activeNpcs}</dd></div>
             <div><dt>Active locations</dt><dd>{activeLocations}</dd></div>
             <div><dt>Archived locations</dt><dd>{archivedLocations}</dd></div>
             <div><dt>Locations in trash</dt><dd>{trashedLocations}</dd></div>
@@ -101,6 +106,22 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <select id="quest-parent" name="parentQuestId"><option value="">None</option>{data.quests.filter(quest => !quest.deletedAt).map(quest => <option key={quest.id} value={quest.id}>{quest.name}</option>)}</select>
             <fieldset><legend>Arcs (optional)</legend>{data.arcs.filter(arc => !arc.deletedAt).map(arc => <label key={arc.id}><input type="checkbox" name="arcIds" value={arc.id} /> {arc.name}</label>)}</fieldset>
             <button type="submit">Create quest</button>
+          </ActionForm>
+        </section>
+        <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">
+          <h2 id="npcs-heading">NPCs</h2>
+          <p>Keep track of the people the GM controls and their current place in the story.</p>
+          {data.npcs.length ? <ul className="workspace-location-list">{data.npcs.map(npc => <li key={npc.id}>
+            <Link href={`/npcs/${npc.id}`}>{npc.name}</Link>{npc.role ? ` · ${npc.role}` : ""}
+            {npc.deletedAt ? " · Trashed" : npc.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No NPCs yet.</p>}
+          <h3>Create NPC</h3>
+          <ActionForm action={createNpcAction.bind(null, campaignId)}>
+            <label htmlFor="npc-name">Name</label><input id="npc-name" name="name" required />
+            <label htmlFor="npc-role">Role (optional)</label><input id="npc-role" name="role" />
+            <label htmlFor="npc-description">Description (optional)</label><textarea id="npc-description" name="description" rows={5} />
+            <label htmlFor="npc-state">Current state (optional)</label><textarea id="npc-state" name="currentState" rows={4} />
+            <button type="submit">Create NPC</button>
           </ActionForm>
         </section>
         <section id="locations" aria-labelledby="locations-heading" className="workspace-section">

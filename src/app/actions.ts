@@ -9,6 +9,7 @@ import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlu
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
+import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
 
@@ -145,6 +146,41 @@ export async function updateArcAction(arcId: string, _state: ActionState, form: 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/arcs/${arcId}`);
   redirect(`/arcs/${arcId}`);
+}
+
+function npcInput(form: FormData) {
+  return { name: text(form, "name"), description: text(form, "description") || null,
+    role: text(form, "role") || null, currentState: text(form, "currentState") || null };
+}
+
+export async function createNpcAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    id = (await createNpc(db, actor, { campaignId, ...npcInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/npcs/${id}`);
+}
+
+export async function updateNpcAction(npcId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editNpc(db, actor, npcId, { expectedRevision: revision, ...npcInput(form) })
+      : intent === "archive" ? await archiveNpc(db, actor, npcId, revision)
+      : intent === "trash" ? await trashNpc(db, actor, npcId, revision)
+      : intent === "restore" ? await restoreNpc(db, actor, npcId, revision) : null;
+    if (!updated) return { message: "Choose an NPC action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/npcs/${npcId}`);
+  redirect(`/npcs/${npcId}`);
 }
 
 function questInput(form: FormData) {

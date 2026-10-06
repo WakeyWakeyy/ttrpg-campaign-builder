@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -318,6 +318,23 @@ export const arc = pgTable("arc", {
   }).onDelete("cascade"),
   check("arc_entity_type_check", sql`${table.entityType} = 'ARC'`),
   check("arc_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const npc = pgTable("npc", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("NPC").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  role: text("role"),
+  currentState: text("current_state"),
+}, table => [
+  uniqueIndex("npc_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("npc_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "npc_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("npc_entity_type_check", sql`${table.entityType} = 'NPC'`),
+  check("npc_name_nonempty", sql`length(btrim(${table.name})) > 0`),
 ]);
 
 export const quest = pgTable("quest", {
