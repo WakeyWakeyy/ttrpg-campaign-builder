@@ -12,6 +12,7 @@ import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type Qu
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
 import { archivePlayerCharacter, createPlayerCharacter, editPlayerCharacter, restorePlayerCharacter, trashPlayerCharacter } from "@/modules/player-characters";
 import { archiveParty, createParty, editParty, restoreParty, trashParty } from "@/modules/parties";
+import { archiveFaction, createFaction, editFaction, restoreFaction, setFactionMembership, trashFaction, type MembershipInput } from "@/modules/factions";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
 
@@ -223,6 +224,58 @@ export async function updatePlayerCharacterAction(id: string, _state: ActionStat
 function partyInput(form: FormData) {
   return { name: text(form, "name"), description: text(form, "description") || null,
     playerCharacterIds: form.getAll("playerCharacterIds").filter((id): id is string => typeof id === "string") };
+}
+
+function factionInput(form: FormData) {
+  return { name: text(form, "name"), description: text(form, "description") || null,
+    purpose: text(form, "purpose") || null, currentState: text(form, "currentState") || null };
+}
+
+export async function createFactionAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createFaction(db, await requireActor(db), { campaignId, ...factionInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/factions/${id}`);
+}
+
+export async function updateFactionAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editFaction(db, actor, id, { expectedRevision: revision, ...factionInput(form) })
+      : intent === "archive" ? await archiveFaction(db, actor, id, revision)
+      : intent === "trash" ? await trashFaction(db, actor, id, revision)
+      : intent === "restore" ? await restoreFaction(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a faction action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/factions/${id}`);
+  redirect(`/factions/${id}`);
+}
+
+export async function setFactionMembershipAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const [memberType, memberId] = text(form, "member").split(":");
+    const updated = await setFactionMembership(db, actor, id, Number(text(form, "expectedRevision")), {
+      memberType: memberType as MembershipInput["memberType"], memberId,
+      role: text(form, "role") || null, rank: text(form, "rank") || null,
+      status: text(form, "status") as MembershipInput["status"],
+    });
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/factions/${id}`);
+  redirect(`/factions/${id}`);
 }
 
 export async function createPartyAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

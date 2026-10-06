@@ -8,8 +8,9 @@ import { listOwnedQuests } from "@/modules/quests";
 import { listOwnedNpcs } from "@/modules/npcs";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listPartyMemberIds } from "@/modules/parties";
+import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -27,8 +28,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const npcs = await listOwnedNpcs(db, actor, campaignId);
     const characters = await listOwnedPlayerCharacters(db, actor, campaignId);
     const parties = await listOwnedParties(db, actor, campaignId);
+    const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await Promise.all(parties.map(party => listPartyMemberIds(db, actor, party.id)));
-    return { campaign, compass, locations, arcs, quests, npcs, characters, parties, partyMembers };
+    return { campaign, compass, locations, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
@@ -59,6 +61,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#npcs">NPCs</a>
         <a href="#player-characters">Player Characters</a>
         <a href="#parties">Parties</a>
+        <a href="#factions">Factions</a>
         <a href="#locations">Locations</a>
       </nav>
       <div className="workspace-content">
@@ -167,6 +170,22 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
               {character.deletedAt ? " (in trash)" : character.archivedAt ? " (archived)" : ""}
             </label>)}</fieldset>
             <button type="submit">Create party</button>
+          </ActionForm>
+        </section>
+        <section id="factions" aria-labelledby="factions-heading" className="workspace-section">
+          <h2 id="factions-heading">Factions</h2>
+          <p>Track organizations and the characters connected to them.</p>
+          {data.factions.length ? <ul className="workspace-location-list">{data.factions.map(faction => <li key={faction.id}>
+            <Link href={`/factions/${faction.id}`}>{faction.name}</Link>
+            {faction.deletedAt ? " · Trashed" : faction.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No factions yet.</p>}
+          <h3>Create faction</h3>
+          <ActionForm action={createFactionAction.bind(null, campaignId)}>
+            <label htmlFor="faction-name">Name</label><input id="faction-name" name="name" required />
+            <label htmlFor="faction-description">Description (optional)</label><textarea id="faction-description" name="description" rows={4} />
+            <label htmlFor="faction-purpose">Purpose (optional)</label><textarea id="faction-purpose" name="purpose" rows={3} />
+            <label htmlFor="faction-state">Current state (optional)</label><textarea id="faction-state" name="currentState" rows={3} />
+            <button type="submit">Create faction</button>
           </ActionForm>
         </section>
         <section id="locations" aria-labelledby="locations-heading" className="workspace-section">

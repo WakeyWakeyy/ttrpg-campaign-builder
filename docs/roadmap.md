@@ -44,7 +44,7 @@ Expand the connected domain model:
 - Quests / plot threads: A18 adds typed Quests, outcome status, parent hierarchy, and Arc membership. See [A18 progress](a18-campaign-quests.md);
 - NPCs: A19 adds typed NPCs with identity, role, current state, revision-safe editing, and preservation lifecycle. See [A19 progress](a19-campaign-npcs.md);
 - Player Characters and Party summary: A20 adds lightweight PCs and Parties with explicit composition and revision-safe editing. See [A20 progress](a20-player-characters-parties.md);
-- Factions and memberships;
+- Factions and memberships: A21 adds typed Factions and NPC/PC memberships with role, rank, and active/former state. See [A21 progress](a21-campaign-factions.md);
 - Locations and Travel Routes;
 - Items;
 - semantic Relationships;
