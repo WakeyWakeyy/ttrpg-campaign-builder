@@ -3,6 +3,7 @@ import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
 import { listOwnedLocations } from "@/modules/locations";
+import { listOwnedTravelRoutes } from "@/modules/travel-routes";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { listOwnedNpcs } from "@/modules/npcs";
@@ -10,7 +11,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -23,6 +24,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const campaign = await getOwnedCampaign(db, actor, campaignId);
     const compass = await getOwnedCompass(db, actor, campaignId);
     const locations = await listOwnedLocations(db, actor, campaignId);
+    const routes = await listOwnedTravelRoutes(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
     const npcs = await listOwnedNpcs(db, actor, campaignId);
@@ -30,7 +32,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await Promise.all(parties.map(party => listPartyMemberIds(db, actor, party.id)));
-    return { campaign, compass, locations, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
@@ -63,6 +65,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#parties">Parties</a>
         <a href="#factions">Factions</a>
         <a href="#locations">Locations</a>
+        <a href="#travel-routes">Travel routes</a>
       </nav>
       <div className="workspace-content">
         <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
@@ -198,6 +201,26 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <label htmlFor="name">Name</label><input id="name" name="name" required />
             <label htmlFor="description">Description (optional)</label><textarea id="description" name="description" rows={5} />
             <button type="submit">Create location</button>
+          </ActionForm>
+        </section>
+        <section id="travel-routes" aria-labelledby="travel-routes-heading" className="workspace-section">
+          <h2 id="travel-routes-heading">Travel routes</h2>
+          <p>Connect two locations and keep travel details close to the campaign.</p>
+          {data.routes.length ? <ul className="workspace-location-list">{data.routes.map(route => <li key={route.id}>
+            <Link href={`/travel-routes/${route.id}`}>{route.name}</Link> · {data.locations.find(place => place.id === route.fromLocationId)?.name ?? "Unknown"} → {data.locations.find(place => place.id === route.toLocationId)?.name ?? "Unknown"}
+            {route.deletedAt ? " · Trashed" : route.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No travel routes yet.</p>}
+          <h3>Create travel route</h3>
+          <ActionForm action={createTravelRouteAction.bind(null, campaignId)}>
+            <label htmlFor="route-name">Name</label><input id="route-name" name="name" required />
+            <label htmlFor="route-from">From</label><select id="route-from" name="fromLocationId" required><option value="">Choose location</option>{data.locations.filter(place => !place.deletedAt).map(place => <option key={place.id} value={place.id}>{place.name}</option>)}</select>
+            <label htmlFor="route-to">To</label><select id="route-to" name="toLocationId" required><option value="">Choose location</option>{data.locations.filter(place => !place.deletedAt).map(place => <option key={place.id} value={place.id}>{place.name}</option>)}</select>
+            <label htmlFor="route-distance">Distance (optional)</label><input id="route-distance" name="distance" />
+            <label htmlFor="route-duration">Duration (optional)</label><input id="route-duration" name="duration" />
+            <label htmlFor="route-mode">Travel mode (optional)</label><input id="route-mode" name="mode" />
+            <label htmlFor="route-hazards">Hazards (optional)</label><textarea id="route-hazards" name="hazards" rows={3} />
+            <label htmlFor="route-notes">GM notes (optional)</label><textarea id="route-notes" name="notes" rows={4} />
+            <button type="submit">Create route</button>
           </ActionForm>
         </section>
       </div>

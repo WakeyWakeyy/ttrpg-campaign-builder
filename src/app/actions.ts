@@ -7,6 +7,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modules/campaigns";
 import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
+import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -19,6 +20,42 @@ import { actionError, type ActionState } from "./action-state";
 function text(form: FormData, name: string) {
   const value = form.get(name);
   return typeof value === "string" ? value : "";
+}
+
+function routeInput(form: FormData) {
+  return { name: text(form, "name"), fromLocationId: text(form, "fromLocationId"),
+    toLocationId: text(form, "toLocationId"), distance: text(form, "distance") || null,
+    duration: text(form, "duration") || null, mode: text(form, "mode") || null,
+    hazards: text(form, "hazards") || null, notes: text(form, "notes") || null };
+}
+
+export async function createTravelRouteAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createTravelRoute(db, await requireActor(db), { campaignId, ...routeInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/travel-routes/${id}`);
+}
+
+export async function updateTravelRouteAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editTravelRoute(db, actor, id, { expectedRevision: revision, ...routeInput(form) })
+      : intent === "archive" ? await archiveTravelRoute(db, actor, id, revision)
+      : intent === "trash" ? await trashTravelRoute(db, actor, id, revision)
+      : intent === "restore" ? await restoreTravelRoute(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a route action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/travel-routes/${id}`);
+  redirect(`/travel-routes/${id}`);
 }
 
 function blueprintInput(form: FormData) {

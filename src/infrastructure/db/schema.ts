@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -300,6 +300,32 @@ export const location = pgTable("location", {
   // Longer cycles are validated by the application, not recursive DB triggers.
   check("location_parent_not_self", sql`${table.parentLocationId} <> ${table.id}`),
   check("location_entity_type_check", sql`${table.entityType} = 'LOCATION'`),
+]);
+
+export const travelRoute = pgTable("travel_route", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("TRAVEL_ROUTE").notNull(),
+  name: text("name").notNull(),
+  fromLocationId: uuid("from_location_id").notNull(),
+  toLocationId: uuid("to_location_id").notNull(),
+  distance: text("distance"),
+  duration: text("duration"),
+  mode: text("mode"),
+  hazards: text("hazards"),
+  notes: text("notes"),
+}, table => [
+  uniqueIndex("travel_route_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("travel_route_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "travel_route_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  foreignKey({ name: "travel_route_from_location_fk", columns: [table.campaignId, table.fromLocationId],
+    foreignColumns: [location.campaignId, location.id] }).onDelete("no action"),
+  foreignKey({ name: "travel_route_to_location_fk", columns: [table.campaignId, table.toLocationId],
+    foreignColumns: [location.campaignId, location.id] }).onDelete("no action"),
+  check("travel_route_entity_type_check", sql`${table.entityType} = 'TRAVEL_ROUTE'`),
+  check("travel_route_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("travel_route_distinct_locations", sql`${table.fromLocationId} <> ${table.toLocationId}`),
 ]);
 
 export const arc = pgTable("arc", {
