@@ -4,8 +4,9 @@ import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { listOwnedCampaigns } from "@/modules/campaigns";
+import { listOwnedBlueprints } from "@/modules/blueprints";
 import { ActionForm } from "./action-form";
-import { createCampaignAction } from "./actions";
+import { createBlueprintAction, createCampaignAction } from "./actions";
 import { CampaignWizard } from "./campaign-wizard";
 
 export default async function Home() {
@@ -16,7 +17,8 @@ export default async function Home() {
     <SignInButton mode="modal"><button>Sign in to your campaigns</button></SignInButton>
   </main>;
   const db = getDatabase();
-  const campaigns = await listOwnedCampaigns(db, await requireActor(db));
+  const actor = await requireActor(db);
+  const [campaigns, drafts] = await Promise.all([listOwnedCampaigns(db, actor), listOwnedBlueprints(db, actor)]);
   const active = campaigns.filter(campaign => !campaign.deletedAt && !campaign.archivedAt);
   const archived = campaigns.filter(campaign => !campaign.deletedAt && campaign.archivedAt);
   const trashed = campaigns.filter(campaign => campaign.deletedAt);
@@ -37,6 +39,22 @@ export default async function Home() {
     {trashed.length > 0 && <section aria-labelledby="trashed-campaigns">
       <h2 id="trashed-campaigns">In trash</h2>{campaignList(trashed)}
     </section>}
+    <section aria-labelledby="blueprint-drafts">
+      <h2 id="blueprint-drafts">Blueprint drafts</h2>
+      <p>Develop an idea before adding anything to a campaign.</p>
+      {drafts.length ? <ul>{drafts.map(draft => <li key={draft.id}><Link href={`/blueprints/${draft.id}`}>{draft.title}</Link></li>)}</ul> : <p>No drafts yet.</p>}
+      <details>
+        <summary>Start a blueprint draft</summary>
+        <ActionForm action={createBlueprintAction}>
+          <label htmlFor="draft-title">Title</label><input id="draft-title" name="title" required />
+          <label htmlFor="draft-premise">Premise</label><textarea id="draft-premise" name="premise" rows={4} required />
+          <label htmlFor="draft-setting">Setting (optional)</label><input id="draft-setting" name="setting" />
+          <label htmlFor="draft-tone">Tone (optional)</label><input id="draft-tone" name="tone" />
+          <label htmlFor="draft-locations">Proposed locations (one per line, optional)</label><textarea id="draft-locations" name="proposedLocations" rows={4} />
+          <button type="submit">Save draft</button>
+        </ActionForm>
+      </details>
+    </section>
     <section aria-labelledby="create-campaign-heading">
     <h2 id="create-campaign-heading">Create campaign</h2>
     <p>Start with the idea you want to preserve. You can add more context now or later.</p>

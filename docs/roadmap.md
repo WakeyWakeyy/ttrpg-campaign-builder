@@ -31,9 +31,9 @@ Build the first product-facing workflow:
 - Dashboard and Create Campaign: A11 implements an initial campaign list grouped by lifecycle state and a creation form for the existing Campaign and Compass fields. See [A11 progress](a11-campaign-start.md).
 - optional guided Campaign Wizard: A13 provides an idea → context → review path alongside direct creation. See [A13 progress](a13-campaign-wizard.md);
 - Campaign Compass reading and editing over the existing persistence foundation: A12 shows the original creative record and adds revision-safe edits for current premise, setting, and tone. See [A12 progress](a12-campaign-compass.md).
-- Blueprint Draft;
-- Blueprint Review and partial acceptance;
-- transactional Blueprint → Campaign materialization;
+- Blueprint Draft: A14 provides private pre-Campaign drafts with owner-scoped, revision-safe editing. See [A14 progress](a14-blueprint-draft.md);
+- Blueprint Review and partial acceptance: A15 persists individually addressable Location proposals and their decisions;
+- transactional Blueprint → Campaign materialization: A15 creates a new Campaign from accepted Locations with persisted idempotency and a one-Campaign-per-Blueprint guard. See [A15 contract and validation](a15-blueprint-review-materialization.md);
 - Campaign Workspace shell.
 
 ## 3. Campaign Core

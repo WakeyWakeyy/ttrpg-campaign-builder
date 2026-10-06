@@ -1,0 +1,1 @@
+ALTER TABLE "blueprint_draft" ADD COLUMN "review_started_at" timestamp with time zone;
