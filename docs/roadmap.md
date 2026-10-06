@@ -22,13 +22,12 @@ The architecture-proof vertical slice is still in progress. Completed foundation
 - owner-scoped Location commands, revision-safe edits, concurrent hierarchy validation,
   and Archive → Trash → Restore application behavior (A8).
 
-**Current slice: A10 focused Playwright proof.** A9 already delivers the minimal sign-in, Campaign/Location UI, visible revision conflicts, and Archive/Trash/Restore. See [browser proof setup](browser-proof.md).
+**Current checkpoint: A10 external browser proof.** A9 delivers the minimal sign-in, Campaign/Location UI, visible revision conflicts, and Archive/Trash/Restore. A10 passed locally and was merged in [PR #17](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/17); the required CI validation passed. See [browser proof setup](browser-proof.md) and [A10 validation](a10-validation.md).
 
 Still pending before the architecture proof is complete:
 
-- execute the focused authenticated browser proof;
-- record actual browser validation evidence;
-- review A10 evidence before declaring architecture-proof completion.
+- configure and run the optional authenticated browser workflow in the protected `e2e` GitHub environment;
+- review that remote result before declaring architecture-proof completion.
 
 Exit condition: the end-to-end slice is green and the database rejects the integrity failures the application claims to prevent.
 

@@ -30,7 +30,16 @@ See [browser proof](browser-proof.md) for credentials and CI setup. The required
 validate job is unchanged. The optional manually dispatched browser workflow
 requires the e2e GitHub environment and Clerk secrets; it has not been run in CI.
 
-Next: review this branch's real diff, complete the established PR/validate flow,
-and then reassess architecture-proof completion. Do not start Wave B, Wizard,
-Blueprint or broader product work implicitly. Local evidence is not remote CI
-evidence, and an unmerged branch is not a completed release.
+## Review update — 2026-10-06
+
+PR #17 merged A10 into `main` on 2026-10-06. Its required CI run 26 passed on
+commit `b1f1a11`. The PR contained the focused browser test, runner, workflow,
+and documentation; it did not change the domain schema or production behavior.
+The local results above cover the authenticated browser journey. No run of the
+optional `Focused browser proof` workflow is recorded for that commit, so the
+architecture-proof exit condition remains open pending protected `e2e`
+environment configuration and a successful remote browser run.
+
+The next product slice is Campaign creation once this checkpoint is accepted.
+Do not infer that the optional Wizard or Blueprint work is authorized by the
+merge of A10 alone.

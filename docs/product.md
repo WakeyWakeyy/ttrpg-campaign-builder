@@ -1,12 +1,18 @@
 # Product
 
-## Purpose
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+## Product Purpose
 
 TTRPG Campaign Builder helps Dungeon Masters and Game Masters turn campaign ideas into structured, connected, playable material while preserving their creative ownership.
 
 The application should reduce repetitive preparation and administrative work. It should help the GM organize, calculate, connect, remember, and prepare — not replace the GM as author.
 
-## The problem
+## Operating Context
 
 Campaign preparation often lives across many independent tools:
 
@@ -24,7 +30,7 @@ Those tools are useful, but the campaign still has to become one coherent system
 
 The product is built around that continuity problem.
 
-## Primary user
+## Users
 
 The long-term target is any GM creating original campaign material.
 
@@ -34,7 +40,7 @@ A representative need is:
 
 > I have ideas, but I need help turning them into something structured and runnable.
 
-## Product thesis
+## Positioning
 
 The differentiator is a **Campaign Design Workflow**, not a single generator.
 
@@ -54,7 +60,7 @@ Idea
 
 The campaign behaves as connected data with useful freeform notes, not as a folder of isolated generated documents.
 
-## Principles
+## Product Principles
 
 ### GM-first
 
@@ -110,7 +116,7 @@ Campaign Intelligence can surface contradictions, inaccessible clues, abandoned 
 
 A GM can turn a rough campaign idea into a structured, connected campaign and prepare runnable sessions with less administrative overhead than when using a collection of unrelated tools.
 
-## MVP capabilities
+## Capabilities and Constraints
 
 The MVP is expected to cover:
 
@@ -126,6 +132,10 @@ The MVP is expected to cover:
 - deterministic rules support for the initial ruleset;
 - contextual AI proposals and consistency assistance;
 - practical exports as the data model matures.
+
+## Evidence on Hand
+
+The current application and its tests provide evidence for the architecture-proof slice only: authentication to an internal Actor, Campaign creation and reopening, pinned Ruleset Version, Location creation and revision-safe editing, and Archive, Trash, and Restore. See `docs/a10-validation.md` and `docs/browser-proof.md` for the recorded local validation and its CI limitation. The broader MVP capabilities above remain intended scope, not claims of implementation.
 
 ## Important product concepts
 
