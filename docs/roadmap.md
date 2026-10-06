@@ -22,13 +22,13 @@ The architecture-proof vertical slice is still in progress. Completed foundation
 - owner-scoped Location commands, revision-safe edits, concurrent hierarchy validation,
   and Archive → Trash → Restore application behavior (A8).
 
-**Next implementation slice: minimal UI + Playwright proof.**
+**Current slice: A10 focused Playwright proof.** A9 already delivers the minimal sign-in, Campaign/Location UI, visible revision conflicts, and Archive/Trash/Restore. See [browser proof setup](browser-proof.md).
 
 Still pending before the architecture proof is complete:
 
-- minimal sign-in, Campaign creation and Location UI over the application boundaries;
-- browser-visible revision conflicts and Archive → Trash → Restore flow;
-- minimal Playwright journey.
+- execute the focused authenticated browser proof;
+- record actual browser validation evidence;
+- review A10 evidence before declaring architecture-proof completion.
 
 Exit condition: the end-to-end slice is green and the database rejects the integrity failures the application claims to prevent.
 

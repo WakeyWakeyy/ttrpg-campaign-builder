@@ -13,3 +13,7 @@ next-env.d.ts
 Thumbs.db
 .codex/
 graphify-out/
+
+playwright-report/
+test-results/
+playwright/.auth/
