@@ -23,6 +23,10 @@ export async function createCampaignAction(_state: ActionState, form: FormData):
     if (!version) throw new RulesetVersionNotFoundError();
     const created = await createCampaign(db, actor, {
       name: text(form, "name"), originalPremise: text(form, "originalPremise"), rulesetVersionId: version.id,
+      description: text(form, "description").trim() || undefined,
+      setting: text(form, "setting").trim() || undefined,
+      tone: text(form, "tone").trim() || undefined,
+      originalNotes: text(form, "originalNotes").trim() || undefined,
     });
     id = created.id;
   } catch (error) { return actionError(error); }
