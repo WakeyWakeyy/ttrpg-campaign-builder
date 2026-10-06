@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { campaign, campaignCompass, campaignRuleset, rulesetVersion } from "../../infrastructure/db/schema";
 import type { Actor } from "../identity";
-import { CampaignNotFoundError, InvalidCampaignInputError, RulesetVersionNotFoundError } from "./errors";
+import { CampaignNotFoundError, CompassRevisionConflictError, InvalidCampaignInputError, RulesetVersionNotFoundError } from "./errors";
 
-export { CampaignNotFoundError, InvalidCampaignInputError, RulesetVersionNotFoundError } from "./errors";
+export { CampaignNotFoundError, CompassRevisionConflictError, InvalidCampaignInputError, RulesetVersionNotFoundError } from "./errors";
 
 export type CreateCampaignInput = Readonly<{
   name: string;
@@ -32,6 +32,42 @@ export async function getOwnedCampaign(db: NodePgDatabase, actor: Actor, campaig
   ));
   if (!owned) throw new CampaignNotFoundError();
   return owned;
+}
+
+export async function getOwnedCompass(db: NodePgDatabase, actor: Actor, campaignId: string) {
+  await getOwnedCampaign(db, actor, campaignId);
+  const [compass] = await db.select().from(campaignCompass).where(eq(campaignCompass.campaignId, campaignId));
+  if (!compass) throw new CampaignNotFoundError();
+  return compass;
+}
+
+export type EditCompassInput = Readonly<{
+  expectedRevision: number;
+  currentPremise: string;
+  setting: string | null;
+  tone: string | null;
+}>;
+
+/** Original premise and notes are preserved as authored at creation. */
+export async function editCompass(db: NodePgDatabase, actor: Actor, campaignId: string, input: EditCompassInput) {
+  if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1 ||
+    typeof input.currentPremise !== "string" || !input.currentPremise.trim() ||
+    (input.setting !== null && typeof input.setting !== "string") ||
+    (input.tone !== null && typeof input.tone !== "string")) {
+    throw new InvalidCampaignInputError("currentPremise");
+  }
+  return db.transaction(async tx => {
+    await getOwnedCampaign(tx, actor, campaignId);
+    const [updated] = await tx.update(campaignCompass).set({
+      currentPremise: input.currentPremise,
+      setting: input.setting,
+      tone: input.tone,
+      revision: sql`${campaignCompass.revision} + 1`,
+      updatedAt: new Date(),
+    }).where(and(eq(campaignCompass.campaignId, campaignId), eq(campaignCompass.revision, input.expectedRevision))).returning();
+    if (!updated) throw new CompassRevisionConflictError();
+    return updated;
+  });
 }
 
 /** Owns the complete transaction; pass the database and an authenticated Actor. */

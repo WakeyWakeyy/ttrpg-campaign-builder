@@ -30,7 +30,7 @@ Build the first product-facing workflow:
 
 - Dashboard and Create Campaign: A11 implements an initial campaign list grouped by lifecycle state and a creation form for the existing Campaign and Compass fields. See [A11 progress](a11-campaign-start.md).
 - optional guided Campaign Wizard;
-- Campaign Compass reading and editing over the existing persistence foundation;
+- Campaign Compass reading and editing over the existing persistence foundation: A12 shows the original creative record and adds revision-safe edits for current premise, setting, and tone. See [A12 progress](a12-campaign-compass.md).
 - Blueprint Draft;
 - Blueprint Review and partial acceptance;
 - transactional Blueprint → Campaign materialization;

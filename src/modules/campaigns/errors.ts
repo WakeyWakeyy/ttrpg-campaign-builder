@@ -19,8 +19,16 @@ export class RulesetVersionNotFoundError extends Error {
 export class InvalidCampaignInputError extends Error {
   readonly code = "INVALID_CAMPAIGN_INPUT";
 
-  constructor(readonly field: "name" | "originalPremise") {
+  constructor(readonly field: "name" | "originalPremise" | "currentPremise") {
     super(`${field} must be nonblank text.`);
     this.name = "InvalidCampaignInputError";
+  }
+}
+
+export class CompassRevisionConflictError extends Error {
+  readonly code = "COMPASS_REVISION_CONFLICT";
+  constructor() {
+    super("Campaign Compass changed since it was opened.");
+    this.name = "CompassRevisionConflictError";
   }
 }

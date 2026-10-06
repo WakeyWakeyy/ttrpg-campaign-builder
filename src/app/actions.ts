@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { createCampaign, RulesetVersionNotFoundError } from "@/modules/campaigns";
+import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modules/campaigns";
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
@@ -46,6 +46,21 @@ export async function createLocationAction(campaignId: string, _state: ActionSta
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   redirect(`/locations/${id}`);
+}
+
+export async function editCompassAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    await editCompass(db, actor, campaignId, {
+      expectedRevision: Number(text(form, "expectedRevision")),
+      currentPremise: text(form, "currentPremise"),
+      setting: text(form, "setting").trim() || null,
+      tone: text(form, "tone").trim() || null,
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/campaigns/${campaignId}`);
 }
 
 export async function updateLocationAction(locationId: string, _state: ActionState, form: FormData): Promise<ActionState> {
