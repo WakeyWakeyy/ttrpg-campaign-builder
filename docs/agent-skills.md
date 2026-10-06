@@ -11,6 +11,8 @@ The repository-scoped skills live under `.agents/skills/`. Codex discovers their
 
 The original instruction file for each adapted skill is preserved as `UPSTREAM-SKILL.md` beside the active `SKILL.md`. Local edits shorten descriptions, fix the UI/UX Pro Max script path for Codex on Windows, and narrow broad activation rules. The Superpowers bootstrap and its two subagent workflows are explicit-only through `agents/openai.yaml`. Their files remain available for direct invocation. Other Superpowers skills can activate for a matching task.
 
+The repository lint excludes `.agents/skills/**`: these pinned upstream tool scripts are maintained separately from application code. TypeScript, application source, and project tests remain covered by the existing checks. Validate a skill's own scripts with its upstream checks when updating that skill.
+
 Impeccable's Windows engine v0.1.11 is bundled under its `scripts/bin/windows-x64/` directory. Its SHA-256 is `605b5b442d2a65d270ef989de13371444849526249f511d397ca7424c184db49`, checked against the upstream `.sha256` release sidecar. This binary is specific to Windows x64; the upstream launcher handles other platforms separately.
 
 To update, inspect upstream changes, prepare a new pinned copy, compare the active `SKILL.md` with `UPSTREAM-SKILL.md`, and carry forward only local adaptations still needed. Do not overwrite the Graphify installation or repository rules.
