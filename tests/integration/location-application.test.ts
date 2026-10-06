@@ -99,10 +99,11 @@ test("parents outside the Campaign, missing and malformed parents share one type
   const second = await createLocation(db, actor, { campaignId: secondOwnedCampaignId, name: "Visible but invalid" });
   const child = await create();
   for (const parentLocationId of [other.id, second.id, randomUUID(), "invalid", ""]) {
-    for (const result of [
-      create("Invalid", parentLocationId),
-      editLocation(db, actor, child.id, { expectedRevision: 1, parentLocationId }),
+    for (const command of [
+      () => create("Invalid", parentLocationId),
+      () => editLocation(db, actor, child.id, { expectedRevision: 1, parentLocationId }),
     ]) {
+      const result = command();
       await expect(result).rejects.toBeInstanceOf(InvalidLocationParentError);
       await expect(result).rejects.toMatchObject({ code: "INVALID_LOCATION_PARENT", message: "Invalid Location parent." });
     }

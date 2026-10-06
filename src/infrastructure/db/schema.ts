@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -479,6 +479,35 @@ export const arcQuest = pgTable("arc_quest", {
     foreignColumns: [arc.campaignId, arc.id] }).onDelete("cascade"),
   foreignKey({ name: "arc_quest_quest_fk", columns: [table.campaignId, table.questId],
     foreignColumns: [quest.campaignId, quest.id] }).onDelete("cascade"),
+]);
+
+// Important retryable commands only; fingerprint comparison belongs to application logic.
+export const item = pgTable("item", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("ITEM").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  significance: text("significance"),
+  currentState: text("current_state"),
+  notes: text("notes"),
+  locationId: uuid("location_id"),
+  npcHolderId: uuid("npc_holder_id"),
+  playerCharacterHolderId: uuid("player_character_holder_id"),
+}, table => [
+  uniqueIndex("item_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("item_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "item_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  foreignKey({ name: "item_location_fk", columns: [table.campaignId, table.locationId],
+    foreignColumns: [location.campaignId, location.id] }).onDelete("no action"),
+  foreignKey({ name: "item_npc_holder_fk", columns: [table.campaignId, table.npcHolderId],
+    foreignColumns: [npc.campaignId, npc.id] }).onDelete("no action"),
+  foreignKey({ name: "item_pc_holder_fk", columns: [table.campaignId, table.playerCharacterHolderId],
+    foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("no action"),
+  check("item_entity_type_check", sql`${table.entityType} = 'ITEM'`),
+  check("item_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("item_one_locator", sql`num_nonnulls(${table.locationId}, ${table.npcHolderId}, ${table.playerCharacterHolderId}) <= 1`),
 ]);
 
 // Important retryable commands only; fingerprint comparison belongs to application logic.
