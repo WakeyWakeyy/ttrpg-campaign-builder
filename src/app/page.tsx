@@ -6,6 +6,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { listOwnedCampaigns } from "@/modules/campaigns";
 import { ActionForm } from "./action-form";
 import { createCampaignAction } from "./actions";
+import { CampaignWizard } from "./campaign-wizard";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -47,5 +48,10 @@ export default async function Home() {
       <label htmlFor="originalNotes">Original notes (optional)</label><textarea id="originalNotes" name="originalNotes" rows={4} />
       <button type="submit">Create campaign</button>
     </ActionForm>
+    <details>
+      <summary>Create with a guided wizard</summary>
+      <p>Build the same campaign in three short steps, then review it before saving.</p>
+      <CampaignWizard />
+    </details>
   </main>;
 }

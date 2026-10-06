@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof complete through A10 · A11 Campaign creation dashboard complete · A12 Campaign Compass reading and editing in progress · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof complete through A10 · A11 Campaign creation dashboard complete · A12 Campaign Compass reading and editing complete · A13 optional Campaign Wizard in progress · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The architecture proof is complete through A10. A11 adds the Campaign creation dashboard. A12 adds Campaign Compass reading and revision-safe editing on the Campaign page. See the [roadmap](docs/roadmap.md) and [A12 progress](docs/a12-campaign-compass.md) for the current scope.
+The architecture proof is complete through A10. A11 adds the Campaign creation dashboard, A12 adds Campaign Compass reading and revision-safe editing, and A13 adds an optional guided creation path. See the [roadmap](docs/roadmap.md) and [A13 progress](docs/a13-campaign-wizard.md) for the current scope.
 
 ## Earlier architecture milestone
 

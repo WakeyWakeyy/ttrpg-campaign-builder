@@ -64,5 +64,21 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Accepted newer description");
     await page.getByRole("link", { name: "Back to campaign" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Harbor" })).toContainText("Archived");
+
+    await page.getByRole("link", { name: "All campaigns" }).click();
+    await page.getByText("Create with a guided wizard").click();
+    await expect(page.getByText("Step 1 of 3")).toBeVisible();
+    await page.locator("#wizard-name").fill("Guided campaign");
+    await page.locator("#wizard-premise").fill("A city beneath the sea.");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.locator("#wizard-setting").fill("Coast");
+    await page.locator("#wizard-tone").fill("Wonder");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByRole("heading", { name: "Review your campaign" })).toBeVisible();
+    await page.getByRole("button", { name: "Create campaign" }).last().click();
+    await expect(page.getByRole("heading", { name: "Guided campaign" })).toBeVisible();
+    const guidedId = page.url().split("/").pop();
+    const compass = await pool.query("SELECT original_premise, current_premise, setting, tone FROM campaign_compass WHERE campaign_id = $1", [guidedId]);
+    expect(compass.rows[0]).toEqual({ original_premise: "A city beneath the sea.", current_premise: "A city beneath the sea.", setting: "Coast", tone: "Wonder" });
   } finally { await pool.end(); }
 });
