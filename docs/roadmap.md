@@ -34,7 +34,7 @@ Build the first product-facing workflow:
 - Blueprint Draft: A14 provides private pre-Campaign drafts with owner-scoped, revision-safe editing. See [A14 progress](a14-blueprint-draft.md);
 - Blueprint Review and partial acceptance: A15 persists individually addressable Location proposals and their decisions;
 - transactional Blueprint → Campaign materialization: A15 creates a new Campaign from accepted Locations with persisted idempotency and a one-Campaign-per-Blueprint guard. See [A15 contract and validation](a15-blueprint-review-materialization.md);
-- Campaign Workspace shell.
+- Campaign Workspace shell: A16 organizes the existing Campaign status, Compass, and Locations in one navigable page. See [A16 progress](a16-campaign-workspace.md).
 
 ## 3. Campaign Core
 
