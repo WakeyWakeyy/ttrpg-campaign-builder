@@ -1,3 +1,10 @@
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+overrides:
+  # Next's lint plugin uses fast-glob only to find root directories; the patch uses Node's native glob.
+  '@next/eslint-plugin-next@16.3.8>fast-glob': '-'
+  # Drizzle Kit's legacy loader works with this patched esbuild release.
+  '@esbuild-kit/core-utils@3.3.2>esbuild': '0.25.12'
+patchedDependencies:
+  '@next/eslint-plugin-next@16.3.8': patches/@next__eslint-plugin-next@16.3.8.patch
