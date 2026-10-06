@@ -35,11 +35,20 @@ requires the e2e GitHub environment and Clerk secrets; it has not been run in CI
 PR #17 merged A10 into `main` on 2026-10-06. Its required CI run 26 passed on
 commit `b1f1a11`. The PR contained the focused browser test, runner, workflow,
 and documentation; it did not change the domain schema or production behavior.
-The local results above cover the authenticated browser journey. No run of the
-optional `Focused browser proof` workflow is recorded for that commit, so the
-architecture-proof exit condition remains open pending protected `e2e`
-environment configuration and a successful remote browser run.
+The local results above cover the authenticated browser journey. At this review,
+no optional `Focused browser proof` run was recorded, so the architecture-proof
+exit condition remained open pending protected `e2e` environment configuration
+and a successful remote browser run.
 
-The next product slice is Campaign creation once this checkpoint is accepted.
-Do not infer that the optional Wizard or Blueprint work is authorized by the
-merge of A10 alone.
+## Remote acceptance — 2026-10-06
+
+The `e2e` GitHub environment was configured for protected branches. Its three
+Clerk development credentials are stored as environment secrets, not in the
+repository. The manually dispatched [Focused browser proof run 1](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/actions/runs/37420021628)
+completed successfully on merged `main` commit `7ad6014`. The required CI
+validation also passed for [PR #18](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/18)
+before its merge. Together with the local PostgreSQL integration evidence,
+this satisfies the documented architecture-proof exit condition.
+
+The next product slice is Campaign creation. Wizard and Blueprint remain
+optional follow-on work, not implied by this checkpoint.

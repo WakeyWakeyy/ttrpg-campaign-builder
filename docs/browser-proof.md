@@ -53,12 +53,14 @@ artifacts or environment files when diagnosing a failure.
 
 The existing required `validate` job remains independent of Clerk credentials.
 `Focused browser proof` is an explicit `workflow_dispatch` workflow using the `e2e`
-GitHub environment and its three Clerk/email secrets listed above. Configure that
-environment with trusted-branch restrictions/reviewers before use. Dispatch only
+GitHub environment and its three Clerk/email secrets listed above. The environment
+is limited to protected branches; its first [remote run](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/actions/runs/37420021628)
+passed on `main` on 2026-10-06. Dispatch only
 reviewed code: tests execute with development Clerk credentials. No secrets are
 exposed to fork pull requests and no browser artifacts are uploaded. This optional
 external-service proof must pass before claiming A10 acceptance; a green `validate`
-job alone does not prove A10. CI execution/configuration is not assumed complete.
+job alone does not prove A10. Rerun the browser workflow after changes to this
+journey or its Clerk integration.
 
 On Windows, ensure `%SystemRoot%\System32` is on PATH so Playwright can
 terminate its owned server with `taskkill`. A missing system-tools PATH caused
