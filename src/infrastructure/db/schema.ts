@@ -264,8 +264,8 @@ export const campaignEntity = pgTable("campaign_entity", {
   purgeAfter: timestamp("purge_after", { withTimezone: true, mode: "date" }),
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
-  // A4 has exactly one supported subtype. Extend this check with future subtypes.
-  check("campaign_entity_type_check", sql`${table.entityType} = 'LOCATION'`),
+  uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -279,6 +279,7 @@ export const location = pgTable("location", {
   // Identity comes from the registry, never a second generated ID.
   id: uuid("id").primaryKey(),
   campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("LOCATION").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   parentLocationId: uuid("parent_location_id"),
@@ -287,8 +288,8 @@ export const location = pgTable("location", {
   index("location_campaign_parent_idx").on(table.campaignId, table.parentLocationId),
   foreignKey({
     name: "location_campaign_entity_fk",
-    columns: [table.campaignId, table.id],
-    foreignColumns: [campaignEntity.campaignId, campaignEntity.id],
+    columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType],
   }).onDelete("cascade"),
   foreignKey({
     name: "location_parent_same_campaign_fk",
@@ -297,6 +298,24 @@ export const location = pgTable("location", {
   }).onDelete("no action"),
   // Longer cycles are validated by the application, not recursive DB triggers.
   check("location_parent_not_self", sql`${table.parentLocationId} <> ${table.id}`),
+  check("location_entity_type_check", sql`${table.entityType} = 'LOCATION'`),
+]);
+
+export const arc = pgTable("arc", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("ARC").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+}, table => [
+  index("arc_campaign_idx").on(table.campaignId),
+  foreignKey({
+    name: "arc_campaign_entity_fk",
+    columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType],
+  }).onDelete("cascade"),
+  check("arc_entity_type_check", sql`${table.entityType} = 'ARC'`),
+  check("arc_name_nonempty", sql`length(btrim(${table.name})) > 0`),
 ]);
 
 // Important retryable commands only; fingerprint comparison belongs to application logic.

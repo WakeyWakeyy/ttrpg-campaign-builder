@@ -7,6 +7,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modules/campaigns";
 import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
+import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { actionError, type ActionState } from "./action-state";
 
@@ -111,6 +112,38 @@ export async function createLocationAction(campaignId: string, _state: ActionSta
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   redirect(`/locations/${id}`);
+}
+
+export async function createArcAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    id = (await createArc(db, actor, { campaignId, name: text(form, "name"), description: text(form, "description") || null })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/arcs/${id}`);
+}
+
+export async function updateArcAction(arcId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save"
+      ? await editArc(db, actor, arcId, { expectedRevision: revision, name: text(form, "name"), description: text(form, "description") || null })
+      : intent === "archive" ? await archiveArc(db, actor, arcId, revision)
+      : intent === "trash" ? await trashArc(db, actor, arcId, revision)
+      : intent === "restore" ? await restoreArc(db, actor, arcId, revision)
+      : null;
+    if (!updated) return { message: "Choose an arc action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/arcs/${arcId}`);
+  redirect(`/arcs/${arcId}`);
 }
 
 export async function editCompassAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

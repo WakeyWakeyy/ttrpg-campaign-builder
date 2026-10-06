@@ -220,11 +220,11 @@ The shared identity gives heterogeneous relationships, knowledge links, timeline
 A4 implements the registry and Location only. The registry owns a positive
 revision (initially 1), timestamps, independent Archive/Trash fields and creator
 provenance through `created_by_user_id`, an internal `user_account` foreign key.
-The supported discriminator is currently `LOCATION`; adding another subtype must
-extend subtype agreement constraints. No provider IDs or future operation tables
-are introduced.
+The initial discriminator was `LOCATION`. A17 adds `ARC` and enforces subtype
+agreement through a composite `(campaign_id, id, entity_type)` foreign key from
+each typed table to the registry. No provider IDs are introduced.
 
-Location has no independent ID default. Its `(campaign_id, id)` foreign key targets
+Location has no independent ID default. Its `(campaign_id, id, entity_type)` foreign key targets
 the registry; its optional parent targets the same pair on Location. Parent deletion
 uses `NO ACTION`: children must be explicitly detached or moved before a parent is
 purged. This also allows a single Campaign deletion to cascade through all owned
