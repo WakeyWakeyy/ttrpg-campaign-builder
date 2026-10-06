@@ -8,6 +8,7 @@ import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modu
 import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
 import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
+import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -27,6 +28,44 @@ function routeInput(form: FormData) {
     toLocationId: text(form, "toLocationId"), distance: text(form, "distance") || null,
     duration: text(form, "duration") || null, mode: text(form, "mode") || null,
     hazards: text(form, "hazards") || null, notes: text(form, "notes") || null };
+}
+
+function itemInput(form: FormData) {
+  const locator = text(form, "locator");
+  return { name: text(form, "name"), description: text(form, "description") || null,
+    significance: text(form, "significance") || null, currentState: text(form, "currentState") || null,
+    notes: text(form, "notes") || null, locationId: locator.startsWith("location:") ? locator.slice(9) : null,
+    npcHolderId: locator.startsWith("npc:") ? locator.slice(4) : null,
+    playerCharacterHolderId: locator.startsWith("pc:") ? locator.slice(3) : null };
+}
+
+export async function createItemAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createItem(db, await requireActor(db), { campaignId, ...itemInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/items/${id}`);
+}
+
+export async function updateItemAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editItem(db, actor, id, { expectedRevision: revision, ...itemInput(form) })
+      : intent === "archive" ? await archiveItem(db, actor, id, revision)
+      : intent === "trash" ? await trashItem(db, actor, id, revision)
+      : intent === "restore" ? await restoreItem(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose an item action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/items/${id}`);
+  redirect(`/items/${id}`);
 }
 
 export async function createTravelRouteAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

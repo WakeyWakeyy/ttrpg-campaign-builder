@@ -4,6 +4,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
 import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedTravelRoutes } from "@/modules/travel-routes";
+import { listOwnedItems } from "@/modules/items";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { listOwnedNpcs } from "@/modules/npcs";
@@ -11,7 +12,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -25,6 +26,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const compass = await getOwnedCompass(db, actor, campaignId);
     const locations = await listOwnedLocations(db, actor, campaignId);
     const routes = await listOwnedTravelRoutes(db, actor, campaignId);
+    const items = await listOwnedItems(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
     const npcs = await listOwnedNpcs(db, actor, campaignId);
@@ -32,7 +34,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await Promise.all(parties.map(party => listPartyMemberIds(db, actor, party.id)));
-    return { campaign, compass, locations, routes, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
@@ -66,6 +68,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#factions">Factions</a>
         <a href="#locations">Locations</a>
         <a href="#travel-routes">Travel routes</a>
+        <a href="#items">Items</a>
       </nav>
       <div className="workspace-content">
         <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
@@ -221,6 +224,29 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <label htmlFor="route-hazards">Hazards (optional)</label><textarea id="route-hazards" name="hazards" rows={3} />
             <label htmlFor="route-notes">GM notes (optional)</label><textarea id="route-notes" name="notes" rows={4} />
             <button type="submit">Create route</button>
+          </ActionForm>
+        </section>
+        <section id="items" aria-labelledby="items-heading" className="workspace-section">
+          <h2 id="items-heading">Items</h2>
+          <p>Track important objects and where they are now.</p>
+          {data.items.length ? <ul className="workspace-location-list">{data.items.map(item => <li key={item.id}>
+            <Link href={`/items/${item.id}`}>{item.name}</Link>
+            {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No items yet.</p>}
+          <h3>Create item</h3>
+          <ActionForm action={createItemAction.bind(null, campaignId)}>
+            <label htmlFor="item-name">Name</label><input id="item-name" name="name" required />
+            <label htmlFor="item-description">Description (optional)</label><textarea id="item-description" name="description" rows={4} />
+            <label htmlFor="item-significance">Significance (optional)</label><textarea id="item-significance" name="significance" rows={3} />
+            <label htmlFor="item-state">Current state (optional)</label><textarea id="item-state" name="currentState" rows={3} />
+            <label htmlFor="item-locator">Current holder or location</label>
+            <select id="item-locator" name="locator"><option value="">Unknown</option>
+              <optgroup label="Locations">{data.locations.filter(place => !place.deletedAt).map(place => <option key={place.id} value={`location:${place.id}`}>{place.name}</option>)}</optgroup>
+              <optgroup label="NPCs">{data.npcs.filter(npc => !npc.deletedAt).map(npc => <option key={npc.id} value={`npc:${npc.id}`}>{npc.name}</option>)}</optgroup>
+              <optgroup label="Player characters">{data.characters.filter(character => !character.deletedAt).map(character => <option key={character.id} value={`pc:${character.id}`}>{character.name}</option>)}</optgroup>
+            </select>
+            <label htmlFor="item-notes">GM notes (optional)</label><textarea id="item-notes" name="notes" rows={4} />
+            <button type="submit">Create item</button>
           </ActionForm>
         </section>
       </div>

@@ -9,9 +9,13 @@ import { InvalidPlayerCharacterInputError, PlayerCharacterNotFoundError, PlayerC
 import { InvalidPartyInputError, InvalidPartyMemberError, PartyNotFoundError, PartyRevisionConflictError } from "@/modules/parties";
 import { FactionNotFoundError, FactionRevisionConflictError, InvalidFactionInputError, InvalidFactionMembershipError } from "@/modules/factions";
 import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevisionConflictError } from "@/modules/travel-routes";
+import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof ItemRevisionConflictError) return { message: "This item changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof ItemNotFoundError) return { message: "Item not found or unavailable." };
+  if (error instanceof InvalidItemInputError) return { message: "Enter an item name and choose an available holder or location in this campaign." };
   if (error instanceof TravelRouteRevisionConflictError) return { message: "This route changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof TravelRouteNotFoundError) return { message: "Route not found or unavailable." };
   if (error instanceof InvalidTravelRouteInputError) return { message: "Enter a route name and choose two available locations in this campaign." };
