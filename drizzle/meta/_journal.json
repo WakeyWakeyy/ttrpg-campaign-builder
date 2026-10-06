@@ -57,6 +57,13 @@
       "when": 1791268936148,
       "tag": "0007_medical_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791305292461,
+      "tag": "0008_campaign_arc",
+      "breakpoints": true
     }
   ]
 }

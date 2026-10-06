@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { testPool } from "./database";
 
-test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore", async ({ page, context }) => {
+test("internal Actor, Campaign, Location, Arc, stale edits and lifecycle", async ({ page, context }) => {
   const pool = testPool();
   try {
     await setupClerkTestingToken({ page });
@@ -36,9 +36,10 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     await expect(workspaceNav.getByRole("link", { name: "Locations" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByLabel("Name", { exact: true }).fill("Harbor");
-    await page.getByLabel("Description (optional)").fill("Original description");
-    await page.getByRole("button", { name: "Create location", exact: true }).click();
+    const locationRegion = page.getByRole("region", { name: "Locations" });
+    await locationRegion.getByLabel("Name", { exact: true }).fill("Harbor");
+    await locationRegion.getByLabel("Description (optional)").fill("Original description");
+    await locationRegion.getByRole("button", { name: "Create location", exact: true }).click();
     await expect(page).toHaveURL(/\/locations\/[0-9a-f-]+$/);
     await expect(page.getByText("Active", { exact: true })).toBeVisible();
     const locationId = page.url().split("/").pop();
@@ -75,6 +76,26 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Accepted newer description");
     await page.getByRole("link", { name: "Back to campaign" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Harbor" })).toContainText("Archived");
+
+    const arcRegion = page.getByRole("region", { name: "Arcs" });
+    await expect(arcRegion).toContainText("No arcs yet.");
+    await arcRegion.getByLabel("Name", { exact: true }).fill("The rising tide");
+    await arcRegion.getByLabel("Description (optional)").fill("A long-running story thread.");
+    await arcRegion.getByRole("button", { name: "Create arc" }).click();
+    await expect(page).toHaveURL(/\/arcs\/[0-9a-f-]+$/);
+    const arcId = page.url().split("/").pop();
+    expect((await pool.query("SELECT entity_type FROM campaign_entity WHERE id = $1", [arcId])).rows[0]).toEqual({ entity_type: "ARC" });
+    const staleArc = await context.newPage();
+    await staleArc.goto(page.url());
+    await page.getByLabel("Description", { exact: true }).fill("The coast is changing.");
+    await page.getByRole("button", { name: "Save arc" }).click();
+    await expect(page.locator('input[name="expectedRevision"]')).toHaveValue("2");
+    await staleArc.getByLabel("Description", { exact: true }).fill("Stale story");
+    await staleArc.getByRole("button", { name: "Save arc" }).click();
+    await expect(staleArc.getByRole("main").getByRole("alert")).toHaveText("This arc changed since you opened it. Reload before saving again.");
+    await staleArc.close();
+    await page.getByRole("link", { name: "Back to campaign arcs" }).click();
+    await expect(page.getByRole("region", { name: "Arcs" })).toContainText("The rising tide");
 
     await page.getByRole("link", { name: "All campaigns" }).click();
     await page.getByText("Create with a guided wizard").click();

@@ -50,7 +50,7 @@ test("shared UUIDv7 identity, defaults and internal creator provenance", async (
   const scope = await campaign();
   const entity = await createLocation(scope);
   const typed = (await client.query("SELECT * FROM location WHERE id = $1", [entity.id])).rows[0];
-  expect(typed).toEqual({ id: entity.id, campaign_id: scope.id, name: 'Harbor', description: null, parent_location_id: null });
+  expect(typed).toEqual({ id: entity.id, campaign_id: scope.id, entity_type: 'LOCATION', name: 'Harbor', description: null, parent_location_id: null });
   expect(entity).toMatchObject({ entity_type: 'LOCATION', revision: 1, created_by_user_id: scope.user, archived_at: null, deleted_at: null, purge_after: null });
   expect(entity.created_at).toBeInstanceOf(Date);
   expect(entity.updated_at).toEqual(entity.created_at);

@@ -2,9 +2,13 @@ import { CampaignNotFoundError, CompassRevisionConflictError, InvalidCampaignInp
 import { BlueprintAlreadyMaterializedError, BlueprintIdempotencyConflictError, BlueprintNotFoundError, BlueprintReviewLockedError, BlueprintRevisionConflictError, InvalidBlueprintInputError } from "@/modules/blueprints";
 import { UnauthenticatedError } from "@/modules/identity";
 import { InvalidLocationInputError, InvalidLocationParentError, LocationNotFoundError, LocationRevisionConflictError } from "@/modules/locations";
+import { ArcNotFoundError, ArcRevisionConflictError, InvalidArcInputError } from "@/modules/arcs";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof ArcRevisionConflictError) return { message: "This arc changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof ArcNotFoundError) return { message: "Arc not found or unavailable." };
+  if (error instanceof InvalidArcInputError) return { message: "Enter an arc name and check its description. If this continues, reload the page." };
   if (error instanceof BlueprintRevisionConflictError) return { message: "This draft changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof BlueprintNotFoundError) return { message: "Draft not found or unavailable." };
   if (error instanceof BlueprintReviewLockedError) return { message: "Location proposals are now edited in Review. Reload this draft before saving again.", conflict: true };

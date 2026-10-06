@@ -40,7 +40,7 @@ Build the first product-facing workflow:
 
 Expand the connected domain model:
 
-- Arcs;
+- Arcs: A17 adds a typed Arc with owner-scoped, revision-safe commands and the same preservation lifecycle as Locations. See [A17 progress](a17-campaign-arcs.md);
 - Quests / plot threads;
 - NPCs;
 - Player Characters and Party summary;

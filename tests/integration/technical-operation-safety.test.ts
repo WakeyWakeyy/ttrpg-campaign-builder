@@ -182,7 +182,8 @@ test.each([false, true])("A5 migration replay on PostgreSQL 18 (preserving A1-A4
     const source = (await readFile(`drizzle/${migration.tag}.sql`, 'utf8')).replaceAll('"public".', `"${schema}".`);
     for (const statement of source.split('--> statement-breakpoint')) if (statement.trim()) await client.query(statement);
   }
-  for (const [table, rows] of snapshots) expect((await client.query(`SELECT to_jsonb(t) AS data FROM ${table} t ORDER BY to_jsonb(t)::text`)).rows).toEqual(rows);
+  // Later migrations may add columns; every pre-A5 value must still match.
+  for (const [table, rows] of snapshots) expect((await client.query(`SELECT to_jsonb(t) AS data FROM ${table} t ORDER BY to_jsonb(t)::text`)).rows).toMatchObject(rows);
   const a = await scope();
   await command(a.user, a.id);
   await entry((await change(a.id, a.user)).id);
