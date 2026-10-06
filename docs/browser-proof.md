@@ -7,6 +7,11 @@ Browser assertions are supplemented by database checks for internal ownership,
 unchanged revision/content after conflict, and restored lifecycle metadata.
 No production authentication bypass is introduced.
 
+The same local authenticated journey now also covers A13 guided Campaign creation
+and A14 Blueprint Draft creation, internal owner persistence, proposed Location
+names, accepted editing, and rejection of a stale draft edit. See
+[A14 handoff](a14-blueprint-draft.md) for the next product step.
+
 ## Local setup
 
 Use Node 24, the repository's pnpm version, and PostgreSQL 18. Create a dedicated

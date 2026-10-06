@@ -81,5 +81,45 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     const guidedId = page.url().split("/").pop();
     const compass = await pool.query("SELECT original_premise, current_premise, setting, tone FROM campaign_compass WHERE campaign_id = $1", [guidedId]);
     expect(compass.rows[0]).toEqual({ original_premise: "A city beneath the sea.", current_premise: "A city beneath the sea.", setting: "Coast", tone: "Wonder" });
+
+    await page.getByRole("link", { name: "All campaigns" }).click();
+    await page.getByText("Start a blueprint draft").click();
+    await page.getByLabel("Title", { exact: true }).fill("Unmade world");
+    await page.getByLabel("Premise", { exact: true }).fill("The sun vanished.");
+    await page.getByLabel("Proposed locations (one per line, optional)").fill("Citadel\nObservatory");
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(page).toHaveURL(/\/blueprints\/[0-9a-f-]+$/);
+    const draftId = page.url().split("/").pop();
+    expect((await pool.query("SELECT owner_user_id, proposed_locations FROM blueprint_draft WHERE id = $1", [draftId])).rows[0])
+      .toEqual({ owner_user_id: actorId, proposed_locations: ["Citadel", "Observatory"] });
+    const staleDraft = await context.newPage();
+    await staleDraft.goto(page.url());
+    await page.getByLabel("Title", { exact: true }).fill("Unmade world revised");
+    await page.getByRole("button", { name: "Save draft changes" }).click();
+    await expect(page.getByRole("heading", { name: "Unmade world revised" })).toBeVisible();
+    await staleDraft.getByLabel("Title", { exact: true }).fill("Stale title");
+    await staleDraft.getByRole("button", { name: "Save draft changes" }).click();
+    await expect(staleDraft.getByRole("main").getByRole("alert")).toHaveText("This draft changed since you opened it. Reload before saving again.");
+    expect((await pool.query("SELECT title, revision FROM blueprint_draft WHERE id = $1", [draftId])).rows[0])
+      .toEqual({ title: "Unmade world revised", revision: 2 });
+    await staleDraft.close();
+      await page.getByRole("button", { name: "Start Blueprint Review" }).click();
+      await expect(page).toHaveURL(new RegExp(`/blueprints/${draftId}/review$`));
+      await page.getByLabel("Decision").first().selectOption("ACCEPTED");
+      await page.getByRole("button", { name: "Save proposal" }).first().click();
+      await expect.poll(async () => (await pool.query("SELECT decision FROM blueprint_proposal WHERE blueprint_id = $1 ORDER BY sort_order", [draftId])).rows[0]?.decision).toBe("ACCEPTED");
+      await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("4");
+      await page.getByLabel("Decision").nth(1).selectOption("REJECTED");
+      await page.getByRole("button", { name: "Save proposal" }).nth(1).click();
+      await expect.poll(async () => (await pool.query("SELECT decision FROM blueprint_proposal WHERE blueprint_id = $1 ORDER BY sort_order", [draftId])).rows[1]?.decision).toBe("REJECTED");
+      await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("5");
+      await expect(page.getByText("1 accepted Location:")).toBeVisible();
+      await page.getByRole("button", { name: "Create Campaign from accepted proposals" }).click();
+      await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]+$/);
+      const materializedCampaignId = page.url().split("/").pop();
+      expect((await pool.query("SELECT name FROM location WHERE campaign_id = $1", [materializedCampaignId])).rows)
+        .toEqual([{ name: "Citadel" }]);
+      expect((await pool.query("SELECT decision FROM blueprint_proposal WHERE blueprint_id = $1 ORDER BY sort_order", [draftId])).rows)
+        .toEqual([{ decision: "ACCEPTED" }, { decision: "REJECTED" }]);
   } finally { await pool.end(); }
 });

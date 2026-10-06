@@ -207,6 +207,48 @@ export const campaignCompassGuideline = pgTable("campaign_compass_guideline", {
   check("campaign_compass_guideline_kind_check", sql`${table.kind} IN ('theme', 'gm_priority', 'boundary', 'style', 'other')`),
 ]);
 
+// A draft is owned by an internal user and has no Campaign identity until accepted.
+export const blueprintDraft = pgTable("blueprint_draft", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  ownerUserId: uuid("owner_user_id").notNull().references(() => userAccount.id, { onDelete: "restrict" }),
+  title: text("title").notNull(),
+  premise: text("premise").notNull(),
+  setting: text("setting"),
+  tone: text("tone"),
+  proposedLocations: jsonb("proposed_locations").$type<string[]>().default(sql`'[]'::jsonb`).notNull(),
+  reviewStartedAt: timestamp("review_started_at", { withTimezone: true, mode: "date" }),
+  revision: integer("revision").default(1).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  index("blueprint_draft_owner_idx").on(table.ownerUserId),
+  check("blueprint_draft_revision_positive", sql`${table.revision} > 0`),
+  check("blueprint_draft_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+  check("blueprint_draft_premise_nonempty", sql`length(btrim(${table.premise})) > 0`),
+  check("blueprint_draft_locations_array", sql`jsonb_typeof(${table.proposedLocations}) = 'array'`),
+]);
+
+export const blueprintProposal = pgTable("blueprint_proposal", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  blueprintId: uuid("blueprint_id").notNull().references(() => blueprintDraft.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  decision: text("decision").default("PENDING").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+}, table => [
+  index("blueprint_proposal_blueprint_idx").on(table.blueprintId),
+  uniqueIndex("blueprint_proposal_order_unique").on(table.blueprintId, table.sortOrder),
+  check("blueprint_proposal_decision_check", sql`${table.decision} IN ('PENDING', 'ACCEPTED', 'REJECTED')`),
+  check("blueprint_proposal_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("blueprint_proposal_order_positive", sql`${table.sortOrder} > 0`),
+]);
+
+export const blueprintMaterialization = pgTable("blueprint_materialization", {
+  blueprintId: uuid("blueprint_id").primaryKey().references(() => blueprintDraft.id, { onDelete: "restrict" }),
+  campaignId: uuid("campaign_id").notNull().unique().references(() => campaign.id, { onDelete: "restrict" }),
+  reviewedRevision: integer("reviewed_revision").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [check("blueprint_materialization_revision_positive", sql`${table.reviewedRevision} > 0`)]);
+
 export const campaignEntity = pgTable("campaign_entity", {
   id: uuid("id").default(sql`uuidv7()`).primaryKey(),
   campaignId: uuid("campaign_id").notNull()

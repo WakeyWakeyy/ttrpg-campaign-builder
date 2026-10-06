@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof complete through A10 · A11 Campaign creation dashboard complete · A12 Campaign Compass reading and editing complete · A13 optional Campaign Wizard in progress · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof complete through A10 · A11–A13 Campaign creation and Compass complete · A14 Blueprint Draft complete · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,11 +33,11 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The architecture proof is complete through A10. A11 adds the Campaign creation dashboard, A12 adds Campaign Compass reading and revision-safe editing, and A13 adds an optional guided creation path. See the [roadmap](docs/roadmap.md) and [A13 progress](docs/a13-campaign-wizard.md) for the current scope.
+The architecture proof is complete through A10. A11–A13 add the Campaign creation dashboard, Compass reading and editing, and an optional guided creation path. A14 adds private Blueprint Drafts before Campaign creation. See the [roadmap](docs/roadmap.md) and [A14 progress](docs/a14-blueprint-draft.md) for the current scope.
 
-## Earlier architecture milestone
+## Earlier architecture milestone (historical)
 
-The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary, A7 — Campaign application boundary, and A8 — Location application commands + revision/lifecycle behavior are complete. The next implementation slice is **minimal UI + Playwright proof**. The full architecture-proof vertical slice remains in progress:
+The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary, A7 — Campaign application boundary, and A8 — Location application commands + revision/lifecycle behavior are complete. A9–A10 then completed the UI and browser proof:
 
 ```text
 Sign in
@@ -51,7 +51,7 @@ Sign in
   → Restore
 ```
 
-Completing this milestone will validate ownership, migrations, transaction boundaries, typed campaign entities, optimistic concurrency, authorization, and lifecycle behavior before the broader campaign workflow is implemented.
+This milestone validated ownership, migrations, transaction boundaries, typed campaign entities, optimistic concurrency, authorization, and lifecycle behavior.
 
 ## Planned MVP
 
@@ -261,9 +261,7 @@ current-revision no-ops write nothing, and stale no-ops still conflict. Trash ke
 archive state and an exact 30-day UTC retention window; repeated Trash never
 restarts it. Restore clears deletion fields and preserves archive state.
 
-Next: **minimal UI + Playwright proof**. Campaign UI, remaining Campaign commands,
-and end-to-end browser flows are still pending. The completed application boundary
-is not yet an end-to-end Campaign workflow.
+Next: **Blueprint Review and partial acceptance**. See [A14 handoff](docs/a14-blueprint-draft.md). The architecture-proof browser journey and initial Campaign creation UI are complete.
 
 ## Licensing
 
