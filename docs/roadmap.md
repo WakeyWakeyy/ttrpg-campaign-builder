@@ -2,9 +2,9 @@
 
 This roadmap is an implementation sequence, not a promise of dates. Later work moves forward only when it helps validate the core product.
 
-## 1. Architecture proof — current
+## 1. Architecture proof — complete
 
-The architecture-proof vertical slice is still in progress. Completed foundation through A8:
+The architecture-proof vertical slice is complete. Foundation through A8:
 
 - app bootstrap;
 - PostgreSQL 18 + Drizzle migrations;
@@ -22,14 +22,7 @@ The architecture-proof vertical slice is still in progress. Completed foundation
 - owner-scoped Location commands, revision-safe edits, concurrent hierarchy validation,
   and Archive → Trash → Restore application behavior (A8).
 
-**Current checkpoint: A10 external browser proof.** A9 delivers the minimal sign-in, Campaign/Location UI, visible revision conflicts, and Archive/Trash/Restore. A10 passed locally and was merged in [PR #17](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/17); the required CI validation passed. See [browser proof setup](browser-proof.md) and [A10 validation](a10-validation.md).
-
-Still pending before the architecture proof is complete:
-
-- configure and run the optional authenticated browser workflow in the protected `e2e` GitHub environment;
-- review that remote result before declaring architecture-proof completion.
-
-Exit condition: the end-to-end slice is green and the database rejects the integrity failures the application claims to prevent.
+**A9–A10 completed the proof.** A9 delivered the minimal sign-in, Campaign/Location UI, visible revision conflicts, and Archive/Trash/Restore. A10 passed locally, merged in [PR #17](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/17), and passed the [authenticated remote browser run](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/actions/runs/37420021628) on `main`. The required CI validation also passed. The end-to-end slice is green, and PostgreSQL integration tests cover the integrity constraints. See [browser proof setup](browser-proof.md) and [A10 validation](a10-validation.md).
 
 ## 2. Campaign creation slice
 
