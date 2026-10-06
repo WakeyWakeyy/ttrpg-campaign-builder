@@ -42,7 +42,7 @@ Expand the connected domain model:
 
 - Arcs: A17 adds a typed Arc with owner-scoped, revision-safe commands and the same preservation lifecycle as Locations. See [A17 progress](a17-campaign-arcs.md);
 - Quests / plot threads: A18 adds typed Quests, outcome status, parent hierarchy, and Arc membership. See [A18 progress](a18-campaign-quests.md);
-- NPCs;
+- NPCs: A19 adds typed NPCs with identity, role, current state, revision-safe editing, and preservation lifecycle. See [A19 progress](a19-campaign-npcs.md);
 - Player Characters and Party summary;
 - Factions and memberships;
 - Locations and Travel Routes;

@@ -58,7 +58,7 @@ test("shared UUIDv7 identity, defaults and internal creator provenance", async (
   expect((await createLocation(scope)).id).not.toBe(entity.id); // Names are not identities.
   await violation("UPDATE campaign_entity SET created_by_user_id = $2 WHERE id = $1", [entity.id, randomUUID()], '23503');
   await violation("UPDATE campaign_entity SET created_by_user_id = 'clerk_external' WHERE id = $1", [entity.id], '22P02');
-  await violation("UPDATE campaign_entity SET entity_type = 'NPC' WHERE id = $1", [entity.id], '23514', 'campaign_entity_type_check');
+  await violation("UPDATE campaign_entity SET entity_type = 'UNKNOWN' WHERE id = $1", [entity.id], '23514', 'campaign_entity_type_check');
   for (const revision of [0, -1]) {
     await violation("UPDATE campaign_entity SET revision = $2 WHERE id = $1", [entity.id, revision], '23514', 'campaign_entity_revision_positive');
   }
