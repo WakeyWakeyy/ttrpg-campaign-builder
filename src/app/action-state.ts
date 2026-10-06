@@ -7,9 +7,14 @@ import { InvalidQuestArcError, InvalidQuestInputError, InvalidQuestParentError, 
 import { InvalidNpcInputError, NpcNotFoundError, NpcRevisionConflictError } from "@/modules/npcs";
 import { InvalidPlayerCharacterInputError, PlayerCharacterNotFoundError, PlayerCharacterRevisionConflictError } from "@/modules/player-characters";
 import { InvalidPartyInputError, InvalidPartyMemberError, PartyNotFoundError, PartyRevisionConflictError } from "@/modules/parties";
+import { FactionNotFoundError, FactionRevisionConflictError, InvalidFactionInputError, InvalidFactionMembershipError } from "@/modules/factions";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof FactionRevisionConflictError) return { message: "This faction changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof FactionNotFoundError) return { message: "Faction not found or unavailable." };
+  if (error instanceof InvalidFactionMembershipError) return { message: "Choose an available character in this campaign and check the membership details." };
+  if (error instanceof InvalidFactionInputError) return { message: "Enter a faction name and check the details. If this continues, reload the page." };
   if (error instanceof PlayerCharacterRevisionConflictError) return { message: "This character changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof PlayerCharacterNotFoundError) return { message: "Character not found or unavailable." };
   if (error instanceof InvalidPlayerCharacterInputError) return { message: "Enter a character name and check the details. If this continues, reload the page." };

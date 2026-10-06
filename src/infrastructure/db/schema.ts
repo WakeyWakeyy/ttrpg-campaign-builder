@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -379,6 +379,47 @@ export const partyMember = pgTable("party_member", {
     foreignColumns: [party.campaignId, party.id] }).onDelete("cascade"),
   foreignKey({ name: "party_member_player_character_fk", columns: [table.campaignId, table.playerCharacterId],
     foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("cascade"),
+]);
+
+export const faction = pgTable("faction", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("FACTION").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  purpose: text("purpose"),
+  currentState: text("current_state"),
+}, table => [
+  uniqueIndex("faction_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("faction_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "faction_campaign_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("faction_entity_type_check", sql`${table.entityType} = 'FACTION'`),
+  check("faction_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+]);
+
+export const factionMembership = pgTable("faction_membership", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  factionId: uuid("faction_id").notNull(),
+  npcId: uuid("npc_id"),
+  playerCharacterId: uuid("player_character_id"),
+  role: text("role"),
+  rank: text("rank"),
+  status: text("status").default("ACTIVE").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  index("faction_membership_faction_idx").on(table.factionId),
+  uniqueIndex("faction_membership_npc_unique").on(table.factionId, table.npcId),
+  uniqueIndex("faction_membership_pc_unique").on(table.factionId, table.playerCharacterId),
+  foreignKey({ name: "faction_membership_faction_fk", columns: [table.campaignId, table.factionId],
+    foreignColumns: [faction.campaignId, faction.id] }).onDelete("cascade"),
+  foreignKey({ name: "faction_membership_npc_fk", columns: [table.campaignId, table.npcId],
+    foreignColumns: [npc.campaignId, npc.id] }).onDelete("cascade"),
+  foreignKey({ name: "faction_membership_pc_fk", columns: [table.campaignId, table.playerCharacterId],
+    foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("cascade"),
+  check("faction_membership_one_member", sql`(${table.npcId} IS NULL) <> (${table.playerCharacterId} IS NULL)`),
+  check("faction_membership_status_check", sql`${table.status} IN ('ACTIVE', 'FORMER')`),
 ]);
 
 export const quest = pgTable("quest", {
