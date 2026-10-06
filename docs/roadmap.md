@@ -29,7 +29,7 @@ The architecture-proof vertical slice is complete. Foundation through A8:
 Build the first product-facing workflow:
 
 - Dashboard and Create Campaign: A11 implements an initial campaign list grouped by lifecycle state and a creation form for the existing Campaign and Compass fields. See [A11 progress](a11-campaign-start.md).
-- optional guided Campaign Wizard;
+- optional guided Campaign Wizard: A13 provides an idea → context → review path alongside direct creation. See [A13 progress](a13-campaign-wizard.md);
 - Campaign Compass reading and editing over the existing persistence foundation: A12 shows the original creative record and adds revision-safe edits for current premise, setting, and tone. See [A12 progress](a12-campaign-compass.md).
 - Blueprint Draft;
 - Blueprint Review and partial acceptance;

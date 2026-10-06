@@ -17,6 +17,11 @@ label { display: block; margin-block: 1rem .25rem; font-weight: 600; }
 input, textarea { box-sizing: border-box; width: 100%; padding: .65rem; border: 1px solid #777; border-radius: .25rem; font: inherit; }
 button { padding: .6rem 1rem; font: inherit; cursor: pointer; }
 form button { margin-top: 1rem; }
+details { margin-top: 2rem; padding: 1rem; border: 1px solid #ddd; border-radius: .25rem; }
+summary { cursor: pointer; font-weight: 600; }
+dt { font-weight: 600; margin-top: .75rem; }
+dd { margin-left: 0; }
+.preserve-lines { white-space: pre-wrap; }
 button:disabled { cursor: wait; }
 .actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .status { display: inline-block; border: 1px solid #aaa; border-radius: .25rem; padding: .1rem .5rem; font-size: .9rem; }

@@ -6,6 +6,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { listOwnedCampaigns } from "@/modules/campaigns";
 import { ActionForm } from "./action-form";
 import { createCampaignAction } from "./actions";
+import { CampaignWizard } from "./campaign-wizard";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -36,7 +37,8 @@ export default async function Home() {
     {trashed.length > 0 && <section aria-labelledby="trashed-campaigns">
       <h2 id="trashed-campaigns">In trash</h2>{campaignList(trashed)}
     </section>}
-    <h2>Create campaign</h2>
+    <section aria-labelledby="create-campaign-heading">
+    <h2 id="create-campaign-heading">Create campaign</h2>
     <p>Start with the idea you want to preserve. You can add more context now or later.</p>
     <ActionForm action={createCampaignAction}>
       <label htmlFor="name">Name</label><input id="name" name="name" required />
@@ -47,5 +49,11 @@ export default async function Home() {
       <label htmlFor="originalNotes">Original notes (optional)</label><textarea id="originalNotes" name="originalNotes" rows={4} />
       <button type="submit">Create campaign</button>
     </ActionForm>
+    </section>
+    <details>
+      <summary>Create with a guided wizard</summary>
+      <p>Build the same campaign in three short steps, then review it before saving.</p>
+      <CampaignWizard />
+    </details>
   </main>;
 }
