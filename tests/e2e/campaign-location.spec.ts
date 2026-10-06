@@ -16,9 +16,10 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     const actorId = identities.rows[0].user_id;
     expect((await pool.query("SELECT id FROM user_account WHERE id = $1", [actorId])).rowCount).toBe(1);
 
-    await page.getByLabel("Name", { exact: true }).fill("A10 campaign");
-    await page.getByLabel("Original premise").fill("Explore the harbor.");
-    await page.getByRole("button", { name: "Create campaign", exact: true }).click();
+    const quickCreate = page.getByRole("region", { name: "Create campaign" });
+    await quickCreate.getByLabel("Name", { exact: true }).fill("A10 campaign");
+    await quickCreate.getByLabel("Original premise").fill("Explore the harbor.");
+    await quickCreate.getByRole("button", { name: "Create campaign", exact: true }).click();
     await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]+$/);
     const campaignId = page.url().split("/").pop();
     expect((await pool.query("SELECT owner_user_id FROM campaign WHERE id = $1", [campaignId])).rows[0].owner_user_id).toBe(actorId);
@@ -75,7 +76,7 @@ test("internal Actor, Campaign, Location, stale edit and Archive/Trash/Restore",
     await page.locator("#wizard-tone").fill("Wonder");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Review your campaign" })).toBeVisible();
-    await page.getByRole("button", { name: "Create campaign" }).last().click();
+    await page.locator("details").getByRole("button", { name: "Create campaign" }).click();
     await expect(page.getByRole("heading", { name: "Guided campaign" })).toBeVisible();
     const guidedId = page.url().split("/").pop();
     const compass = await pool.query("SELECT original_premise, current_premise, setting, tone FROM campaign_compass WHERE campaign_id = $1", [guidedId]);
