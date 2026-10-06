@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof in progress · persistence and technical safety foundation through A5 complete · A6 internal authentication/Actor boundary complete · A7 Campaign application boundary complete · A8 Location application commands + revision/lifecycle behavior complete · **Next:** minimal UI + Playwright proof · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof complete through A10 · A11 Campaign creation dashboard complete · A12 Campaign Compass reading and editing in progress · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -32,6 +32,10 @@ The application assists with organization, deterministic rules, consistency chec
 - **MVP over feature creep:** prove the campaign-design workflow before expanding into maps, collaboration, multiple rulesets, or VTT features.
 
 ## Current milestone
+
+The architecture proof is complete through A10. A11 adds the Campaign creation dashboard. A12 adds Campaign Compass reading and revision-safe editing on the Campaign page. See the [roadmap](docs/roadmap.md) and [A12 progress](docs/a12-campaign-compass.md) for the current scope.
+
+## Earlier architecture milestone
 
 The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary, A7 — Campaign application boundary, and A8 — Location application commands + revision/lifecycle behavior are complete. The next implementation slice is **minimal UI + Playwright proof**. The full architecture-proof vertical slice remains in progress:
 

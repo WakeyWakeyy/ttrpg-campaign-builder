@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { campaign, campaignCompass, campaignRuleset, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
-import { CampaignNotFoundError, createCampaign, getOwnedCampaign, InvalidCampaignInputError, listOwnedCampaigns, RulesetVersionNotFoundError } from "../../src/modules/campaigns";
+import { CampaignNotFoundError, CompassRevisionConflictError, createCampaign, editCompass, getOwnedCampaign, getOwnedCompass, InvalidCampaignInputError, listOwnedCampaigns, RulesetVersionNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 
 // Commands commit their own transactions. Isolate fixtures and failure constraints
@@ -124,6 +124,26 @@ test("listOwnedCampaigns scopes every result to the Actor", async () => {
 test("getOwnedCampaign returns an owned Campaign", async () => {
   const created = await createCampaign(db, actor, input());
   await expect(getOwnedCampaign(db, actor, created.id)).resolves.toEqual(created);
+});
+
+test("Compass edits preserve original content and reject stale or non-owner writes", async () => {
+  const created = await createCampaign(db, actor, { ...input(), originalNotes: "First sketch" });
+  const initial = await getOwnedCompass(db, actor, created.id);
+  await expect(getOwnedCompass(db, otherActor, created.id)).rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(editCompass(db, otherActor, created.id, {
+    expectedRevision: initial.revision, currentPremise: "Intrusion", setting: null, tone: null,
+  })).rejects.toBeInstanceOf(CampaignNotFoundError);
+  const updated = await editCompass(db, actor, created.id, {
+    expectedRevision: initial.revision, currentPremise: "The city returns.", setting: "Coast", tone: "Mysterious",
+  });
+  expect(updated).toMatchObject({
+    originalPremise: creative.originalPremise, originalNotes: "First sketch",
+    currentPremise: "The city returns.", setting: "Coast", tone: "Mysterious", revision: 2,
+  });
+  await expect(editCompass(db, actor, created.id, {
+    expectedRevision: initial.revision, currentPremise: "Stale", setting: null, tone: null,
+  })).rejects.toBeInstanceOf(CompassRevisionConflictError);
+  expect(await getOwnedCompass(db, actor, created.id)).toEqual(updated);
 });
 
 test("non-owned, missing and malformed Campaign IDs have identical typed failure behavior", async () => {
