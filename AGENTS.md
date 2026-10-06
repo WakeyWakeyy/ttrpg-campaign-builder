@@ -115,3 +115,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Contextual skills
+
+The project skills live in `.agents/skills/`. Load a skill for the requested task, not as a permanent instruction bundle. This file's architecture, authorization, lifecycle, and test constraints remain authoritative for project work. If a skill proposes a broader workflow or dependency, follow the narrower project scope unless the user explicitly asks to expand it.
+
+- `ui-ux-pro-max`: use for UI/UX pattern research, interaction, and accessibility. Its searchable data supports decisions; check recommendations against the current interface and product intent.
+- `impeccable`: use for explicit visual direction, critique, redesign, or focused polish/audit. For ordinary UI edits, use its narrow relevant guidance only. Preserve the existing design and behavior when the task is a refinement.
+- When both design skills apply, use UI/UX Pro Max to research patterns and Impeccable to evaluate and refine the resulting interface. Do not run two parallel design-system generators or create `PRODUCT.md`/`DESIGN.md` merely because a skill is installed.
+- `react-best-practices`: use the relevant rules for React/Next.js implementation and performance. The local Next.js version guide above controls version-specific APIs; do not apply a generic rule that conflicts with it.
+- Superpowers skills: select a specific process skill for planning, debugging, testing, review, or verification when it fits the task. Its conversation-wide bootstrap is explicit-only. Subagent workflows require the user's explicit request. Existing repository practices and user instructions take priority over skill defaults such as mandatory brainstorming, test-first work, new worktrees, or review for every change.
+- Graphify remains the existing `.codex/skills/graphify` plus hook and `graphify-out/` integration. Keep using the Graphify section above; do not install another copy.
+
+The upstream skill versions and local adaptations are recorded in `docs/agent-skills.md`. No application feature is authorized by installing a skill.
