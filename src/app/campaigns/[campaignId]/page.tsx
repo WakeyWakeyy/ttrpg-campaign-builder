@@ -9,7 +9,7 @@ import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { listOwnedNpcs } from "@/modules/npcs";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
-import { listOwnedParties, listPartyMemberIds } from "@/modules/parties";
+import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
 import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createTravelRouteAction, editCompassAction } from "../../actions";
@@ -33,7 +33,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const characters = await listOwnedPlayerCharacters(db, actor, campaignId);
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
-    const partyMembers = await Promise.all(parties.map(party => listPartyMemberIds(db, actor, party.id)));
+    const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
     return { campaign, compass, locations, routes, items, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
@@ -162,9 +162,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <section id="parties" aria-labelledby="parties-heading" className="workspace-section">
           <h2 id="parties-heading">Parties</h2>
           <p>Organize normal groups of player characters. Session attendance is separate.</p>
-          {data.parties.length ? <ul className="workspace-location-list">{data.parties.map((party, index) => <li key={party.id}>
-            <Link href={`/parties/${party.id}`}>{party.name}</Link> · {data.partyMembers[index].length} members
-            {data.partyMembers[index].length ? ` · ${data.partyMembers[index].map(id => characterNames.get(id) ?? "Unknown character").join(", ")}` : ""}
+          {data.parties.length ? <ul className="workspace-location-list">{data.parties.map(party => <li key={party.id}>
+            <Link href={`/parties/${party.id}`}>{party.name}</Link> · {(data.partyMembers.get(party.id) ?? []).length} {(data.partyMembers.get(party.id) ?? []).length === 1 ? "member" : "members"}
+            {(data.partyMembers.get(party.id) ?? []).length ? ` · ${(data.partyMembers.get(party.id) ?? []).map(id => characterNames.get(id) ?? "Unknown character").join(", ")}` : ""}
             {party.deletedAt ? " · Trashed" : party.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No parties yet.</p>}
           <h3>Create party</h3>
