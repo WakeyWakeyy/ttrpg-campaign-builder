@@ -1,6 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { delimiter, join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { config } from "dotenv";
+
+if (process.platform === "win32") {
+  // Playwright needs taskkill.exe from System32 to stop its web server.
+  const system32 = join(process.env.SystemRoot ?? "C:\\Windows", "System32");
+  if (!(process.env.PATH ?? "").split(delimiter).some(path => path.toLowerCase() === system32.toLowerCase())) {
+    process.env.PATH = `${system32}${delimiter}${process.env.PATH ?? ""}`;
+  }
+}
 
 config({ path: ".env.e2e.local", quiet: true });
 // Propagated to workers and the owned server; never reuse a development server.
@@ -32,7 +41,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm exec next dev --port 3100",
+    command: "node node_modules/next/dist/bin/next dev --port 3100",
     url: "http://localhost:3100",
     reuseExistingServer: false,
     timeout: 120_000,
