@@ -7,7 +7,7 @@ import { campaign, campaignEntity, scene, session, userAccount } from "../../src
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  listOwnedSessions, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError,
+  getPreviousSessionContext, listOwnedSessions, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -97,4 +97,20 @@ test("scenes are ordered, owner-scoped, revision-safe, and recoverable", async (
   expect((await listSessionScenes(db, actor, parent.id)).find(row => row.id === first.id)).toMatchObject({
     title: "At the bridge", preparation: "Toll keeper waits", deletedAt: null,
   });
+});
+
+test("previous-session context uses the latest available session and recorded outcomes", async () => {
+  const first = await createSession(db, actor, { campaignId, title: "First", outcome: "The party crossed" });
+  const sceneOne = await createScene(db, actor, first.id, { expectedRevision: 1, title: "Bridge" });
+  await editScene(db, actor, first.id, sceneOne.id, { expectedRevision: 2, intent: "save",
+    title: "Bridge", outcome: "The toll was paid" });
+  const second = await createSession(db, actor, { campaignId, title: "Second" });
+  expect(await getPreviousSessionContext(db, actor, second.id)).toMatchObject({
+    session: { id: first.id, outcome: "The party crossed" },
+    scenes: [{ title: "Bridge", outcome: "The toll was paid" }],
+  });
+  await expect(getPreviousSessionContext(db, other, second.id)).rejects.toBeInstanceOf(SessionNotFoundError);
+  const current = await getOwnedSession(db, actor, first.id);
+  await trashSession(db, actor, first.id, current.revision);
+  expect(await getPreviousSessionContext(db, actor, second.id)).toBeNull();
 });
