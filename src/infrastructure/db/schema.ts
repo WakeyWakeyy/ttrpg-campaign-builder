@@ -345,6 +345,23 @@ export const session = pgTable("session", {
   check("session_title_nonempty", sql`length(btrim(${table.title})) > 0`),
 ]);
 
+export const scene = pgTable("scene", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  sessionId: uuid("session_id").notNull(),
+  position: integer("position").notNull(),
+  title: text("title").notNull(),
+  preparation: text("preparation"),
+  outcome: text("outcome"),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+}, table => [
+  index("scene_session_position_idx").on(table.sessionId, table.position),
+  foreignKey({ name: "scene_session_fk", columns: [table.campaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
+  check("scene_position_positive", sql`${table.position} > 0`),
+  check("scene_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+]);
+
 export const arc = pgTable("arc", {
   id: uuid("id").primaryKey(),
   campaignId: uuid("campaign_id").notNull(),

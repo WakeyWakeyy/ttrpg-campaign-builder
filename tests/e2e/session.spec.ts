@@ -23,18 +23,37 @@ test("prepare a session, record its outcome, and restore it", async ({ page }) =
     await sessions.getByRole("button", { name: "Create session" }).click();
     await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
     const sessionId = page.url().split("/").pop()!;
-    await expect(page.getByLabel("Preparation")).toHaveValue("Meet the ferryman.");
+    await expect(page.getByLabel("Preparation").first()).toHaveValue("Meet the ferryman.");
     await page.getByLabel("What actually happened (optional)").fill("The party crossed by boat.");
     await page.getByRole("button", { name: "Save session" }).click();
+    await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("2");
     await expect(page.getByLabel("What actually happened (optional)")).toHaveValue("The party crossed by boat.");
+    await page.getByLabel("Title", { exact: true }).last().fill("At the bridge");
+    await page.getByLabel("Preparation", { exact: true }).last().fill("A toll keeper waits.");
+    await page.getByRole("button", { name: "Add scene" }).click();
+    await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("3");
+    await expect(page.getByRole("heading", { name: "At the bridge" })).toBeVisible();
+    await page.getByLabel("What happened").fill("The party paid the toll.");
+    await page.getByRole("button", { name: "Save scene" }).click();
+    await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("4");
+    await page.getByRole("button", { name: "Trash scene" }).click();
+    await expect(page.getByRole("heading", { name: /At the bridge · In trash/ })).toBeVisible();
+    await page.getByRole("button", { name: "Restore scene" }).click();
+    await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("6");
+    await expect(page.getByLabel("What happened")).toHaveValue("The party paid the toll.");
     await page.getByRole("button", { name: "Archive" }).click();
-    await page.getByRole("button", { name: "Trash" }).click();
-    await page.getByRole("button", { name: "Restore" }).click();
+    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Trash", exact: true }).click();
+    await expect(page.getByText("In trash", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Restore", exact: true }).click();
     await expect(page.getByText("Archived", { exact: true })).toBeVisible();
     await page.goto(`/campaigns/${campaignId}`);
     await expect(page.getByRole("region", { name: "Sessions" }).getByRole("link", { name: "The crossing" })).toBeVisible();
     expect((await pool.query("SELECT title, planned_for::text AS planned_for, preparation, outcome FROM session WHERE id = $1", [sessionId])).rows[0])
       .toEqual({ title: "The crossing", planned_for: "2026-10-08",
         preparation: "Meet the ferryman.", outcome: "The party crossed by boat." });
+    expect((await pool.query("SELECT title, preparation, outcome, deleted_at FROM scene WHERE session_id = $1", [sessionId])).rows[0])
+      .toMatchObject({ title: "At the bridge", preparation: "A toll keeper waits.",
+        outcome: "The party paid the toll.", deleted_at: null });
   } finally { await pool.end(); }
 });
