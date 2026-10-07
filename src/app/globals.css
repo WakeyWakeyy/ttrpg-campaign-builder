@@ -56,6 +56,16 @@ main {
 .workspace-stats dd { margin: .25rem 0 0; font-size: 1.5rem; font-weight: 700; }
 .workspace-location-list { padding-left: 1.5rem; }
 
+.run-view { max-width: 68rem; }
+.run-heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; margin: 2rem 0; }
+.run-heading h1 { margin: .25rem 0; }
+.run-nav { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; padding: .75rem 0; border-block: 1px solid #ddd; }
+.run-section { scroll-margin-top: 1rem; padding: 1.5rem 0; border-bottom: 1px solid #ddd; }
+.run-section h2 { margin-top: 0; }
+.run-scenes { padding-left: 1.5rem; }
+.run-scenes > li { padding: .5rem 0 1.5rem; }
+.run-scenes h3 { margin-bottom: .5rem; }
+
 @media (max-width: 42rem) {
   .workspace-heading { flex-direction: column; gap: .5rem; }
   .workspace-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }

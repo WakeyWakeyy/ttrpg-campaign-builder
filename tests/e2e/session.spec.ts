@@ -36,6 +36,12 @@ test("prepare a session, record its outcome, and restore it", async ({ page }) =
     await page.getByLabel("What happened").fill("The party paid the toll.");
     await page.getByRole("button", { name: "Save scene" }).click();
     await expect(page.locator('input[name="expectedRevision"]').first()).toHaveValue("4");
+    await page.getByRole("link", { name: "Open Run View" }).click();
+    await expect(page).toHaveURL(new RegExp(`/sessions/${sessionId}/run$`));
+    await expect(page.getByRole("heading", { name: "The crossing" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "At the bridge" })).toBeVisible();
+    await expect(page.getByText("A toll keeper waits.")).toBeVisible();
+    await page.getByRole("link", { name: "Edit session" }).click();
     await page.getByRole("button", { name: "Trash scene" }).click();
     await expect(page.getByRole("heading", { name: /At the bridge · In trash/ })).toBeVisible();
     await page.getByRole("button", { name: "Restore scene" }).click();
