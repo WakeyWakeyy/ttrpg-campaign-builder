@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, getTableColumns, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { campaign, campaignEntity, scene, session } from "../../infrastructure/db/schema";
+import { campaign, campaignEntity, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
 
@@ -31,6 +31,44 @@ export async function getOwnedSession(db: NodePgDatabase, actor: Actor, id: stri
   const [row] = await owned(db, actor).where(eq(session.id, id));
   if (!row) throw new SessionNotFoundError();
   return row;
+}
+export async function listSessionAttendance(db: NodePgDatabase, actor: Actor, id: string) {
+  const current = await getOwnedSession(db, actor, id);
+  return db.select({ playerCharacterId: sessionAttendance.playerCharacterId }).from(sessionAttendance)
+    .where(and(eq(sessionAttendance.sessionId, id), eq(sessionAttendance.campaignId, current.campaignId)));
+}
+
+export async function setSessionAttendance(db: NodePgDatabase, actor: Actor, id: string,
+  input: { expectedRevision: number; playerCharacterIds: string[] | null }) {
+  if (input.playerCharacterIds !== null && (!Array.isArray(input.playerCharacterIds)
+    || input.playerCharacterIds.some(value => !uuid(value))
+    || new Set(input.playerCharacterIds.map(value => value.toLowerCase())).size !== input.playerCharacterIds.length))
+    throw new InvalidSessionInputError();
+  return db.transaction(async tx => {
+    const current = await lock(tx, actor, id, input.expectedRevision);
+    if (current.deletedAt) throw new InvalidSessionInputError();
+    const ids = input.playerCharacterIds;
+    if (ids !== null) {
+      for (const playerCharacterId of ids) {
+        const [found] = await tx.select({ id: playerCharacter.id }).from(playerCharacter)
+          .innerJoin(campaignEntity, eq(campaignEntity.id, playerCharacter.id))
+          .where(and(eq(playerCharacter.id, playerCharacterId), eq(playerCharacter.campaignId, current.campaignId),
+            isNull(campaignEntity.deletedAt)));
+        if (!found) throw new InvalidSessionInputError();
+      }
+    }
+    const old = await tx.select({ id: sessionAttendance.playerCharacterId }).from(sessionAttendance)
+      .where(eq(sessionAttendance.sessionId, id));
+    if (current.attendanceSet === (ids !== null) && old.length === (ids?.length ?? 0)
+      && old.every(row => ids?.includes(row.id))) return current;
+    await tx.delete(sessionAttendance).where(eq(sessionAttendance.sessionId, id));
+    if (ids?.length) await tx.insert(sessionAttendance).values(ids.map(playerCharacterId => ({
+      campaignId: current.campaignId, sessionId: id, playerCharacterId,
+    })));
+    await tx.update(session).set({ attendanceSet: ids !== null }).where(eq(session.id, id));
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, id));
+    return getOwnedSession(tx, actor, id);
+  }, { isolationLevel: "read committed" });
 }
 export async function getPreviousSessionContext(db: NodePgDatabase, actor: Actor, id: string) {
   const current = await getOwnedSession(db, actor, id);

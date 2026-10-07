@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { getOwnedSession, getPreviousSessionContext, listSessionScenes } from "@/modules/sessions";
+import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
+import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { ActionForm } from "../../action-form";
-import { createSceneAction, updateSceneAction, updateSessionAction } from "../../actions";
+import { createSceneAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
 import { readError } from "../../read-error";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  const { item, scenes, previous } = await (async () => {
+  const { item, scenes, previous, characters, attendance } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
-    return { item: await getOwnedSession(db, actor, sessionId),
+    const item = await getOwnedSession(db, actor, sessionId);
+    return { item,
       scenes: await listSessionScenes(db, actor, sessionId),
-      previous: await getPreviousSessionContext(db, actor, sessionId) };
+      previous: await getPreviousSessionContext(db, actor, sessionId),
+      characters: await listOwnedPlayerCharacters(db, actor, item.campaignId),
+      attendance: await listSessionAttendance(db, actor, sessionId) };
   })().catch(readError);
   return <main>
     <Link href={`/campaigns/${item.campaignId}#sessions`}>Back to campaign</Link>
@@ -29,6 +33,28 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         {previous.scenes.length > 0 && <><h3>Scene outcomes</h3><ul>{previous.scenes.map((scene, index) =>
           <li key={index}><strong>{scene.title}:</strong> {scene.outcome}</li>)}</ul></>}
       </> : <p>This is the first available session in this campaign.</p>}
+    </section>
+    <section aria-labelledby="attendance-heading">
+      <h2 id="attendance-heading">Attendance</h2>
+      <p>{item.attendanceSet ? "Attendance recorded for this session." : "No attendance recorded yet."}
+        {" "}This list only affects this session, not your parties.</p>
+      <ActionForm key={`attendance-${item.revision}`} action={setSessionAttendanceAction.bind(null, item.id)} reloadLabel="Reload session">
+          <input type="hidden" name="expectedRevision" value={item.revision} />
+          <fieldset disabled={!!item.deletedAt}>
+            <legend>Player characters who attended</legend>
+            {characters.length === 0 && <p>No player characters in this campaign yet.</p>}
+            {characters.filter(character => !character.deletedAt || attendance.some(row => row.playerCharacterId === character.id))
+              .map(character => <label key={character.id}>
+                <input type="checkbox" name="playerCharacterIds" value={character.id}
+                  defaultChecked={attendance.some(row => row.playerCharacterId === character.id)} disabled={!!character.deletedAt} />
+                {character.name}{character.deletedAt ? " (in trash)" : ""}
+              </label>)}
+          </fieldset>
+          {!item.deletedAt && <div className="actions">
+            <button name="intent" value="save">Save attendance</button>
+            {item.attendanceSet && <button name="intent" value="reset" formNoValidate>Clear attendance record</button>}
+          </div>}
+      </ActionForm>
     </section>
     <ActionForm key={item.revision} action={updateSessionAction.bind(null, item.id)} reloadLabel="Reload session">
       <input type="hidden" name="expectedRevision" value={item.revision} />
