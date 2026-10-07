@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -482,6 +482,42 @@ export const arcQuest = pgTable("arc_quest", {
 ]);
 
 // Important retryable commands only; fingerprint comparison belongs to application logic.
+export const timelineEvent = pgTable("timeline_event", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("TIMELINE_EVENT").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" }),
+  inWorldDate: text("in_world_date"),
+}, table => [
+  uniqueIndex("timeline_event_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("timeline_event_occurred_at_idx").on(table.campaignId, table.occurredAt),
+  foreignKey({ name: "timeline_event_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("timeline_event_entity_type_check", sql`${table.entityType} = 'TIMELINE_EVENT'`),
+  check("timeline_event_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+]);
+
+export const timelineEventLink = pgTable("timeline_event_link", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  eventId: uuid("event_id").notNull(),
+  targetCampaignId: uuid("target_campaign_id"),
+  targetEntityId: uuid("target_entity_id"),
+  targetTypeSnapshot: text("target_type_snapshot").notNull(),
+  targetNameSnapshot: text("target_name_snapshot").notNull(),
+}, table => [
+  index("timeline_event_link_target_idx").on(table.targetCampaignId, table.targetEntityId),
+  foreignKey({ name: "timeline_event_link_event_fk", columns: [table.campaignId, table.eventId],
+    foreignColumns: [timelineEvent.campaignId, timelineEvent.id] }).onDelete("cascade"),
+  foreignKey({ name: "timeline_event_link_target_fk", columns: [table.targetCampaignId, table.targetEntityId],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id] }).onDelete("set null"),
+  check("timeline_event_link_campaign_check", sql`(${table.targetCampaignId} IS NULL AND ${table.targetEntityId} IS NULL) OR (${table.targetCampaignId} = ${table.campaignId} AND ${table.targetEntityId} IS NOT NULL)`),
+  check("timeline_event_link_type_nonempty", sql`length(btrim(${table.targetTypeSnapshot})) > 0`),
+  check("timeline_event_link_name_nonempty", sql`length(btrim(${table.targetNameSnapshot})) > 0`),
+]);
+
 export const semanticRelationship = pgTable("semantic_relationship", {
   id: uuid("id").primaryKey(),
   campaignId: uuid("campaign_id").notNull(),

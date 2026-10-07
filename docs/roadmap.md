@@ -48,7 +48,7 @@ Expand the connected domain model:
 - Locations and Travel Routes: A22 connects existing Locations with typed Travel Routes for distance, duration, mode, hazards, and GM notes. See [A22 progress](a22-travel-routes.md);
 - Items: A23 adds important objects with an exclusive current Location or NPC/PC holder, revision-safe editing, and preservation lifecycle. See [A23 progress](a23-campaign-items.md);
 - semantic Relationships: A24 adds owner-scoped links between Campaign entities with GM-defined semantics, revision-safe editing, and preservation lifecycle. See [A24 progress](a24-semantic-relationships.md);
-- basic Timeline.
+- basic Timeline: A25 records narrative events with optional real and in-world dates, multiple entity links, revision-safe editing, and preservation lifecycle. See [A25 progress](a25-basic-timeline.md).
 
 ## 4. Sessions
 
