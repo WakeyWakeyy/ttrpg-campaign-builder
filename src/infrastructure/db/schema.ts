@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   foreignKey,
@@ -336,6 +337,7 @@ export const session = pgTable("session", {
   plannedFor: date("planned_for"),
   preparation: text("preparation"),
   outcome: text("outcome"),
+  attendanceSet: boolean("attendance_set").default(false).notNull(),
 }, table => [
   uniqueIndex("session_campaign_id_id_unique").on(table.campaignId, table.id),
   index("session_campaign_planned_for_idx").on(table.campaignId, table.plannedFor),
@@ -438,6 +440,18 @@ export const partyMember = pgTable("party_member", {
   foreignKey({ name: "party_member_party_fk", columns: [table.campaignId, table.partyId],
     foreignColumns: [party.campaignId, party.id] }).onDelete("cascade"),
   foreignKey({ name: "party_member_player_character_fk", columns: [table.campaignId, table.playerCharacterId],
+    foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("cascade"),
+]);
+
+export const sessionAttendance = pgTable("session_attendance", {
+  campaignId: uuid("campaign_id").notNull(),
+  sessionId: uuid("session_id").notNull(),
+  playerCharacterId: uuid("player_character_id").notNull(),
+}, table => [
+  primaryKey({ columns: [table.sessionId, table.playerCharacterId] }),
+  foreignKey({ name: "session_attendance_session_fk", columns: [table.campaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
+  foreignKey({ name: "session_attendance_player_character_fk", columns: [table.campaignId, table.playerCharacterId],
     foreignColumns: [playerCharacter.campaignId, playerCharacter.id] }).onDelete("cascade"),
 ]);
 

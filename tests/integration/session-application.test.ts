@@ -3,11 +3,13 @@ import { readFile } from "node:fs/promises";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, scene, session, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignEntity, scene, session, sessionAttendance, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
+import { createParty, listPartyMemberIds } from "../../src/modules/parties";
+import { createPlayerCharacter } from "../../src/modules/player-characters";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  getPreviousSessionContext, listOwnedSessions, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError,
+  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -35,6 +37,32 @@ beforeEach(async () => {
   campaignId = owned.id; foreignCampaignId = foreign.id;
 });
 afterAll(async () => { try { await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally { await pool.end(); } });
+
+test("attendance is explicit, revision-safe, campaign-bound, and independent of party membership", async () => {
+  const parent = await createSession(db, actor, { campaignId, title: "Crossing" });
+  const owned = await createPlayerCharacter(db, actor, { campaignId, name: "Mira" });
+  const group = await createParty(db, actor, { campaignId, name: "Voyagers", playerCharacterIds: [owned.id] });
+  const foreign = await createPlayerCharacter(db, other, { campaignId: foreignCampaignId, name: "Other" });
+  expect(parent.attendanceSet).toBe(false);
+  await expect(setSessionAttendance(db, other, parent.id, { expectedRevision: 1, playerCharacterIds: [owned.id] }))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(setSessionAttendance(db, actor, parent.id, { expectedRevision: 1, playerCharacterIds: [foreign.id] }))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+  await expect(db.insert(sessionAttendance).values({ campaignId: foreignCampaignId, sessionId: parent.id,
+    playerCharacterId: foreign.id })).rejects.toMatchObject({ cause: { constraint: "session_attendance_session_fk" } });
+  const recorded = await setSessionAttendance(db, actor, parent.id, { expectedRevision: 1, playerCharacterIds: [owned.id] });
+  expect(recorded).toMatchObject({ attendanceSet: true, revision: 2 });
+  expect(await listSessionAttendance(db, actor, parent.id)).toEqual([{ playerCharacterId: owned.id }]);
+  await expect(setSessionAttendance(db, actor, parent.id, { expectedRevision: 1, playerCharacterIds: [] }))
+    .rejects.toBeInstanceOf(SessionRevisionConflictError);
+  const empty = await setSessionAttendance(db, actor, parent.id, { expectedRevision: 2, playerCharacterIds: [] });
+  expect(empty.attendanceSet).toBe(true);
+  expect(await listSessionAttendance(db, actor, parent.id)).toEqual([]);
+  const reset = await setSessionAttendance(db, actor, parent.id, { expectedRevision: 3, playerCharacterIds: null });
+  expect(reset.attendanceSet).toBe(false);
+  expect(await listSessionAttendance(db, actor, parent.id)).toEqual([]);
+  expect(await listPartyMemberIds(db, actor, group.id)).toEqual([owned.id]);
+});
 
 test("creates owner-scoped preparation atomically and preserves distinct outcome", async () => {
   await expect(createSession(db, actor, { campaignId: foreignCampaignId, title: "Stolen" }))

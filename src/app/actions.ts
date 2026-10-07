@@ -11,7 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, restoreSession, trashSession } from "@/modules/sessions";
+import { archiveSession, createScene, createSession, editScene, editSession, restoreSession, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -112,6 +112,21 @@ export async function updateSessionAction(id: string, _state: ActionState, form:
     campaignId = updated.campaignId;
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/sessions/${id}`);
+  redirect(`/sessions/${id}`);
+}
+
+export async function setSessionAttendanceAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    const intent = text(form, "intent");
+    if (intent !== "save" && intent !== "reset") return { message: "Choose an attendance action." };
+    await setSessionAttendance(db, await requireActor(db), id, {
+      expectedRevision: Number(text(form, "expectedRevision")),
+      playerCharacterIds: intent === "reset" ? null
+        : form.getAll("playerCharacterIds").filter((value): value is string => typeof value === "string"),
+    });
+  } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${id}`);
   redirect(`/sessions/${id}`);
 }
