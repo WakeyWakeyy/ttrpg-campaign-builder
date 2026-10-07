@@ -2,7 +2,7 @@
 
 A campaign design and preparation application for tabletop RPG Game Masters.
 
-**Status:** architecture proof complete through A10 · Campaign creation and Workspace complete through A16 · Campaign Core begins with Arcs in A17 · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
+**Status:** architecture proof complete through A10 · Campaign creation and Workspace complete through A16 · Campaign Core complete through A25 · Sessions and Scenes complete through A27 · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
 
 The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
 
@@ -33,7 +33,7 @@ The application assists with organization, deterministic rules, consistency chec
 
 ## Current milestone
 
-The architecture proof is complete through A10. A11–A13 add the Campaign creation dashboard, Compass reading and editing, and an optional guided creation path. A14 adds private Blueprint Drafts before Campaign creation. See the [roadmap](docs/roadmap.md) and [A14 progress](docs/a14-blueprint-draft.md) for the current scope.
+The implemented workflow now reaches Sessions and ordered Scenes. A Session keeps its preparation separate from its outcome; each Scene does the same and can be reordered, trashed, and restored. See the [roadmap](docs/roadmap.md), [A26 Session preparation](docs/a26-session-preparation.md), and [A27 Scenes](docs/a27-session-scenes.md) for the current scope.
 
 ## Earlier architecture milestone (historical)
 
@@ -261,7 +261,7 @@ current-revision no-ops write nothing, and stale no-ops still conflict. Trash ke
 archive state and an exact 30-day UTC retention window; repeated Trash never
 restarts it. Restore clears deletion fields and preserves archive state.
 
-Next: **Blueprint Review and partial acceptance**. See [A14 handoff](docs/a14-blueprint-draft.md). The architecture-proof browser journey and initial Campaign creation UI are complete.
+For later completed slices, see the [roadmap](docs/roadmap.md). The architecture-proof browser journey and initial Campaign creation UI are complete.
 
 ## Licensing
 
