@@ -9,7 +9,7 @@ import type { Actor } from "../../src/modules/identity";
 import { createParty, listPartyMemberIds } from "../../src/modules/parties";
 import { createPlayerCharacter } from "../../src/modules/player-characters";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
+  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -37,6 +37,31 @@ beforeEach(async () => {
   campaignId = owned.id; foreignCampaignId = foreign.id;
 });
 afterAll(async () => { try { await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally { await pool.end(); } });
+
+test("outcome capture preserves preparation and rejects stale, foreign, or trashed writes", async () => {
+  const parent = await createSession(db, actor, { campaignId, title: "Crossing", preparation: "Meet the guard" });
+  const beat = await createScene(db, actor, parent.id, { expectedRevision: 1,
+    title: "Gate", preparation: "Ask for passage" });
+  await expect(recordSessionOutcome(db, other, parent.id, { expectedRevision: 2, outcome: "Stolen" }))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  const recorded = await recordSessionOutcome(db, actor, parent.id, { expectedRevision: 2,
+    outcome: "They found another route" });
+  expect(recorded).toMatchObject({ revision: 3, preparation: "Meet the guard", outcome: "They found another route" });
+  await expect(recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 2, outcome: "Old" }))
+    .rejects.toBeInstanceOf(SessionRevisionConflictError);
+  await expect(recordSceneOutcome(db, actor, parent.id, randomUUID(), { expectedRevision: 3, outcome: "Wrong" }))
+    .rejects.toBeInstanceOf(SceneNotFoundError);
+  const afterScene = await recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 3,
+    outcome: "The guard left" });
+  expect(afterScene.revision).toBe(4);
+  expect((await listSessionScenes(db, actor, parent.id))[0]).toMatchObject({
+    preparation: "Ask for passage", outcome: "The guard left" });
+  await expect(recordSessionOutcome(db, actor, parent.id, { expectedRevision: 4, outcome: "Bad\0value" }))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+  await trashSession(db, actor, parent.id, 4);
+  await expect(recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 5, outcome: "No" }))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+});
 
 test("attendance is explicit, revision-safe, campaign-bound, and independent of party membership", async () => {
   const parent = await createSession(db, actor, { campaignId, title: "Crossing" });

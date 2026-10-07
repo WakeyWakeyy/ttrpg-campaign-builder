@@ -132,6 +132,20 @@ export async function editSession(db: NodePgDatabase, actor: Actor, id: string, 
     return getOwnedSession(tx, actor, id);
   }, { isolationLevel: "read committed" });
 }
+export async function recordSessionOutcome(db: NodePgDatabase, actor: Actor, id: string,
+  input: { expectedRevision: number; outcome: string | null }) {
+  if (input.outcome != null && (typeof input.outcome !== "string" || input.outcome.includes("\0")))
+    throw new InvalidSessionInputError();
+  return db.transaction(async tx => {
+    const current = await lock(tx, actor, id, input.expectedRevision);
+    if (current.deletedAt) throw new InvalidSessionInputError();
+    const outcome = input.outcome || null;
+    if (current.outcome === outcome) return current;
+    await tx.update(session).set({ outcome }).where(eq(session.id, id));
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, id));
+    return getOwnedSession(tx, actor, id);
+  }, { isolationLevel: "read committed" });
+}
 async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, revision: number,
   action: "archive" | "trash" | "restore") {
   return db.transaction(async tx => {
@@ -203,5 +217,23 @@ export async function editScene(db: NodePgDatabase, actor: Actor, sessionId: str
     const [updated] = await tx.update(scene).set(changes).where(eq(scene.id, sceneId)).returning();
     await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
     return updated;
+  }, { isolationLevel: "read committed" });
+}
+export async function recordSceneOutcome(db: NodePgDatabase, actor: Actor, sessionId: string, sceneId: string,
+  input: { expectedRevision: number; outcome: string | null }) {
+  if (!uuid(sceneId)) throw new SceneNotFoundError();
+  if (input.outcome != null && (typeof input.outcome !== "string" || input.outcome.includes("\0")))
+    throw new InvalidSessionInputError();
+  return db.transaction(async tx => {
+    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    const [current] = await tx.select().from(scene).where(and(eq(scene.id, sceneId),
+      eq(scene.sessionId, sessionId), eq(scene.campaignId, parent.campaignId)));
+    if (!current) throw new SceneNotFoundError();
+    if (parent.deletedAt || current.deletedAt) throw new InvalidSessionInputError();
+    const outcome = input.outcome || null;
+    if (current.outcome === outcome) return parent;
+    await tx.update(scene).set({ outcome }).where(eq(scene.id, sceneId));
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
+    return getOwnedSession(tx, actor, sessionId);
   }, { isolationLevel: "read committed" });
 }

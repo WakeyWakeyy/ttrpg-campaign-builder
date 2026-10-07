@@ -24,6 +24,7 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
 
   return <main className="run-view">
     <nav aria-label="Session navigation"><Link href={`/sessions/${session.id}`}>Edit session</Link>
+      {" · "}<Link href={`/sessions/${session.id}/recap`}>Record outcomes</Link>
       {" · "}<Link href={`/campaigns/${session.campaignId}#sessions`}>Campaign workspace</Link></nav>
     <header className="run-heading"><div><p className="workspace-eyebrow">Run View</p><h1>{session.title}</h1>
       {session.plannedFor && <p>Planned for {session.plannedFor}</p>}</div>
