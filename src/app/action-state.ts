@@ -12,9 +12,13 @@ import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevi
 import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
+import { InvalidSessionInputError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof SessionRevisionConflictError) return { message: "This session changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof SessionNotFoundError) return { message: "Session not found or unavailable." };
+  if (error instanceof InvalidSessionInputError) return { message: "Enter a session title and check the planned date and notes." };
   if (error instanceof TimelineEventRevisionConflictError) return { message: "This event changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof TimelineEventNotFoundError) return { message: "Timeline event not found or unavailable." };
   if (error instanceof InvalidTimelineEventInputError) return { message: "Enter an event title, a valid date, and available campaign entities." };

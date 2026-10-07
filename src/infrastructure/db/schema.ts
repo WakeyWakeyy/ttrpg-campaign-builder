@@ -266,7 +266,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -326,6 +326,23 @@ export const travelRoute = pgTable("travel_route", {
   check("travel_route_entity_type_check", sql`${table.entityType} = 'TRAVEL_ROUTE'`),
   check("travel_route_name_nonempty", sql`length(btrim(${table.name})) > 0`),
   check("travel_route_distinct_locations", sql`${table.fromLocationId} <> ${table.toLocationId}`),
+]);
+
+export const session = pgTable("session", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("SESSION").notNull(),
+  title: text("title").notNull(),
+  plannedFor: date("planned_for"),
+  preparation: text("preparation"),
+  outcome: text("outcome"),
+}, table => [
+  uniqueIndex("session_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("session_campaign_planned_for_idx").on(table.campaignId, table.plannedFor),
+  foreignKey({ name: "session_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("session_entity_type_check", sql`${table.entityType} = 'SESSION'`),
+  check("session_title_nonempty", sql`length(btrim(${table.title})) > 0`),
 ]);
 
 export const arc = pgTable("arc", {
