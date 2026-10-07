@@ -11,7 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, restoreSession, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -61,6 +61,31 @@ function sessionInput(form: FormData) {
 function sceneInput(form: FormData) {
   return { title: text(form, "title"), preparation: text(form, "preparation") || null,
     outcome: text(form, "outcome") || null, position: Number(text(form, "position")) };
+}
+
+export async function recordSessionOutcomeAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await recordSessionOutcome(db, await requireActor(db), id, {
+      expectedRevision: Number(text(form, "expectedRevision")), outcome: text(form, "outcome") || null,
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/sessions/${id}`);
+  revalidatePath(`/sessions/${id}/recap`);
+  redirect(`/sessions/${id}/recap`);
+}
+
+export async function recordSceneOutcomeAction(id: string, sceneId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await recordSceneOutcome(db, await requireActor(db), id, sceneId, {
+      expectedRevision: Number(text(form, "expectedRevision")), outcome: text(form, "outcome") || null,
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/sessions/${id}`);
+  revalidatePath(`/sessions/${id}/recap`);
+  redirect(`/sessions/${id}/recap`);
 }
 
 export async function createSceneAction(sessionId: string, _state: ActionState, form: FormData): Promise<ActionState> {

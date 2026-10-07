@@ -23,6 +23,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
     <Link href={`/campaigns/${item.campaignId}#sessions`}>Back to campaign</Link>
     <h1>{item.title}</h1>
     <p><Link href={`/sessions/${item.id}/run`}>Open Run View</Link></p>
+    <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this session to {item.archivedAt ? "Archived" : "Active"}.</p>}
     <section aria-labelledby="previous-session-heading">
