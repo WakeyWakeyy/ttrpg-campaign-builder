@@ -1,270 +1,70 @@
 # TTRPG Campaign Builder
 
-A campaign design and preparation application for tabletop RPG Game Masters.
-
-**Status:** architecture proof complete through A10 · Campaign creation and Workspace complete through A16 · Campaign Core complete through A25 · Sessions and Scenes complete through A27 · **Core stack:** TypeScript, Next.js, PostgreSQL, Drizzle
-
-The goal is to help a GM turn an initial idea into connected, playable campaign material — arcs, quests, NPCs, locations, sessions, encounters, rewards, and continuity — without taking creative control away from them.
+A workspace for tabletop RPG Game Masters to develop a campaign idea into connected material they can prepare and use at the table.
 
 > **North Star:** I still feel like I created this campaign, but I had an entire team helping me prepare it.
 
 ## Why this project exists
 
-Campaign preparation is often scattered across notes, wikis, spreadsheets, encounter calculators, rulebooks, VTTs, PDFs, and AI chats.
+Campaign preparation often ends up scattered across notes, wikis, spreadsheets, rulebooks, PDFs, and AI chats. The challenge is keeping ideas connected and consistent as the campaign changes, while making them easy to find during play.
 
-The hard part is not generating more content. It is keeping campaign ideas **structured, connected, consistent, easy to prepare, and usable at the table** as the campaign evolves.
+TTRPG Campaign Builder follows the campaign from an initial idea through its world, story threads, sessions, and consequences. The GM remains the author and makes the final decisions. The application helps organize material and preserve earlier work as plans evolve.
 
-TTRPG Campaign Builder explores a workflow-first approach:
+## What works today
 
-```text
-Idea → Campaign Structure → World → Quests → Sessions → Encounters → Consequences → Continue
-```
+- **Start a campaign:** sign in, create a campaign directly or use a guided idea-to-campaign flow, and record its premise, setting, and tone.
+- **Build a connected world:** create and manage arcs, quests, NPCs, player characters, parties, factions, locations, travel routes, and important items.
+- **Track connections and history:** link campaign elements with meaningful relationships and place events on a timeline.
+- **Prepare sessions:** record a session plan and its outcome separately, then arrange scenes in the order you expect to run them. Scenes also keep preparation and outcomes separate.
+- **Keep control of changes:** edit with conflict protection and archive, discard, or restore supported campaign material without silently losing accepted work.
 
-The application assists with organization, deterministic rules, consistency checks, and optional generation. The GM remains the author and final decision-maker.
+These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
+
+## Milestones reached
+
+1. **Working foundation:** authentication, campaign ownership, durable storage, and safeguards for concurrent edits and recovery.
+2. **Campaign creation:** direct creation, a guided starting flow, reviewable draft material, and a central campaign workspace.
+3. **Campaign core:** story structure, people and groups, places and travel, items, relationships, and a basic timeline.
+4. **Session preparation:** sessions and ordered scenes with separate plans and outcomes.
+
+The detailed implementation history is in the [roadmap](docs/roadmap.md).
+
+## Estimated project status
+
+**Active development — campaign creation, the connected campaign core, and basic session preparation are implemented.** This is an estimate of product maturity, not a release percentage or delivery date. The next areas on the roadmap include richer session support, encounters and rewards, rules support, contextual assistance, and export. Those areas should be treated as planned unless the roadmap says otherwise.
+
+The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 
 ## Product principles
 
-- **GM-first:** important narrative decisions are never changed silently.
-- **Structured data before AI:** use relational data and deterministic rules where they solve the problem reliably.
-- **AI as assistance, not authority:** generated changes remain proposals until the GM accepts them.
-- **Preserve work:** reorganizing, archiving, postponing, or removing an item from a parent should not destroy it.
-- **Campaigns are connected systems:** entities can be linked without forcing every relationship into one rigid hierarchy.
-- **MVP over feature creep:** prove the campaign-design workflow before expanding into maps, collaboration, multiple rulesets, or VTT features.
+- **GM first:** important narrative decisions are never changed silently.
+- **Connected material:** campaign elements can relate to one another without being forced into one rigid hierarchy.
+- **Preserve work:** changing plans, reorganizing, or removing an item from view should not destroy it unexpectedly.
+- **Reliable tools first:** structured information and deterministic rules take priority where they solve a problem well.
+- **AI as assistance:** generated changes should be reviewable proposals that the GM can accept, edit, or reject.
 
-## Current milestone
+## Technology and documentation
 
-The implemented workflow now reaches Sessions and ordered Scenes. A Session keeps its preparation separate from its outcome; each Scene does the same and can be reordered, trashed, and restored. See the [roadmap](docs/roadmap.md), [A26 Session preparation](docs/a26-session-preparation.md), and [A27 Scenes](docs/a27-session-scenes.md) for the current scope.
+The application uses TypeScript, Next.js, PostgreSQL, Drizzle, and Clerk. It is built as one application with clear internal boundaries. For technical details, see [Architecture](docs/architecture.md) and [Domain Model](docs/domain-model.md).
 
-## Earlier architecture milestone (historical)
+- [Product vision](docs/product.md)
+- [Roadmap](docs/roadmap.md)
+- [Licensing and rules content](docs/licensing.md)
+- [Architecture decisions](docs/decisions/)
 
-The persistence and technical safety foundation through A5 is complete, including Campaigns, a shared entity registry, typed Locations, and Technical Operation Safety. A6 — Authentication / Actor Boundary, A7 — Campaign application boundary, and A8 — Location application commands + revision/lifecycle behavior are complete. A9–A10 then completed the UI and browser proof:
+## Local development
 
-```text
-Sign in
-  → resolve internal user
-  → create Campaign
-  → pin Ruleset Version
-  → create Location
-  → revision-safe edit
-  → Archive
-  → Trash
-  → Restore
-```
-
-This milestone validated ownership, migrations, transaction boundaries, typed campaign entities, optimistic concurrency, authorization, and lifecycle behavior.
-
-## Planned MVP
-
-The MVP is focused on turning a campaign idea into material a GM can actually prepare and run.
-
-Core areas include:
-
-- Campaign creation and campaign structure;
-- arcs and quests / plot threads;
-- NPCs, factions, and locations;
-- sessions and scenes;
-- encounters and rewards;
-- relationships between campaign entities;
-- basic timeline and continuity support;
-- a deterministic fifth-edition-compatible Rules Engine based on legally reusable SRD material;
-- contextual AI assistance with explicit approval boundaries;
-- export-oriented structured data.
-
-The MVP is **not** intended to be a VTT, full character builder, marketplace, multiplayer collaboration platform, native mobile app, or advanced map generator.
-
-## Architecture
-
-The project starts as a **modular monolith**. Module boundaries are explicit in code, but the application remains one deployable system until real operational requirements justify more infrastructure.
-
-Initial implementation stack:
-
-- TypeScript
-- Node.js 24 LTS
-- Next.js 16 App Router
-- PostgreSQL 18
-- Drizzle ORM / Drizzle Kit
-- Zod
-- pnpm
-- Clerk behind a provider-neutral internal identity boundary
-- Vitest
-- real PostgreSQL integration tests
-- Playwright (planned)
-
-Some deliberate constraints:
-
-- no separate backend for the first implementation slice;
-- no microservices, Redis, queues, GraphQL, vector database, or event sourcing without a demonstrated requirement;
-- application commands own business transactions;
-- UI code does not write directly to the ORM;
-- Campaign Core stays ruleset-neutral;
-- external auth-provider IDs never become campaign ownership IDs;
-- deterministic calculations stay outside the AI layer.
-
-See [Architecture](docs/architecture.md) for the reasoning and boundaries behind these choices.
-
-## Data model in one idea
-
-Campaign entities share a common identity through `campaign_entity`, while their actual data stays in typed relational tables. The registry and `location` are implemented; `npc` and `quest` are planned.
-
-This gives heterogeneous relationships and lifecycle operations a stable target without turning the database into an EAV model.
-
-Known structural relationships remain explicit relational structures. A generic `relationship` model is reserved for flexible semantic connections such as allies, rivals, debts, fears, protection, or custom GM-defined relationships.
-
-See [Domain Model](docs/domain-model.md) for the conceptual model.
-
-## AI approach
-
-AI is a layer of the product, not the product itself.
-
-Preferred order:
-
-```text
-Structured data → deterministic rules / algorithms → AI
-```
-
-AI output that could change campaign truth is validated and presented for review. The GM can accept, edit, reject, regenerate, or ignore it. Campaign modules do not call model SDKs directly.
-
-## Documentation
-
-The public documentation is intentionally concise:
-
-- [Product](docs/product.md) — problem, users, principles, MVP boundaries;
-- [Architecture](docs/architecture.md) — implementation structure and technical trade-offs;
-- [Domain Model](docs/domain-model.md) — major entities, relationships, and lifecycle concepts;
-- [Roadmap](docs/roadmap.md) — implementation sequence and scope boundaries;
-- [Licensing](docs/licensing.md) — SRD and third-party content boundaries;
-- [Architecture Decisions](docs/decisions/) — selected decisions where the trade-off is worth preserving.
-
-
-## Running tests
-
-### Minimal browser UI (A9)
-
-For Next.js, `DATABASE_URL` and the Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-and `CLERK_SECRET_KEY`) may live in `.env.local`.
-
-Before applying the existing migrations, make `DATABASE_URL` available to
-drizzle-kit. `drizzle.config.ts` uses `dotenv/config`, which does not load
-Next.js's `.env.local`. For example, set it in the PowerShell session:
+Use Node.js 24, pnpm 12, and PostgreSQL 18. Copy the settings described in [.env.example](.env.example), including the database URL and Clerk keys. Set `DATABASE_URL` in your shell before running migrations; the migration tool does not load Next.js's `.env.local` automatically.
 
 ```powershell
+pnpm install
 $env:DATABASE_URL="postgresql://app:local_password@localhost:5432/ttrpg_campaign_builder"
 pnpm db:migrate
+pnpm dev
 ```
 
-Then run `pnpm dev`. No new migration or additional dependency is needed for A9.
-
-`/` offers Clerk sign-in, the owner's Campaign list, and Campaign creation from
-a name and original premise. The server resolves the persisted `dnd-5e-2024`
-Ruleset Version `5.2.1`; a missing seed produces an unavailable message.
-`/campaigns/[campaignId]` lists all Location lifecycle states and offers creation.
-`/locations/[locationId]` provides editing, Archive, Trash, and Restore.
-The Clerk user menu includes identity and sign-out controls.
-
-Server Components and Server Actions resolve `requireActor(db)` before calling
-the existing application boundaries. A lazy process-wide database pool serves
-requests. The only form client state is pending/error feedback; accepted commands
-revalidate and redirect to persisted server state. Location forms submit the
-rendered revision. A conflict disables further submissions until explicit reload,
-without fetching a new revision and silently retrying. Archive/Trash/Restore
-semantics remain in the A8 commands; no Unarchive is exposed.
-
-Manual smoke checklist with configured Clerk credentials:
-
-1. Sign in; create a Campaign with a name and original premise; return home and
-   verify it appears in the list, then open it.
-2. Create a Location, edit its name/description, save, and reload to verify it persisted.
-3. Archive it, then Trash it, then Restore it. Verify it remains **Archived** in
-   both the Location detail and Campaign list.
-4. Open the same Location in two tabs. Save a change in one; submit the older
-   form in the other. Verify the visible conflict message and Reload control,
-   and verify the first tab's accepted content was not overwritten.
-5. Sign out through the user menu; verify the signed-out entry is shown.
-
-Browser automation remains the separate A10 checkpoint.
-
-### Authentication boundary (A6)
-
-Server transports call `requireActor(db)` from
-`src/infrastructure/auth/clerk/require-actor.ts` before entering feature code.
-It awaits Clerk authentication and resolves `(provider, provider_subject)` through
-the Identity application boundary to an `Actor` containing only the internal
-`user_account.id` as `userId`. Missing authentication throws `UnauthenticatedError`
-with code `UNAUTHENTICATED`; infrastructure errors propagate separately.
-
-The identity resolver owns account/mapping creation in one transaction. The
-existing unique index chooses the winner of concurrent first resolutions; losing
-transactions roll back their accounts and then read the committed mapping.
-Call it with the database before starting a feature command transaction. Provider
-claims must come from the trusted auth adapter, never from submitted form data.
-
-Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local`
-to serve authenticated requests. `src/proxy.ts` installs the Clerk request
-context on Next.js 16; it does not implement Campaign authorization or sign-in UI.
-Unit tests mock Clerk and the build does not require live Clerk credentials.
-The lockfile resolves Clerk 7.9.10 and Next.js 16.3.8, which satisfies Clerk's
-published Next.js peer range; no Next.js dependency adjustment was needed.
-See the [Clerk proxy documentation](https://clerk.com/docs/reference/nextjs/clerk-middleware).
-
-### Test commands
-
-- `pnpm test` runs the fast Node-based unit tests in `tests/unit/` without external services.
-- `pnpm test:watch` watches the unit tests.
-- `pnpm test:integration` runs `tests/integration/` against real PostgreSQL.
-
-For integration tests, set `TEST_DATABASE_URL` in your shell to an existing,
-dedicated test database such as `ttrpg_campaign_builder_test` (see `.env.example`).
-This test setup does not load `TEST_DATABASE_URL` from local env files; set it explicitly in your shell. Missing or blank
-`TEST_DATABASE_URL` causes integration tests to fail; `DATABASE_URL` is never a
-fallback. Before running the suite, apply the committed migrations with
-`pnpm db:migrate`, setting `DATABASE_URL` to the dedicated test database for that
-command.
-
-The suite covers identity, Ruleset and Campaign persistence, ownership, Ruleset
-Version pinning, Campaign Compass, the shared entity registry, Location integrity,
-revision-safe SQL updates, and archive/trash/restore database behavior. It also
-replays committed migrations from an empty schema and checks upgrades with existing
-data. Integration tests require PostgreSQL 18.
-
-## Project status
-
-Completed persistence, technical safety, and tooling foundation (through A5):
-
-- app bootstrap, PostgreSQL 18, and Drizzle migrations;
-- unit tests and real PostgreSQL integration tests;
-- provider-neutral identity persistence;
-- Ruleset / immutable Ruleset Version foundation;
-- Campaign root persistence, internal-user ownership, and Ruleset Version pinning;
-- Campaign Compass persistence and Campaign archive/trash database invariants;
-- shared `campaign_entity` registry and typed Location persistence, with same-Campaign constraints and database tests for atomic creation, revision safety, and lifecycle behavior;
-- Technical Operation Safety persistence foundation;
-- CI validation and protected `main`.
-
-A6 — Authentication / Actor Boundary is complete: Clerk authentication resolves to an internal Actor through the provider-neutral identity boundary.
-
-A7 is complete: owner-scoped Campaign queries and atomic Campaign creation with a Ruleset Version pin and Compass.
-
-A8 is complete: `src/modules/locations` exposes owner-scoped `listOwnedLocations`
-and `getOwnedLocation`, atomic `createLocation`, revision-safe `editLocation`, and
-`archiveLocation`, `trashLocation`, `restoreLocation`. Every function takes the
-database and trusted internal Actor. Listing and creation take a Campaign ID;
-direct access takes a Location ID. Queries include all lifecycle states.
-Edits take `expectedRevision` in their input; lifecycle commands take it as the
-fourth argument. Omitted edit fields stay unchanged; nullable fields accept `null`.
-Missing, malformed and non-owned direct IDs share `LocationNotFoundError`.
-Invalid input, parent hierarchy and stale revisions have distinct typed errors.
-
-Parent changes serialize on the owning Campaign row and validate ancestor links
-after acquiring that lock. Ordinary content edits lock only the entity. Real edits
-and lifecycle transitions increment revision once and update the timestamp;
-current-revision no-ops write nothing, and stale no-ops still conflict. Trash keeps
-archive state and an exact 30-day UTC retention window; repeated Trash never
-restarts it. Restore clears deletion fields and preserves archive state.
-
-For later completed slices, see the [roadmap](docs/roadmap.md). The architecture-proof browser journey and initial Campaign creation UI are complete.
+Run `pnpm test` for unit tests. Integration tests use a dedicated PostgreSQL database: set `TEST_DATABASE_URL`, migrate that database with `DATABASE_URL` pointed to it, then run `pnpm test:integration`. Browser tests run with `pnpm test:e2e` after configuring their test environment; see [browser proof setup](docs/browser-proof.md).
 
 ## Licensing
 
-The repository's own software license has not been selected yet.
-
-D&D rules content is treated separately from project code. The current ruleset direction is based only on material that can legally be used from the SRD 5.2.1 under CC BY 4.0, with the required attribution and content boundaries documented in [docs/licensing.md](docs/licensing.md).
+A license for the repository's own software has not yet been selected. Rules content is handled separately: the current direction uses legally reusable SRD 5.2.1 material under CC BY 4.0. See [licensing details](docs/licensing.md).
