@@ -6,6 +6,7 @@ import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedTravelRoutes } from "@/modules/travel-routes";
 import { listOwnedItems } from "@/modules/items";
 import { listOwnedRelationships } from "@/modules/relationships";
+import { listOwnedTimelineEvents } from "@/modules/timeline";
 import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
@@ -14,7 +15,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -30,6 +31,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const routes = await listOwnedTravelRoutes(db, actor, campaignId);
     const items = await listOwnedItems(db, actor, campaignId);
     const relationships = await listOwnedRelationships(db, actor, campaignId);
+    const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
@@ -38,9 +40,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
+  const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
+    id: row.id, name: row.kind, type: "Relationship", deletedAt: row.deletedAt,
+  }))];
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
@@ -74,6 +79,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#travel-routes">Travel routes</a>
         <a href="#items">Items</a>
         <a href="#relationships">Relationships</a>
+        <a href="#timeline">Timeline</a>
       </nav>
       <div className="workspace-content">
         <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
@@ -275,6 +281,26 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             </select>
             <label htmlFor="relationship-description">Details (optional)</label><textarea id="relationship-description" name="description" rows={3} />
             <button type="submit">Create relationship</button>
+          </ActionForm>
+        </section>
+        <section id="timeline" aria-labelledby="timeline-heading" className="workspace-section">
+          <h2 id="timeline-heading">Timeline</h2>
+          <p>Record meaningful events in the campaign story. A real date and an in-world date are both optional.</p>
+          {data.timeline.length ? <ul className="workspace-location-list">{data.timeline.map(event => <li key={event.id}>
+            <Link href={`/timeline/${event.id}`}>{event.title}</Link>
+            {event.inWorldDate ? ` · ${event.inWorldDate}` : event.occurredAt ? ` · ${event.occurredAt.toISOString().slice(0, 10)}` : ""}
+            {event.deletedAt ? " · Trashed" : event.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No timeline events yet.</p>}
+          <h3>Record event</h3>
+          <ActionForm action={createTimelineEventAction.bind(null, campaignId)}>
+            <label htmlFor="timeline-title">Title</label><input id="timeline-title" name="title" required />
+            <label htmlFor="timeline-description">What happened (optional)</label><textarea id="timeline-description" name="description" rows={4} />
+            <label htmlFor="timeline-occurred">Real date (optional)</label><input id="timeline-occurred" name="occurredOn" type="date" />
+            <label htmlFor="timeline-world-date">In-world date (optional)</label><input id="timeline-world-date" name="inWorldDate" />
+            <fieldset><legend>Related entities (optional)</legend>{timelineChoices.filter(choice => !choice.deletedAt).map(choice => <label key={choice.id}>
+              <input type="checkbox" name="entityIds" value={choice.id} /> {choice.type}: {choice.name}
+            </label>)}</fieldset>
+            <button type="submit">Record event</button>
           </ActionForm>
         </section>
       </div>

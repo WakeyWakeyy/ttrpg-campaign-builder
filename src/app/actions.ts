@@ -10,6 +10,7 @@ import { archiveLocation, createLocation, editLocation, restoreLocation, trashLo
 import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
+import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -43,6 +44,41 @@ function itemInput(form: FormData) {
 function relationshipInput(form: FormData) {
   return { sourceEntityId: text(form, "sourceEntityId"), targetEntityId: text(form, "targetEntityId"),
     kind: text(form, "kind"), description: text(form, "description") || null };
+}
+
+function timelineInput(form: FormData) {
+  return { title: text(form, "title"), description: text(form, "description") || null,
+    occurredOn: text(form, "occurredOn") || null, inWorldDate: text(form, "inWorldDate") || null,
+    entityIds: form.getAll("entityIds").filter((id): id is string => typeof id === "string") };
+}
+
+export async function createTimelineEventAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createTimelineEvent(db, await requireActor(db), { campaignId, ...timelineInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/timeline/${id}`);
+}
+
+export async function updateTimelineEventAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editTimelineEvent(db, actor, id, { expectedRevision: revision, ...timelineInput(form) })
+      : intent === "archive" ? await archiveTimelineEvent(db, actor, id, revision)
+      : intent === "trash" ? await trashTimelineEvent(db, actor, id, revision)
+      : intent === "restore" ? await restoreTimelineEvent(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a timeline action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/timeline/${id}`);
+  redirect(`/timeline/${id}`);
 }
 
 export async function createRelationshipAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

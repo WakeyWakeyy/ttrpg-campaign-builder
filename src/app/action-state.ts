@@ -11,9 +11,13 @@ import { FactionNotFoundError, FactionRevisionConflictError, InvalidFactionInput
 import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevisionConflictError } from "@/modules/travel-routes";
 import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
+import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof TimelineEventRevisionConflictError) return { message: "This event changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof TimelineEventNotFoundError) return { message: "Timeline event not found or unavailable." };
+  if (error instanceof InvalidTimelineEventInputError) return { message: "Enter an event title, a valid date, and available campaign entities." };
   if (error instanceof RelationshipRevisionConflictError) return { message: "This relationship changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof RelationshipNotFoundError) return { message: "Relationship not found or unavailable." };
   if (error instanceof InvalidRelationshipInputError) return { message: "Choose two available campaign entities and enter a relationship type." };
