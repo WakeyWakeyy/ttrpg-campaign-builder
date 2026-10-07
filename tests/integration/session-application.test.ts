@@ -3,11 +3,11 @@ import { readFile } from "node:fs/promises";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, session, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignEntity, scene, session, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
-import { archiveSession, createSession, editSession, getOwnedSession, InvalidSessionInputError,
-  listOwnedSessions, restoreSession, SessionNotFoundError, SessionRevisionConflictError,
+import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
+  listOwnedSessions, listSessionScenes, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -69,4 +69,32 @@ test("concurrent edits reject stale revisions and restore keeps archive state", 
   expect(restored).toMatchObject({ archivedAt: archived.archivedAt, deletedAt: null,
     preparation: null, outcome: null });
   expect(await db.select().from(campaignEntity)).toHaveLength(1);
+});
+
+test("scenes are ordered, owner-scoped, revision-safe, and recoverable", async () => {
+  const parent = await createSession(db, actor, { campaignId, title: "Crossing" });
+  await expect(createScene(db, other, parent.id, { expectedRevision: 1, title: "Intrusion" }))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  const first = await createScene(db, actor, parent.id, { expectedRevision: 1,
+    title: "At the bridge", preparation: "Toll keeper waits" });
+  const second = await createScene(db, actor, parent.id, { expectedRevision: 2, title: "Beyond" });
+  expect((await listSessionScenes(db, actor, parent.id)).map(row => row.title))
+    .toEqual(["At the bridge", "Beyond"]);
+  await expect(listSessionScenes(db, other, parent.id)).rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(db.insert(scene).values({ campaignId: foreignCampaignId, sessionId: parent.id,
+    position: 3, title: "Cross-campaign" })).rejects.toMatchObject({ cause: { constraint: "scene_session_fk" } });
+  await expect(editScene(db, other, parent.id, first.id, { expectedRevision: 3, intent: "save", title: "Stolen" }))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(editScene(db, actor, parent.id, randomUUID(), { expectedRevision: 3, intent: "trash", title: "" }))
+    .rejects.toBeInstanceOf(SceneNotFoundError);
+  const edited = await editScene(db, actor, parent.id, second.id, { expectedRevision: 3,
+    intent: "save", title: "Beyond", position: 1, outcome: "The party left" });
+  expect(edited).toMatchObject({ position: 1, outcome: "The party left" });
+  await expect(editScene(db, actor, parent.id, first.id, { expectedRevision: 3, intent: "save", title: "Stale" }))
+    .rejects.toBeInstanceOf(SessionRevisionConflictError);
+  await editScene(db, actor, parent.id, first.id, { expectedRevision: 4, intent: "trash", title: "" });
+  await editScene(db, actor, parent.id, first.id, { expectedRevision: 5, intent: "restore", title: "" });
+  expect((await listSessionScenes(db, actor, parent.id)).find(row => row.id === first.id)).toMatchObject({
+    title: "At the bridge", preparation: "Toll keeper waits", deletedAt: null,
+  });
 });

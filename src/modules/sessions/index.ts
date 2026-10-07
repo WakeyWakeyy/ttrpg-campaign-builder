@@ -1,12 +1,13 @@
 import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { campaign, campaignEntity, session } from "../../infrastructure/db/schema";
+import { campaign, campaignEntity, scene, session } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
 
 export class SessionNotFoundError extends Error {}
 export class SessionRevisionConflictError extends Error {}
 export class InvalidSessionInputError extends Error {}
+export class SceneNotFoundError extends Error {}
 
 type Fields = { title: string; plannedFor?: string | null; preparation?: string | null; outcome?: string | null };
 type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
@@ -100,3 +101,56 @@ export const trashSession = (db: NodePgDatabase, actor: Actor, id: string, revis
   lifecycle(db, actor, id, revision, "trash");
 export const restoreSession = (db: NodePgDatabase, actor: Actor, id: string, revision: number) =>
   lifecycle(db, actor, id, revision, "restore");
+
+type SceneFields = { title: string; preparation?: string | null; outcome?: string | null; position?: number };
+
+function sceneValues(input: SceneFields) {
+  if (typeof input.title !== "string" || !input.title.trim() || input.title.includes("\0")
+    || [input.preparation, input.outcome].some(value => value != null && (typeof value !== "string" || value.includes("\0")))
+    || (input.position !== undefined && (!Number.isInteger(input.position) || input.position < 1 || input.position > 2147483647)))
+    throw new InvalidSessionInputError();
+  return { title: input.title.trim(), preparation: input.preparation || null, outcome: input.outcome || null };
+}
+
+export async function listSessionScenes(db: NodePgDatabase, actor: Actor, sessionId: string) {
+  const parent = await getOwnedSession(db, actor, sessionId);
+  return db.select().from(scene).where(and(eq(scene.sessionId, parent.id), eq(scene.campaignId, parent.campaignId)))
+    .orderBy(asc(scene.position), asc(scene.id));
+}
+
+export async function createScene(db: NodePgDatabase, actor: Actor, sessionId: string,
+  input: SceneFields & { expectedRevision: number }) {
+  const data = sceneValues(input);
+  return db.transaction(async tx => {
+    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    if (parent.deletedAt) throw new InvalidSessionInputError();
+    const [last] = await tx.select({ position: scene.position }).from(scene)
+      .where(eq(scene.sessionId, sessionId)).orderBy(sql`${scene.position} DESC`).limit(1);
+    if (last?.position === 2147483647) throw new InvalidSessionInputError();
+    const [created] = await tx.insert(scene).values({ campaignId: parent.campaignId, sessionId,
+      position: (last?.position ?? 0) + 1, ...data }).returning();
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
+    return created;
+  }, { isolationLevel: "read committed" });
+}
+
+export async function editScene(db: NodePgDatabase, actor: Actor, sessionId: string, sceneId: string,
+  input: SceneFields & { expectedRevision: number; intent: "save" | "trash" | "restore" }) {
+  if (!uuid(sceneId)) throw new SceneNotFoundError();
+  const data = input.intent === "save" ? sceneValues(input) : null;
+  return db.transaction(async tx => {
+    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    const [current] = await tx.select().from(scene).where(and(eq(scene.id, sceneId),
+      eq(scene.sessionId, sessionId), eq(scene.campaignId, parent.campaignId)));
+    if (!current) throw new SceneNotFoundError();
+    if (parent.deletedAt || (input.intent === "save" && current.deletedAt)) throw new InvalidSessionInputError();
+    const changes = input.intent === "save" ? { ...data!, position: input.position ?? current.position }
+      : input.intent === "trash" ? { deletedAt: sql`statement_timestamp()` } : { deletedAt: null };
+    if (input.intent === "trash" && current.deletedAt || input.intent === "restore" && !current.deletedAt) return current;
+    if (input.intent === "save" && current.title === data!.title && current.preparation === data!.preparation
+      && current.outcome === data!.outcome && current.position === (input.position ?? current.position)) return current;
+    const [updated] = await tx.update(scene).set(changes).where(eq(scene.id, sceneId)).returning();
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
+    return updated;
+  }, { isolationLevel: "read committed" });
+}
