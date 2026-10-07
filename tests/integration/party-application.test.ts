@@ -7,7 +7,7 @@ import { campaign, campaignEntity, party, partyMember, playerCharacter, userAcco
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { archivePlayerCharacter, createPlayerCharacter, editPlayerCharacter, getOwnedPlayerCharacter, PlayerCharacterNotFoundError, PlayerCharacterRevisionConflictError, restorePlayerCharacter, trashPlayerCharacter } from "../../src/modules/player-characters";
-import { archiveParty, createParty, editParty, getOwnedParty, InvalidPartyMemberError, listPartyMemberIds, PartyNotFoundError, PartyRevisionConflictError, restoreParty, trashParty } from "../../src/modules/parties";
+import { archiveParty, createParty, editParty, getOwnedParty, InvalidPartyMemberError, listCampaignPartyMemberIds, listPartyMemberIds, PartyNotFoundError, PartyRevisionConflictError, restoreParty, trashParty } from "../../src/modules/parties";
 
 const schema = `a20_party_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -68,6 +68,22 @@ test("Party membership enforces same-Campaign PCs and preserves PCs when unlinke
   expect(edited.revision).toBe(2);
   expect(await listPartyMemberIds(db, actor, created.id)).toEqual([first.id]);
   expect(await getOwnedPlayerCharacter(db, actor, second.id)).toMatchObject({ name: "Sol" });
+});
+
+test("Campaign Party membership groups only owned Campaign members", async () => {
+  const first = await createPlayerCharacter(db, actor, { campaignId, name: "Rin" });
+  const second = await createPlayerCharacter(db, actor, { campaignId, name: "Sol" });
+  const foreign = await createPlayerCharacter(db, other, { campaignId: foreignCampaignId, name: "Other" });
+  const populated = await createParty(db, actor, { campaignId, name: "Travelers", playerCharacterIds: [first.id, second.id] });
+  const empty = await createParty(db, actor, { campaignId, name: "Empty" });
+  const outside = await createParty(db, other, { campaignId: foreignCampaignId, name: "Outside", playerCharacterIds: [foreign.id] });
+
+  const members = await listCampaignPartyMemberIds(db, actor, campaignId);
+  expect(members.get(populated.id)).toEqual(expect.arrayContaining([first.id, second.id]));
+  expect(members.get(populated.id)).toHaveLength(2);
+  expect(members.get(empty.id) ?? []).toEqual([]);
+  expect(members.has(outside.id)).toBe(false);
+  await expect(listCampaignPartyMemberIds(db, other, campaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
 });
 
 test("Party subtype creation rolls back and concurrent composition edits reject a stale revision", async () => {

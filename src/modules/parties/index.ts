@@ -32,6 +32,18 @@ export async function listPartyMemberIds(db: NodePgDatabase, actor: Actor, id: s
   await getOwnedParty(db, actor, id);
   return (await db.select({ id: partyMember.playerCharacterId }).from(partyMember).where(eq(partyMember.partyId, id))).map(row => row.id);
 }
+export async function listCampaignPartyMemberIds(db: NodePgDatabase, actor: Actor, campaignId: string) {
+  await getOwnedCampaign(db, actor, campaignId);
+  const rows = await db.select({ partyId: partyMember.partyId, id: partyMember.playerCharacterId })
+    .from(partyMember).where(eq(partyMember.campaignId, campaignId));
+  const members = new Map<string, string[]>();
+  for (const row of rows) {
+    const ids = members.get(row.partyId) ?? [];
+    ids.push(row.id);
+    members.set(row.partyId, ids);
+  }
+  return members;
+}
 async function lockCampaign(tx: Transaction, actor: Actor, id: string) {
   if (!isUuid(id)) throw new CampaignNotFoundError();
   const [row] = await tx.select({ id: campaign.id }).from(campaign)
