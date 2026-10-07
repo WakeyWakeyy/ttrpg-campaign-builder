@@ -40,7 +40,7 @@ Draft → Review proposals → accept, reject, or rename each node → preview a
 - Rollback when a later Location insert fails; no Campaign, partial Locations, materialization record, or successful command execution may remain.
 - Browser journey with mixed accepted/rejected/pending Locations and a visible conflict; the resulting Campaign contains accepted Locations only.
 
-The A14 implementation remains uncommitted on `feat/a13-optional-campaign-wizard` as of this review. Separate A14 and A15 changes before merging so each migration and behavior can be reviewed independently.
+Historical note: when this contract was drafted, A14 remained uncommitted on `feat/a13-optional-campaign-wizard`. The completed Blueprint work was later merged in PR #23.
 
 ## Local validation
 

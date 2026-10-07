@@ -9,8 +9,8 @@ No production authentication bypass is introduced.
 
 The same local authenticated journey now also covers A13 guided Campaign creation
 and A14 Blueprint Draft creation, internal owner persistence, proposed Location
-names, accepted editing, and rejection of a stale draft edit. See
-[A14 handoff](a14-blueprint-draft.md) for the next product step.
+names, accepted editing, and rejection of a stale draft edit. See the
+[roadmap](roadmap.md) for later completed journeys.
 
 ## Local setup
 
