@@ -11,6 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
+import { archiveSession, createSession, editSession, restoreSession, trashSession } from "@/modules/sessions";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -50,6 +51,40 @@ function timelineInput(form: FormData) {
   return { title: text(form, "title"), description: text(form, "description") || null,
     occurredOn: text(form, "occurredOn") || null, inWorldDate: text(form, "inWorldDate") || null,
     entityIds: form.getAll("entityIds").filter((id): id is string => typeof id === "string") };
+}
+
+function sessionInput(form: FormData) {
+  return { title: text(form, "title"), plannedFor: text(form, "plannedFor") || null,
+    preparation: text(form, "preparation") || null, outcome: text(form, "outcome") || null };
+}
+
+export async function createSessionAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createSession(db, await requireActor(db), { campaignId, ...sessionInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/sessions/${id}`);
+}
+
+export async function updateSessionAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editSession(db, actor, id, { expectedRevision: revision, ...sessionInput(form) })
+      : intent === "archive" ? await archiveSession(db, actor, id, revision)
+      : intent === "trash" ? await trashSession(db, actor, id, revision)
+      : intent === "restore" ? await restoreSession(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a session action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/sessions/${id}`);
+  redirect(`/sessions/${id}`);
 }
 
 export async function createTimelineEventAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

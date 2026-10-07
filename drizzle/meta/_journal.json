@@ -120,6 +120,13 @@
       "when": 1791348802048,
       "tag": "0016_nervous_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791417600000,
+      "tag": "0017_campaign_session",
+      "breakpoints": true
     }
   ]
 }

@@ -54,7 +54,7 @@ Expand the connected domain model:
 
 Make recurring preparation useful:
 
-- Session preparation;
+- Session preparation: A26 adds an owner-scoped Session with separate plan and outcome fields, revision-safe edits, and preservation lifecycle. See [A26 progress](a26-session-preparation.md);
 - optional Scenes;
 - previous-session context;
 - attendance override;

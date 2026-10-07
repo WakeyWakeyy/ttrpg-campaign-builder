@@ -7,6 +7,7 @@ import { listOwnedTravelRoutes } from "@/modules/travel-routes";
 import { listOwnedItems } from "@/modules/items";
 import { listOwnedRelationships } from "@/modules/relationships";
 import { listOwnedTimelineEvents } from "@/modules/timeline";
+import { listOwnedSessions } from "@/modules/sessions";
 import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
@@ -15,7 +16,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -32,6 +33,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const items = await listOwnedItems(db, actor, campaignId);
     const relationships = await listOwnedRelationships(db, actor, campaignId);
     const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
+    const sessions = await listOwnedSessions(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
@@ -40,7 +42,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -80,8 +82,24 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#items">Items</a>
         <a href="#relationships">Relationships</a>
         <a href="#timeline">Timeline</a>
+        <a href="#sessions">Sessions</a>
       </nav>
       <div className="workspace-content">
+        <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
+          <h2 id="sessions-heading">Sessions</h2>
+          <p>Prepare the next table session and keep its outcome separate from the plan.</p>
+          {data.sessions.length ? <ul className="workspace-location-list">{data.sessions.map(item => <li key={item.id}>
+            <Link href={`/sessions/${item.id}`}>{item.title}</Link>{item.plannedFor ? ` · ${item.plannedFor}` : ""}
+            {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No sessions yet.</p>}
+          <h3>Prepare session</h3>
+          <ActionForm action={createSessionAction.bind(null, campaignId)}>
+            <label htmlFor="new-session-title">Title</label><input id="new-session-title" name="title" required />
+            <label htmlFor="new-session-date">Planned date (optional)</label><input id="new-session-date" name="plannedFor" type="date" />
+            <label htmlFor="new-session-preparation">Preparation</label><textarea id="new-session-preparation" name="preparation" rows={5} />
+            <button type="submit">Create session</button>
+          </ActionForm>
+        </section>
         <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
           <h2 id="overview-heading">Overview</h2>
           <p>Keep the campaign&apos;s direction, story arcs, and places together as it grows.</p>
