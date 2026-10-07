@@ -47,7 +47,7 @@ Expand the connected domain model:
 - Factions and memberships: A21 adds typed Factions and NPC/PC memberships with role, rank, and active/former state. See [A21 progress](a21-campaign-factions.md);
 - Locations and Travel Routes: A22 connects existing Locations with typed Travel Routes for distance, duration, mode, hazards, and GM notes. See [A22 progress](a22-travel-routes.md);
 - Items: A23 adds important objects with an exclusive current Location or NPC/PC holder, revision-safe editing, and preservation lifecycle. See [A23 progress](a23-campaign-items.md);
-- semantic Relationships;
+- semantic Relationships: A24 adds owner-scoped links between Campaign entities with GM-defined semantics, revision-safe editing, and preservation lifecycle. See [A24 progress](a24-semantic-relationships.md);
 - basic Timeline.
 
 ## 4. Sessions

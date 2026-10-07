@@ -5,6 +5,8 @@ import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
 import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedTravelRoutes } from "@/modules/travel-routes";
 import { listOwnedItems } from "@/modules/items";
+import { listOwnedRelationships } from "@/modules/relationships";
+import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { listOwnedNpcs } from "@/modules/npcs";
@@ -12,7 +14,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -27,6 +29,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const locations = await listOwnedLocations(db, actor, campaignId);
     const routes = await listOwnedTravelRoutes(db, actor, campaignId);
     const items = await listOwnedItems(db, actor, campaignId);
+    const relationships = await listOwnedRelationships(db, actor, campaignId);
+    const relationshipChoices = await relationshipOptions(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
     const npcs = await listOwnedNpcs(db, actor, campaignId);
@@ -34,7 +38,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
@@ -69,6 +73,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#locations">Locations</a>
         <a href="#travel-routes">Travel routes</a>
         <a href="#items">Items</a>
+        <a href="#relationships">Relationships</a>
       </nav>
       <div className="workspace-content">
         <section id="overview" aria-labelledby="overview-heading" className="workspace-section">
@@ -247,6 +252,29 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             </select>
             <label htmlFor="item-notes">GM notes (optional)</label><textarea id="item-notes" name="notes" rows={4} />
             <button type="submit">Create item</button>
+          </ActionForm>
+        </section>
+        <section id="relationships" aria-labelledby="relationships-heading" className="workspace-section">
+          <h2 id="relationships-heading">Relationships</h2>
+          <p>Connect campaign people, places, stories, and objects with your own terms.</p>
+          {data.relationships.length ? <ul className="workspace-location-list">{data.relationships.map(relationship => <li key={relationship.id}>
+            <Link href={`/relationships/${relationship.id}`}>
+              {data.relationshipChoices.find(choice => choice.id === relationship.sourceEntityId)?.name ?? "Unknown"} · {relationship.kind} · {data.relationshipChoices.find(choice => choice.id === relationship.targetEntityId)?.name ?? "Unknown"}
+            </Link>{relationship.deletedAt ? " · Trashed" : relationship.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No relationships yet.</p>}
+          <h3>Create relationship</h3>
+          <ActionForm action={createRelationshipAction.bind(null, campaignId)}>
+            <label htmlFor="relationship-source">From</label>
+            <select id="relationship-source" name="sourceEntityId" required><option value="">Choose entity</option>
+              {data.relationshipChoices.filter(choice => !choice.deletedAt).map(choice => <option key={choice.id} value={choice.id}>{choice.type}: {choice.name}</option>)}
+            </select>
+            <label htmlFor="relationship-kind">Relationship</label><input id="relationship-kind" name="kind" placeholder="protects, owes, knows…" required />
+            <label htmlFor="relationship-target">To</label>
+            <select id="relationship-target" name="targetEntityId" required><option value="">Choose entity</option>
+              {data.relationshipChoices.filter(choice => !choice.deletedAt).map(choice => <option key={choice.id} value={choice.id}>{choice.type}: {choice.name}</option>)}
+            </select>
+            <label htmlFor="relationship-description">Details (optional)</label><textarea id="relationship-description" name="description" rows={3} />
+            <button type="submit">Create relationship</button>
           </ActionForm>
         </section>
       </div>
