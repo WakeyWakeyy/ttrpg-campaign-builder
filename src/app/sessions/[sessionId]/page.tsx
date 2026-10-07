@@ -1,24 +1,35 @@
 import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { getOwnedSession, listSessionScenes } from "@/modules/sessions";
+import { getOwnedSession, getPreviousSessionContext, listSessionScenes } from "@/modules/sessions";
 import { ActionForm } from "../../action-form";
 import { createSceneAction, updateSceneAction, updateSessionAction } from "../../actions";
 import { readError } from "../../read-error";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  const { item, scenes } = await (async () => {
+  const { item, scenes, previous } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
     return { item: await getOwnedSession(db, actor, sessionId),
-      scenes: await listSessionScenes(db, actor, sessionId) };
+      scenes: await listSessionScenes(db, actor, sessionId),
+      previous: await getPreviousSessionContext(db, actor, sessionId) };
   })().catch(readError);
   return <main>
     <Link href={`/campaigns/${item.campaignId}#sessions`}>Back to campaign</Link>
     <h1>{item.title}</h1>
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this session to {item.archivedAt ? "Archived" : "Active"}.</p>}
+    <section aria-labelledby="previous-session-heading">
+      <h2 id="previous-session-heading">Previous session</h2>
+      {previous ? <>
+        <p><Link href={`/sessions/${previous.session.id}`}>{previous.session.title}</Link>
+          {previous.session.plannedFor ? ` · ${previous.session.plannedFor}` : ""}</p>
+        {previous.session.outcome?.trim() ? <p>{previous.session.outcome}</p> : <p>No session outcome recorded yet.</p>}
+        {previous.scenes.length > 0 && <><h3>Scene outcomes</h3><ul>{previous.scenes.map((scene, index) =>
+          <li key={index}><strong>{scene.title}:</strong> {scene.outcome}</li>)}</ul></>}
+      </> : <p>This is the first available session in this campaign.</p>}
+    </section>
     <ActionForm key={item.revision} action={updateSessionAction.bind(null, item.id)} reloadLabel="Reload session">
       <input type="hidden" name="expectedRevision" value={item.revision} />
       <label htmlFor="session-title">Title</label>

@@ -1,4 +1,4 @@
-import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { campaign, campaignEntity, scene, session } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
@@ -31,6 +31,19 @@ export async function getOwnedSession(db: NodePgDatabase, actor: Actor, id: stri
   const [row] = await owned(db, actor).where(eq(session.id, id));
   if (!row) throw new SessionNotFoundError();
   return row;
+}
+export async function getPreviousSessionContext(db: NodePgDatabase, actor: Actor, id: string) {
+  const current = await getOwnedSession(db, actor, id);
+  const [previous] = await owned(db, actor).where(and(
+    eq(session.campaignId, current.campaignId),
+    lt(campaignEntity.createdAt, current.createdAt),
+    isNull(campaignEntity.deletedAt),
+  )).orderBy(desc(campaignEntity.createdAt)).limit(1);
+  if (!previous) return null;
+  const scenes = await db.select({ title: scene.title, outcome: scene.outcome }).from(scene)
+    .where(and(eq(scene.sessionId, previous.id), eq(scene.campaignId, current.campaignId), isNull(scene.deletedAt)))
+    .orderBy(asc(scene.position), asc(scene.id));
+  return { session: previous, scenes: scenes.filter(item => item.outcome?.trim()) };
 }
 function values(input: Fields) {
   if (typeof input.title !== "string" || !input.title.trim() || input.title.includes("\0")
