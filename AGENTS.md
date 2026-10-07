@@ -96,6 +96,7 @@ Do not implement later Campaign Wizard, Blueprint, AI, export, encounter, or map
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+The shared operating guide is `docs/graphify-workflow.md`.
 
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
@@ -105,6 +106,8 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- Before relying on a result, check snapshot coverage and freshness, then verify the cited relationship in its source file. If the graph is missing, stale, or incomplete for the question, inspect the source directly and state the limitation.
+- For new entities or cross-module changes, use the relevant subgraph to inspect dependencies against the accepted architecture. Review whether new node and relationship patterns are represented after updating the snapshot; `graphify update .` alone does not change Graphify's extraction model. See `docs/graphify-workflow.md`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
