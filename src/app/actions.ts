@@ -9,6 +9,7 @@ import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlu
 import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
 import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
+import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -37,6 +38,40 @@ function itemInput(form: FormData) {
     notes: text(form, "notes") || null, locationId: locator.startsWith("location:") ? locator.slice(9) : null,
     npcHolderId: locator.startsWith("npc:") ? locator.slice(4) : null,
     playerCharacterHolderId: locator.startsWith("pc:") ? locator.slice(3) : null };
+}
+
+function relationshipInput(form: FormData) {
+  return { sourceEntityId: text(form, "sourceEntityId"), targetEntityId: text(form, "targetEntityId"),
+    kind: text(form, "kind"), description: text(form, "description") || null };
+}
+
+export async function createRelationshipAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createRelationship(db, await requireActor(db), { campaignId, ...relationshipInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/relationships/${id}`);
+}
+
+export async function updateRelationshipAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editRelationship(db, actor, id, { expectedRevision: revision, ...relationshipInput(form) })
+      : intent === "archive" ? await archiveRelationship(db, actor, id, revision)
+      : intent === "trash" ? await trashRelationship(db, actor, id, revision)
+      : intent === "restore" ? await restoreRelationship(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a relationship action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/relationships/${id}`);
+  redirect(`/relationships/${id}`);
 }
 
 export async function createItemAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

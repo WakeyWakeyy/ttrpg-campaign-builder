@@ -10,9 +10,13 @@ import { InvalidPartyInputError, InvalidPartyMemberError, PartyNotFoundError, Pa
 import { FactionNotFoundError, FactionRevisionConflictError, InvalidFactionInputError, InvalidFactionMembershipError } from "@/modules/factions";
 import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevisionConflictError } from "@/modules/travel-routes";
 import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
+import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof RelationshipRevisionConflictError) return { message: "This relationship changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof RelationshipNotFoundError) return { message: "Relationship not found or unavailable." };
+  if (error instanceof InvalidRelationshipInputError) return { message: "Choose two available campaign entities and enter a relationship type." };
   if (error instanceof ItemRevisionConflictError) return { message: "This item changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof ItemNotFoundError) return { message: "Item not found or unavailable." };
   if (error instanceof InvalidItemInputError) return { message: "Enter an item name and choose an available holder or location in this campaign." };
