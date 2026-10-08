@@ -54,7 +54,7 @@ Expand the connected domain model:
 
 Make recurring preparation useful:
 
-**Current stage:** Session preparation, Scenes, previous-session context, per-session attendance, Run View, and focused post-session outcome capture are complete. Reusable preparation when plans change is next.
+**Current stage:** Session preparation, Scenes, previous-session context, per-session attendance, Run View, focused post-session outcome capture, and reusable preparation are complete. Rules, Encounters, and Rewards is next.
 
 - Session preparation: A26 adds an owner-scoped Session with separate plan and outcome fields, revision-safe edits, and preservation lifecycle. See [A26 progress](a26-session-preparation.md);
 - Scenes: A27 adds ordered preparation beats within a Session, with separate outcomes, revision-safe edits, and recoverable trash. See [A27 progress](a27-session-scenes.md);
@@ -62,7 +62,7 @@ Make recurring preparation useful:
 - attendance override: a Session records its own explicit set of attending Player Characters, including an intentional empty set, without editing Party membership (merged in [PR #42](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/42));
 - quick-reference / Run View: a focused table view of previous outcomes, attendance, preparation, and available Scenes, with a link back to editing;
 - post-session outcome capture: a dedicated recap page records the Session and individual Scene outcomes with revision protection while preserving their preparation;
-- reusable preparation when plans change.
+- reusable preparation when plans change: a GM can copy a Session's plan and available Scenes into a new Session, leaving the source intact and starting with empty outcomes, attendance, and date.
 
 ## 5. Rules, Encounters, and Rewards
 

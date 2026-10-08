@@ -107,6 +107,25 @@ export async function createSession(db: NodePgDatabase, actor: Actor, input: Fie
     return { ...entity, ...typed };
   });
 }
+export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, sourceId: string,
+  expectedRevision: number) {
+  return db.transaction(async tx => {
+    const source = await lock(tx, actor, sourceId, expectedRevision);
+    if (source.deletedAt) throw new InvalidSessionInputError();
+    const sourceScenes = await tx.select().from(scene).where(and(eq(scene.sessionId, source.id),
+      eq(scene.campaignId, source.campaignId), isNull(scene.deletedAt)))
+      .orderBy(asc(scene.position), asc(scene.id));
+    const [entity] = await tx.insert(campaignEntity).values({ campaignId: source.campaignId,
+      entityType: "SESSION", createdByUserId: actor.userId }).returning();
+    const [typed] = await tx.insert(session).values({ id: entity.id, campaignId: entity.campaignId,
+      title: `Copy of ${source.title}`, preparation: source.preparation }).returning();
+    if (sourceScenes.length) await tx.insert(scene).values(sourceScenes.map((item, index) => ({
+      campaignId: source.campaignId, sessionId: entity.id, position: index + 1,
+      title: item.title, preparation: item.preparation,
+    })));
+    return { ...entity, ...typed };
+  }, { isolationLevel: "read committed" });
+}
 async function lock(tx: Transaction, actor: Actor, id: string, expectedRevision: number) {
   if (!uuid(id)) throw new SessionNotFoundError();
   const [row] = await tx.select({ id: campaignEntity.id }).from(campaignEntity)

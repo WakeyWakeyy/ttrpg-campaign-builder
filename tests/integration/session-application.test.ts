@@ -9,7 +9,7 @@ import type { Actor } from "../../src/modules/identity";
 import { createParty, listPartyMemberIds } from "../../src/modules/parties";
 import { createPlayerCharacter } from "../../src/modules/player-characters";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
+  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -61,6 +61,36 @@ test("outcome capture preserves preparation and rejects stale, foreign, or trash
   await trashSession(db, actor, parent.id, 4);
   await expect(recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 5, outcome: "No" }))
     .rejects.toBeInstanceOf(InvalidSessionInputError);
+});
+
+test("reuses available preparation in a new session without copying play history", async () => {
+  const source = await createSession(db, actor, { campaignId, title: "Crossing", plannedFor: "2026-10-08",
+    preparation: "Meet the guard", outcome: "The bridge fell" });
+  const kept = await createScene(db, actor, source.id, { expectedRevision: 1,
+    title: "Gate", preparation: "Ask for passage", outcome: "The guard fled" });
+  const discarded = await createScene(db, actor, source.id, { expectedRevision: 2,
+    title: "Unused", preparation: "Old plan" });
+  await editScene(db, actor, source.id, discarded.id, { expectedRevision: 3, intent: "trash", title: "" });
+  const character = await createPlayerCharacter(db, actor, { campaignId, name: "Mira" });
+  await setSessionAttendance(db, actor, source.id, { expectedRevision: 4, playerCharacterIds: [character.id] });
+  await expect(reuseSessionPreparation(db, other, source.id, 5))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(reuseSessionPreparation(db, actor, source.id, 4))
+    .rejects.toBeInstanceOf(SessionRevisionConflictError);
+  const copy = await reuseSessionPreparation(db, actor, source.id, 5);
+  expect(copy).toMatchObject({ campaignId, title: "Copy of Crossing", preparation: "Meet the guard",
+    outcome: null, plannedFor: null, attendanceSet: false, revision: 1 });
+  expect(await listSessionAttendance(db, actor, copy.id)).toEqual([]);
+  expect(await listSessionScenes(db, actor, copy.id)).toMatchObject([
+    { title: "Gate", preparation: "Ask for passage", outcome: null, position: 1, deletedAt: null },
+  ]);
+  expect((await listSessionScenes(db, actor, source.id)).find(item => item.id === kept.id)?.outcome)
+    .toBe("The guard fled");
+  expect((await getOwnedSession(db, actor, source.id)).revision).toBe(5);
+  await trashSession(db, actor, source.id, 5);
+  await expect(reuseSessionPreparation(db, actor, source.id, 6))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+  expect(await listOwnedSessions(db, actor, campaignId)).toHaveLength(2);
 });
 
 test("attendance is explicit, revision-safe, campaign-bound, and independent of party membership", async () => {
