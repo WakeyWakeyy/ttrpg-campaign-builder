@@ -11,7 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -120,6 +120,18 @@ export async function createSessionAction(campaignId: string, _state: ActionStat
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   redirect(`/sessions/${id}`);
+}
+
+export async function reuseSessionPreparationAction(sourceId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  let created: { id: string; campaignId: string };
+  try {
+    const db = getDatabase();
+    created = await reuseSessionPreparation(db, await requireActor(db), sourceId,
+      Number(text(form, "expectedRevision")));
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${created.campaignId}`);
+  redirect(`/sessions/${created.id}`);
 }
 
 export async function updateSessionAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {

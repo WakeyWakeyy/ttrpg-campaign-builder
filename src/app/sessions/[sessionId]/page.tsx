@@ -4,7 +4,7 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { ActionForm } from "../../action-form";
-import { createSceneAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
+import { createSceneAction, reuseSessionPreparationAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
 import { readError } from "../../read-error";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
@@ -24,6 +24,11 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
     <h1>{item.title}</h1>
     <p><Link href={`/sessions/${item.id}/run`}>Open Run View</Link></p>
     <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
+    {!item.deletedAt && <ActionForm action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
+      <input type="hidden" name="expectedRevision" value={item.revision} />
+      <button type="submit">Reuse preparation in a new session</button>
+      <p>Copies this plan and available scenes. Outcomes, attendance, and the planned date start empty.</p>
+    </ActionForm>}
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this session to {item.archivedAt ? "Archived" : "Active"}.</p>}
     <section aria-labelledby="previous-session-heading">
