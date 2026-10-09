@@ -8,6 +8,8 @@ import { listOwnedItems } from "@/modules/items";
 import { listOwnedRelationships } from "@/modules/relationships";
 import { listOwnedTimelineEvents } from "@/modules/timeline";
 import { listOwnedSessions } from "@/modules/sessions";
+import { getCampaignRulesetVersion, listCampaignRulesReferences } from "@/modules/rulesets";
+import { EncounterBudgetCalculator } from "../../encounter-budget-calculator";
 import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
@@ -34,6 +36,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const relationships = await listOwnedRelationships(db, actor, campaignId);
     const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
     const sessions = await listOwnedSessions(db, actor, campaignId);
+    const rulesReferences = await listCampaignRulesReferences(db, actor, campaignId);
+    const rulesetVersion = await getCampaignRulesetVersion(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
@@ -42,7 +46,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -83,8 +87,22 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#relationships">Relationships</a>
         <a href="#timeline">Timeline</a>
         <a href="#sessions">Sessions</a>
+        <a href="#rules-reference">Rules reference</a>
       </nav>
       <div className="workspace-content">
+        <section id="rules-reference" aria-labelledby="rules-reference-heading" className="workspace-section">
+          <h2 id="rules-reference-heading">Rules reference</h2>
+          {data.rulesReferences.length ? <>
+            <p>Selected sections from {data.rulesReferences[0].version}, the version pinned to this campaign.</p>
+            <ul>{data.rulesReferences.map(entry => <li key={entry.key}>
+              {entry.category}: <a href={`${entry.sourceUrl}#page=${entry.page}`}>{entry.title}</a> (page {entry.page})
+            </li>)}</ul>
+            <p>Source: <a href={data.rulesReferences[0].sourceUrl}>{data.rulesReferences[0].sourceTitle}</a> · <a href={data.rulesReferences[0].licenseUrl}>{data.rulesReferences[0].license}</a></p>
+            <p>{data.rulesReferences[0].attribution}</p>
+          </> : <p>No reference index is available for this campaign&apos;s ruleset version.</p>}
+          {data.rulesetVersion && <EncounterBudgetCalculator rulesetKey={data.rulesetVersion.rulesetKey}
+            version={data.rulesetVersion.version} />}
+        </section>
         <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
           <h2 id="sessions-heading">Sessions</h2>
           <p>Prepare the next table session and keep its outcome separate from the plan.</p>

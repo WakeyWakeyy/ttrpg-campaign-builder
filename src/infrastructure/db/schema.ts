@@ -148,6 +148,24 @@ export const rulesetContentSource = pgTable(
   ],
 );
 
+// Reference entries belong to one published source, and never to Campaign Core.
+export const rulesetReference = pgTable(
+  "ruleset_reference",
+  {
+    id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+    sourceId: uuid("source_id").notNull()
+      .references(() => rulesetContentSource.id, { onDelete: "restrict" }),
+    key: text("key").notNull(),
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    page: integer("page").notNull(),
+  },
+  (table) => [
+    uniqueIndex("ruleset_reference_source_key_unique").on(table.sourceId, table.key),
+    check("ruleset_reference_page_positive", sql`${table.page} > 0`),
+  ],
+);
+
 export const campaign = pgTable("campaign", {
   id: uuid("id").default(sql`uuidv7()`).primaryKey(),
   ownerUserId: uuid("owner_user_id").notNull()
