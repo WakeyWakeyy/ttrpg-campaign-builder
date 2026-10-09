@@ -16,6 +16,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Build a connected world:** create and manage arcs, quests, NPCs, player characters, parties, factions, locations, travel routes, and important items.
 - **Track connections and history:** link campaign elements with meaningful relationships and place events on a timeline.
 - **Prepare sessions:** record a session plan and its outcome separately, then arrange scenes in the order you expect to run them. Scenes also keep preparation and outcomes separate. Reuse a plan in a new session when plans change.
+- **Consult rules:** open selected sections of the SRD 5.2.1 from a campaign, with the pinned version and source attribution visible. Calculate encounter XP budgets for a party of equal-level characters.
 - **Keep control of changes:** edit with conflict protection and archive, discard, or restore supported campaign material without silently losing accepted work.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
@@ -26,12 +27,13 @@ These features are backed by persistent storage and automated tests. The current
 2. **Campaign creation:** direct creation, a guided starting flow, reviewable draft material, and a central campaign workspace.
 3. **Campaign core:** story structure, people and groups, places and travel, items, relationships, and a basic timeline.
 4. **Session preparation:** sessions and ordered scenes with separate plans and outcomes.
+5. **Rules foundation:** a versioned SRD reference index and deterministic encounter XP budgets.
 
 The detailed implementation history is in the [roadmap](docs/roadmap.md).
 
 ## Estimated project status
 
-**Active development — campaign creation, the connected campaign core, and session preparation are implemented.** This is an estimate of product maturity, not a release percentage or delivery date. The next areas on the roadmap include encounters and rewards, rules support, contextual assistance, and export. Those areas should be treated as planned unless the roadmap says otherwise.
+**Active development — campaign creation, the connected campaign core, session preparation, a rules reference index, and encounter XP budgets are implemented.** This is an estimate of product maturity, not a release percentage or delivery date. The next areas on the roadmap include the Encounter Builder, rewards, contextual assistance, and export. Those areas should be treated as planned unless the roadmap says otherwise.
 
 The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 

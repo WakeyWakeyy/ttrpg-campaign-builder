@@ -3,8 +3,9 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import { afterAll, afterEach, beforeEach, expect, test } from "vitest";
 import { createDatabase } from "../../src/infrastructure/db";
-import { ruleset, rulesetVersion, rulesetContentSource } from "../../src/infrastructure/db/schema";
-import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
+import { campaign, campaignRuleset, ruleset, rulesetVersion, rulesetContentSource, rulesetReference, userAccount } from "../../src/infrastructure/db/schema";
+import { CampaignNotFoundError } from "../../src/modules/campaigns";
+import { getCampaignRulesetVersion, getSupportedRulesetVersion, listCampaignRulesReferences } from "../../src/modules/rulesets";
 
 const connectionString = process.env.TEST_DATABASE_URL;
 if (!connectionString?.trim()) {
@@ -93,6 +94,45 @@ test("migration seeds the official Ruleset, Version and source with exact proven
     publishedAt: "2025-05-01",
     attribution: "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.",
   });
+});
+
+test("migration indexes SRD sections with a valid source and printed pages", async () => {
+  const rows = await db.select().from(rulesetReference)
+    .innerJoin(rulesetContentSource, eq(rulesetReference.sourceId, rulesetContentSource.id))
+    .orderBy(rulesetReference.page);
+  const official = rows.filter(row => row.ruleset_content_source.key === "srd-5.2.1-en");
+  expect(official.map(row => [row.ruleset_reference.key, row.ruleset_reference.page])).toEqual([
+    ["d20-tests", 6], ["combat", 13], ["rules-glossary", 176],
+    ["combat-encounters", 202], ["monsters", 254],
+  ]);
+  const sourceId = official[0].ruleset_content_source.id;
+  await expect(db.insert(rulesetReference).values({ sourceId, key: "combat", category: "Core rules",
+    title: "Duplicate", page: 13 })).rejects.toMatchObject({ cause: { constraint: "ruleset_reference_source_key_unique" } });
+});
+
+test("campaign reference follows its pinned version and requires ownership", async () => {
+  const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
+  const version = await getSupportedRulesetVersion(db);
+  expect(version).toBeTruthy();
+  const [pin] = await db.select().from(rulesetVersion).where(eq(rulesetVersion.id, version!.id));
+  const [owned] = await db.insert(campaign).values({ ownerUserId: owner.id, name: "Rules" }).returning();
+  await db.insert(campaignRuleset).values({ campaignId: owned.id, rulesetId: pin.rulesetId, rulesetVersionId: pin.id });
+  const entries = await listCampaignRulesReferences(db, { userId: owner.id }, owned.id);
+  expect(await getCampaignRulesetVersion(db, { userId: owner.id }, owned.id)).toMatchObject({
+    rulesetKey: "dnd-5e-2024", version: "5.2.1",
+  });
+  expect(entries).toHaveLength(5);
+  expect(entries[0]).toMatchObject({ title: "D20 Tests", version: "SRD 5.2.1", license: "CC-BY-4.0" });
+  await expect(listCampaignRulesReferences(db, { userId: stranger.id }, owned.id))
+    .rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(getCampaignRulesetVersion(db, { userId: stranger.id }, owned.id))
+    .rejects.toBeInstanceOf(CampaignNotFoundError);
+  const otherVersion = await newVersion((await newRuleset()).id);
+  const [otherCampaign] = await db.insert(campaign).values({ ownerUserId: owner.id, name: "Other" }).returning();
+  await db.insert(campaignRuleset).values({ campaignId: otherCampaign.id, rulesetId: otherVersion.rulesetId, rulesetVersionId: otherVersion.id });
+  expect(await listCampaignRulesReferences(db, { userId: owner.id }, otherCampaign.id)).toEqual([]);
+  expect(await getCampaignRulesetVersion(db, { userId: owner.id }, otherCampaign.id))
+    .toMatchObject({ version: otherVersion.version });
 });
 
 test("all Ruleset tables generate UUIDv7 IDs and timezone-aware timestamps", async () => {
