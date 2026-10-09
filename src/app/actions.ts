@@ -12,6 +12,7 @@ import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/mod
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -61,6 +62,72 @@ function sessionInput(form: FormData) {
 function sceneInput(form: FormData) {
   return { title: text(form, "title"), preparation: text(form, "preparation") || null,
     outcome: text(form, "outcome") || null, position: Number(text(form, "position")) };
+}
+
+function encounterInput(form: FormData) {
+  return { title: text(form, "title"), notes: text(form, "notes") || null,
+    partyLevel: Number(text(form, "partyLevel")), partySize: Number(text(form, "partySize")) };
+}
+
+function encounterCreatureInput(form: FormData) {
+  const xp = text(form, "xp");
+  return { name: text(form, "name"), xp: xp.trim() ? Number(xp) : Number.NaN,
+    quantity: Number(text(form, "quantity")) };
+}
+
+export async function createEncounterAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createEncounter(db, await requireActor(db), { campaignId, ...encounterInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/encounters/${id}`);
+}
+
+export async function updateEncounterAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editEncounter(db, actor, id,
+      { expectedRevision: revision, ...encounterInput(form) })
+      : intent === "archive" ? await archiveEncounter(db, actor, id, revision)
+      : intent === "trash" ? await trashEncounter(db, actor, id, revision)
+      : intent === "restore" ? await restoreEncounter(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose an encounter action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/encounters/${id}`);
+  redirect(`/encounters/${id}`);
+}
+
+export async function addEncounterCreatureAction(id: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await addEncounterCreature(db, await requireActor(db), id,
+      { expectedRevision: Number(text(form, "expectedRevision")), ...encounterCreatureInput(form) });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/encounters/${id}`);
+  redirect(`/encounters/${id}`);
+}
+
+export async function updateEncounterCreatureAction(id: string, creatureId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    const intent = text(form, "intent");
+    if (intent !== "save" && intent !== "trash" && intent !== "restore")
+      return { message: "Choose a creature action." };
+    await editEncounterCreature(db, await requireActor(db), id, creatureId,
+      { expectedRevision: Number(text(form, "expectedRevision")), intent, ...encounterCreatureInput(form) });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/encounters/${id}`);
+  redirect(`/encounters/${id}`);
 }
 
 export async function recordSessionOutcomeAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {

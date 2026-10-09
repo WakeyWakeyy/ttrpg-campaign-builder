@@ -285,7 +285,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -345,6 +345,51 @@ export const travelRoute = pgTable("travel_route", {
   check("travel_route_entity_type_check", sql`${table.entityType} = 'TRAVEL_ROUTE'`),
   check("travel_route_name_nonempty", sql`length(btrim(${table.name})) > 0`),
   check("travel_route_distinct_locations", sql`${table.fromLocationId} <> ${table.toLocationId}`),
+]);
+
+export const encounter = pgTable("encounter", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("ENCOUNTER").notNull(),
+  title: text("title").notNull(),
+  notes: text("notes"),
+}, table => [
+  uniqueIndex("encounter_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("encounter_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "encounter_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("encounter_entity_type_check", sql`${table.entityType} = 'ENCOUNTER'`),
+  check("encounter_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+]);
+
+// Ruleset-specific preparation remains outside the ruleset-neutral Encounter identity.
+export const encounterSrdPlan = pgTable("encounter_srd_521_plan", {
+  encounterId: uuid("encounter_id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  partyLevel: integer("party_level").notNull(),
+  partySize: integer("party_size").notNull(),
+}, table => [
+  foreignKey({ name: "encounter_srd_plan_encounter_fk", columns: [table.campaignId, table.encounterId],
+    foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
+  check("encounter_srd_plan_level_check", sql`${table.partyLevel} BETWEEN 1 AND 20`),
+  check("encounter_srd_plan_size_check", sql`${table.partySize} BETWEEN 1 AND 20`),
+]);
+
+export const encounterCreature = pgTable("encounter_srd_521_creature", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  encounterId: uuid("encounter_id").notNull(),
+  name: text("name").notNull(),
+  xp: integer("xp").notNull(),
+  quantity: integer("quantity").notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+}, table => [
+  index("encounter_creature_encounter_idx").on(table.encounterId),
+  foreignKey({ name: "encounter_creature_encounter_fk", columns: [table.campaignId, table.encounterId],
+    foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
+  check("encounter_creature_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("encounter_creature_xp_nonnegative", sql`${table.xp} >= 0`),
+  check("encounter_creature_quantity_positive", sql`${table.quantity} BETWEEN 1 AND 100`),
 ]);
 
 export const session = pgTable("session", {

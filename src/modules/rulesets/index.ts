@@ -26,6 +26,7 @@ export async function getCampaignRulesetVersion(db: NodePgDatabase, actor: Actor
 export async function listCampaignRulesReferences(db: NodePgDatabase, actor: Actor, campaignId: string) {
   await getOwnedCampaign(db, actor, campaignId);
   return db.select({
+    sourceId: rulesetContentSource.id,
     key: rulesetReference.key,
     category: rulesetReference.category,
     title: rulesetReference.title,

@@ -148,6 +148,13 @@
       "when": 1791508120483,
       "tag": "0020_green_spencer_smythe",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791515086774,
+      "tag": "0021_classy_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

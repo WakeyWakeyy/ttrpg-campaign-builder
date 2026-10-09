@@ -123,6 +123,14 @@ test("campaign reference follows its pinned version and requires ownership", asy
   });
   expect(entries).toHaveLength(5);
   expect(entries[0]).toMatchObject({ title: "D20 Tests", version: "SRD 5.2.1", license: "CC-BY-4.0" });
+  const [extraSource] = await db.insert(rulesetContentSource).values(sourceValues(pin.id, "extra-source")).returning();
+  await db.insert(rulesetReference).values({ sourceId: extraSource.id, key: "extra-reference",
+    category: "Supplement", title: "Extra reference", page: 300 });
+  const withExtra = await listCampaignRulesReferences(db, { userId: owner.id }, owned.id);
+  expect(withExtra.find(entry => entry.key === "extra-reference")).toMatchObject({
+    sourceId: extraSource.id, sourceTitle: "Test Source", attribution: "Test attribution",
+    license: "test-license",
+  });
   await expect(listCampaignRulesReferences(db, { userId: stranger.id }, owned.id))
     .rejects.toBeInstanceOf(CampaignNotFoundError);
   await expect(getCampaignRulesetVersion(db, { userId: stranger.id }, owned.id))

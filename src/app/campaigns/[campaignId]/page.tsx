@@ -8,6 +8,7 @@ import { listOwnedItems } from "@/modules/items";
 import { listOwnedRelationships } from "@/modules/relationships";
 import { listOwnedTimelineEvents } from "@/modules/timeline";
 import { listOwnedSessions } from "@/modules/sessions";
+import { listOwnedEncounters } from "@/modules/encounters";
 import { getCampaignRulesetVersion, listCampaignRulesReferences } from "@/modules/rulesets";
 import { EncounterBudgetCalculator } from "../../encounter-budget-calculator";
 import { relationshipOptions } from "../../relationship-options";
@@ -18,7 +19,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -36,6 +37,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const relationships = await listOwnedRelationships(db, actor, campaignId);
     const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
     const sessions = await listOwnedSessions(db, actor, campaignId);
+    const encounters = await listOwnedEncounters(db, actor, campaignId);
     const rulesReferences = await listCampaignRulesReferences(db, actor, campaignId);
     const rulesetVersion = await getCampaignRulesetVersion(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
@@ -46,7 +48,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -60,6 +62,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
   const archivedLocations = data.locations.filter(location => !location.deletedAt && location.archivedAt).length;
   const trashedLocations = data.locations.filter(location => location.deletedAt).length;
   const campaignStatus = data.campaign.deletedAt ? "In trash" : data.campaign.archivedAt ? "Archived" : "Active";
+  const referenceSources = [...Map.groupBy(data.rulesReferences, entry => entry.sourceId).values()];
   return <main className="workspace-page">
     <Link href="/">All campaigns</Link>
     <div className="workspace-heading">
@@ -87,21 +90,42 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#relationships">Relationships</a>
         <a href="#timeline">Timeline</a>
         <a href="#sessions">Sessions</a>
+        <a href="#encounters">Encounters</a>
         <a href="#rules-reference">Rules reference</a>
       </nav>
       <div className="workspace-content">
         <section id="rules-reference" aria-labelledby="rules-reference-heading" className="workspace-section">
           <h2 id="rules-reference-heading">Rules reference</h2>
-          {data.rulesReferences.length ? <>
-            <p>Selected sections from {data.rulesReferences[0].version}, the version pinned to this campaign.</p>
-            <ul>{data.rulesReferences.map(entry => <li key={entry.key}>
-              {entry.category}: <a href={`${entry.sourceUrl}#page=${entry.page}`}>{entry.title}</a> (page {entry.page})
-            </li>)}</ul>
-            <p>Source: <a href={data.rulesReferences[0].sourceUrl}>{data.rulesReferences[0].sourceTitle}</a> · <a href={data.rulesReferences[0].licenseUrl}>{data.rulesReferences[0].license}</a></p>
-            <p>{data.rulesReferences[0].attribution}</p>
+          {referenceSources.length ? <>
+            <p>Selected sections from {data.rulesetVersion?.name}, the version pinned to this campaign.</p>
+            {referenceSources.map(entries => <div key={entries[0].sourceId}>
+              <ul>{entries.map(entry => <li key={entry.key}>
+                {entry.category}: <a href={`${entry.sourceUrl}#page=${entry.page}`}>{entry.title}</a> (page {entry.page})
+              </li>)}</ul>
+              <p>Source: <a href={entries[0].sourceUrl}>{entries[0].sourceTitle}</a> · <a href={entries[0].licenseUrl}>{entries[0].license}</a></p>
+              <p>{entries[0].attribution}</p>
+            </div>)}
           </> : <p>No reference index is available for this campaign&apos;s ruleset version.</p>}
           {data.rulesetVersion && <EncounterBudgetCalculator rulesetKey={data.rulesetVersion.rulesetKey}
             version={data.rulesetVersion.version} />}
+        </section>
+        <section id="encounters" aria-labelledby="encounters-heading" className="workspace-section">
+          <h2 id="encounters-heading">Encounters</h2>
+          <p>Build a combat plan and compare its creature XP with the party budget.</p>
+          {data.encounters.length ? <ul>{data.encounters.map(item => <li key={item.id}>
+            <Link href={`/encounters/${item.id}`}>{item.title}</Link>
+            {item.deletedAt ? " · In trash" : item.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No encounters yet.</p>}
+          {data.rulesetVersion?.rulesetKey === "dnd-5e-2024" && data.rulesetVersion.version === "5.2.1"
+            && !data.campaign.deletedAt && <ActionForm action={createEncounterAction.bind(null, campaignId)}>
+              <label htmlFor="new-encounter-title">Title</label>
+              <input id="new-encounter-title" name="title" required maxLength={200} />
+              <label htmlFor="new-encounter-level">Party level</label>
+              <input id="new-encounter-level" name="partyLevel" type="number" min="1" max="20" defaultValue="1" required />
+              <label htmlFor="new-encounter-size">Number of characters</label>
+              <input id="new-encounter-size" name="partySize" type="number" min="1" max="20" defaultValue="4" required />
+              <button type="submit">Create encounter</button>
+            </ActionForm>}
         </section>
         <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
           <h2 id="sessions-heading">Sessions</h2>

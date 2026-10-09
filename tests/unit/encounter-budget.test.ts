@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { calculateEncounterBudget, InvalidEncounterBudgetInputError,
+import { calculateEncounterBudget, calculateEncounterBudgetForGroups, InvalidEncounterBudgetInputError,
   UnsupportedEncounterRulesetError } from "../../src/modules/rulesets/encounter-budget";
 
 const base = { rulesetKey: "dnd-5e-2024", version: "5.2.1", partyLevel: 1, partySize: 4,
@@ -20,6 +20,15 @@ test("matches the SRD encounter examples at low, moderate, and high budgets", ()
   expect(calculateEncounterBudget({ ...base, partyLevel: 20, partySize: 1 })).toMatchObject({
     budgets: { low: 6400, moderate: 13200, high: 22000 },
   });
+});
+
+test("sums named creature groups without changing the SRD party budget", () => {
+  expect(calculateEncounterBudgetForGroups({ ...base, partyLevel: 3, partySize: 5,
+    creatures: [{ xp: 450, quantity: 2 }, { xp: 25, quantity: 9 }] })).toEqual({
+    budgets: { low: 750, moderate: 1125, high: 2000 }, totalXp: 1125,
+  });
+  expect(() => calculateEncounterBudgetForGroups({ ...base,
+    creatures: [{ xp: 50, quantity: 0 }] })).toThrow(InvalidEncounterBudgetInputError);
 });
 
 test("rejects unsupported versions and invalid levels, party sizes, or XP", () => {
