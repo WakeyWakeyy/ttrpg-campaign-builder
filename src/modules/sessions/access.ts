@@ -10,7 +10,7 @@ export class InvalidSessionInputError extends Error {}
 
 export type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 export const uuid = (value: unknown): value is string => typeof value === "string"
-  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const columns = { ...getTableColumns(campaignEntity), ...getTableColumns(session) };
 const join = and(eq(session.id, campaignEntity.id), eq(session.campaignId, campaignEntity.campaignId));
 
