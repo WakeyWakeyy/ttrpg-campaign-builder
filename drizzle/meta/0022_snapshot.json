@@ -1834,7 +1834,7 @@
             "session_id",
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "encounter_placement_encounter_fk": {
@@ -1849,7 +1849,7 @@
             "campaign_id",
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

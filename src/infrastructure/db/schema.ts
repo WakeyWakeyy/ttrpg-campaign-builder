@@ -441,9 +441,9 @@ export const encounterPlacement = pgTable("encounter_placement", {
   foreignKey({ name: "encounter_placement_session_fk", columns: [table.campaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
   foreignKey({ name: "encounter_placement_scene_fk", columns: [table.campaignId, table.sessionId, table.sceneId],
-    foreignColumns: [scene.campaignId, scene.sessionId, scene.id] }).onDelete("no action"),
+    foreignColumns: [scene.campaignId, scene.sessionId, scene.id] }).onDelete("cascade"),
   foreignKey({ name: "encounter_placement_encounter_fk", columns: [table.campaignId, table.encounterId],
-    foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("no action"),
+    foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
 ]);
 
 export const arc = pgTable("arc", {
