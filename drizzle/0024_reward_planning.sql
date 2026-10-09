@@ -21,8 +21,8 @@ CREATE TABLE "reward_component" (
 --> statement-breakpoint
 ALTER TABLE "campaign_entity" DROP CONSTRAINT "campaign_entity_type_check";--> statement-breakpoint
 ALTER TABLE "reward" ADD CONSTRAINT "reward_entity_fk" FOREIGN KEY ("campaign_id","id","entity_type") REFERENCES "public"."campaign_entity"("campaign_id","id","entity_type") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reward_component" ADD CONSTRAINT "reward_component_reward_fk" FOREIGN KEY ("campaign_id","reward_id") REFERENCES "public"."reward"("campaign_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "reward_campaign_id_id_unique" ON "reward" USING btree ("campaign_id","id");--> statement-breakpoint
+ALTER TABLE "reward_component" ADD CONSTRAINT "reward_component_reward_fk" FOREIGN KEY ("campaign_id","reward_id") REFERENCES "public"."reward"("campaign_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "reward_campaign_idx" ON "reward" USING btree ("campaign_id");--> statement-breakpoint
 CREATE INDEX "reward_component_reward_idx" ON "reward_component" USING btree ("reward_id");--> statement-breakpoint
 ALTER TABLE "campaign_entity" ADD CONSTRAINT "campaign_entity_type_check" CHECK ("campaign_entity"."entity_type" IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER', 'REWARD'));
