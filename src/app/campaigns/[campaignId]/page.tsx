@@ -16,6 +16,7 @@ import { EncounterBudgetCalculator } from "../../encounter-budget-calculator";
 import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
+import { findQuestContinuityIssues } from "@/modules/intelligence/quest-continuity";
 import { listOwnedNpcs } from "@/modules/npcs";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
@@ -59,6 +60,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     id: row.id, name: row.kind, type: "Relationship", deletedAt: row.deletedAt,
   }))];
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
+  const continuityFindings = findQuestContinuityIssues(data.quests);
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
   const characterNames = new Map(data.characters.map(character => [character.id, character.name]));
@@ -84,6 +86,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#compass">Campaign Compass</a>
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
+        <a href="#continuity">Continuity</a>
         <a href="#npcs">NPCs</a>
         <a href="#player-characters">Player Characters</a>
         <a href="#parties">Parties</a>
@@ -228,6 +231,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <fieldset><legend>Arcs (optional)</legend>{data.arcs.filter(arc => !arc.deletedAt).map(arc => <label key={arc.id}><input type="checkbox" name="arcIds" value={arc.id} /> {arc.name}</label>)}</fieldset>
             <button type="submit">Create quest</button>
           </ActionForm>
+        </section>
+        <section id="continuity" aria-labelledby="continuity-heading" className="workspace-section">
+          <h2 id="continuity-heading">Continuity</h2>
+          <p>Open or postponed threads beneath a resolved, failed, or abandoned parent may need a second look. These are prompts for the GM, not automatic changes.</p>
+          {continuityFindings.length ? <ul>{continuityFindings.map(finding => <li key={finding.questId}>
+            <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is {finding.questStatus.toLowerCase()} beneath {finding.parentName}.
+          </li>)}</ul> : <p>No quest continuity prompts right now.</p>}
         </section>
         <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">
           <h2 id="npcs-heading">NPCs</h2>
