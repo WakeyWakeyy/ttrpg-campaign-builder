@@ -1,39 +1,20 @@
-import { createHash } from "node:crypto";
-import { and, asc, desc, eq, getTableColumns, isNull, lt, sql } from "drizzle-orm";
+import { createHash, randomUUID } from "node:crypto";
+import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { campaign, campaignEntity, commandExecution, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
+import { campaignEntity, commandExecution, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
+import { copyEncounterPlacements } from "../encounters/placements";
+import { getOwnedSession, InvalidSessionInputError, lockSession, owned, uuid } from "./access";
+export { getOwnedSession, listOwnedSessions, SessionNotFoundError,
+  SessionRevisionConflictError, InvalidSessionInputError } from "./access";
 
-export class SessionNotFoundError extends Error {}
-export class SessionRevisionConflictError extends Error {}
-export class InvalidSessionInputError extends Error {}
 export class SceneNotFoundError extends Error {}
 export class SessionCopyIdempotencyConflictError extends Error {}
 
 type Fields = { title: string; plannedFor?: string | null; preparation?: string | null; outcome?: string | null };
-type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
-const uuid = (value: unknown): value is string => typeof value === "string"
-  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-const columns = { ...getTableColumns(campaignEntity), ...getTableColumns(session) };
-const join = and(eq(session.id, campaignEntity.id), eq(session.campaignId, campaignEntity.campaignId));
 const advance = { revision: sql`${campaignEntity.revision} + 1`, updatedAt: sql`clock_timestamp()` };
 
-function owned(db: NodePgDatabase, actor: Actor) {
-  return db.select(columns).from(session).innerJoin(campaignEntity, join)
-    .innerJoin(campaign, and(eq(campaign.id, session.campaignId), eq(campaign.ownerUserId, actor.userId)));
-}
-export async function listOwnedSessions(db: NodePgDatabase, actor: Actor, campaignId: string) {
-  await getOwnedCampaign(db, actor, campaignId);
-  return owned(db, actor).where(eq(session.campaignId, campaignId))
-    .orderBy(asc(session.plannedFor), asc(campaignEntity.createdAt));
-}
-export async function getOwnedSession(db: NodePgDatabase, actor: Actor, id: string) {
-  if (!uuid(id)) throw new SessionNotFoundError();
-  const [row] = await owned(db, actor).where(eq(session.id, id));
-  if (!row) throw new SessionNotFoundError();
-  return row;
-}
 export async function listSessionAttendance(db: NodePgDatabase, actor: Actor, id: string) {
   const current = await getOwnedSession(db, actor, id);
   return db.select({ playerCharacterId: sessionAttendance.playerCharacterId }).from(sessionAttendance)
@@ -47,7 +28,7 @@ export async function setSessionAttendance(db: NodePgDatabase, actor: Actor, id:
     || new Set(input.playerCharacterIds.map(value => value.toLowerCase())).size !== input.playerCharacterIds.length))
     throw new InvalidSessionInputError();
   return db.transaction(async tx => {
-    const current = await lock(tx, actor, id, input.expectedRevision);
+    const current = await lockSession(tx, actor, id, input.expectedRevision);
     if (current.deletedAt) throw new InvalidSessionInputError();
     const ids = input.playerCharacterIds;
     if (ids !== null) {
@@ -128,7 +109,7 @@ export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, 
       return getOwnedSession(tx, actor, result.sessionId);
     }
     if (!inserted.length || execution.status !== "IN_PROGRESS") throw new SessionCopyIdempotencyConflictError();
-    const source = await lock(tx, actor, sourceId, expectedRevision);
+    const source = await lockSession(tx, actor, sourceId, expectedRevision);
     if (source.deletedAt) throw new InvalidSessionInputError();
     const sourceScenes = await tx.select().from(scene).where(and(eq(scene.sessionId, source.id),
       eq(scene.campaignId, source.campaignId), isNull(scene.deletedAt)))
@@ -137,31 +118,20 @@ export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, 
       entityType: "SESSION", createdByUserId: actor.userId }).returning();
     const [typed] = await tx.insert(session).values({ id: entity.id, campaignId: entity.campaignId,
       title: `Copy of ${source.title}`, preparation: source.preparation }).returning();
+    const sceneIds = new Map(sourceScenes.map(item => [item.id, randomUUID()]));
     if (sourceScenes.length) await tx.insert(scene).values(sourceScenes.map((item, index) => ({
-      campaignId: source.campaignId, sessionId: entity.id, position: index + 1,
+      id: sceneIds.get(item.id)!, campaignId: source.campaignId, sessionId: entity.id, position: index + 1,
       title: item.title, preparation: item.preparation,
     })));
+    await copyEncounterPlacements(tx, source.campaignId, sourceId, entity.id, sceneIds);
     await tx.update(commandExecution).set({ status: "SUCCEEDED", completedAt: new Date(),
       resultSchemaVersion: 1, resultJson: { sessionId: entity.id } }).where(eq(commandExecution.id, execution.id));
     return { ...entity, ...typed };
   }, { isolationLevel: "read committed" });
 }
-async function lock(tx: Transaction, actor: Actor, id: string, expectedRevision: number) {
-  if (!uuid(id)) throw new SessionNotFoundError();
-  const [row] = await tx.select({ id: campaignEntity.id }).from(campaignEntity)
-    .innerJoin(campaign, eq(campaign.id, campaignEntity.campaignId))
-    .where(and(eq(campaignEntity.id, id), eq(campaignEntity.entityType, "SESSION"),
-      eq(campaign.ownerUserId, actor.userId))).for("update", { of: campaignEntity });
-  if (!row) throw new SessionNotFoundError();
-  const current = await getOwnedSession(tx, actor, id);
-  if (!Number.isInteger(expectedRevision) || expectedRevision < 1 || expectedRevision > 2147483647)
-    throw new InvalidSessionInputError();
-  if (current.revision !== expectedRevision) throw new SessionRevisionConflictError();
-  return current;
-}
 export async function editSession(db: NodePgDatabase, actor: Actor, id: string, input: Fields & { expectedRevision: number }) {
   return db.transaction(async tx => {
-    const current = await lock(tx, actor, id, input.expectedRevision);
+    const current = await lockSession(tx, actor, id, input.expectedRevision);
     if (current.deletedAt) throw new InvalidSessionInputError();
     const data = values(input);
     if (current.title === data.title && current.plannedFor === data.plannedFor
@@ -176,7 +146,7 @@ export async function recordSessionOutcome(db: NodePgDatabase, actor: Actor, id:
   if (input.outcome != null && (typeof input.outcome !== "string" || input.outcome.includes("\0")))
     throw new InvalidSessionInputError();
   return db.transaction(async tx => {
-    const current = await lock(tx, actor, id, input.expectedRevision);
+    const current = await lockSession(tx, actor, id, input.expectedRevision);
     if (current.deletedAt) throw new InvalidSessionInputError();
     const outcome = input.outcome || null;
     if (current.outcome === outcome) return current;
@@ -188,7 +158,7 @@ export async function recordSessionOutcome(db: NodePgDatabase, actor: Actor, id:
 async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, revision: number,
   action: "archive" | "trash" | "restore") {
   return db.transaction(async tx => {
-    const current = await lock(tx, actor, id, revision);
+    const current = await lockSession(tx, actor, id, revision);
     if ((action === "archive" && current.archivedAt) || (action === "trash" && current.deletedAt)
       || (action === "restore" && !current.deletedAt)) return current;
     const change = action === "archive" ? { archivedAt: sql`statement_timestamp()` }
@@ -226,7 +196,7 @@ export async function createScene(db: NodePgDatabase, actor: Actor, sessionId: s
   input: SceneFields & { expectedRevision: number }) {
   const data = sceneValues(input);
   return db.transaction(async tx => {
-    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    const parent = await lockSession(tx, actor, sessionId, input.expectedRevision);
     if (parent.deletedAt) throw new InvalidSessionInputError();
     const [last] = await tx.select({ position: scene.position }).from(scene)
       .where(eq(scene.sessionId, sessionId)).orderBy(sql`${scene.position} DESC`).limit(1);
@@ -243,7 +213,7 @@ export async function editScene(db: NodePgDatabase, actor: Actor, sessionId: str
   if (!uuid(sceneId)) throw new SceneNotFoundError();
   const data = input.intent === "save" ? sceneValues(input) : null;
   return db.transaction(async tx => {
-    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    const parent = await lockSession(tx, actor, sessionId, input.expectedRevision);
     const [current] = await tx.select().from(scene).where(and(eq(scene.id, sceneId),
       eq(scene.sessionId, sessionId), eq(scene.campaignId, parent.campaignId)));
     if (!current) throw new SceneNotFoundError();
@@ -264,7 +234,7 @@ export async function recordSceneOutcome(db: NodePgDatabase, actor: Actor, sessi
   if (input.outcome != null && (typeof input.outcome !== "string" || input.outcome.includes("\0")))
     throw new InvalidSessionInputError();
   return db.transaction(async tx => {
-    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    const parent = await lockSession(tx, actor, sessionId, input.expectedRevision);
     const [current] = await tx.select().from(scene).where(and(eq(scene.id, sceneId),
       eq(scene.sessionId, sessionId), eq(scene.campaignId, parent.campaignId)));
     if (!current) throw new SceneNotFoundError();

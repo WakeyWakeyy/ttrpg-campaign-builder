@@ -68,12 +68,12 @@ Make recurring preparation useful:
 
 Add deterministic game support:
 
-**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, and the Encounter Builder are available. Placement of reusable Encounters in Sessions or Scenes is next.
+**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, and reusable placements in Sessions or Scenes are available. Encounter Run history is next.
 
 - SRD-backed rules/reference foundation: a version-scoped, source-attributed index links GMs to selected sections of the official SRD from their Campaign workspace. This is a navigation foundation, not a complete rules compendium;
 - deterministic encounter calculations: a version-bound calculator shows low, moderate, and high XP budgets for an equal-level party and compares a creature XP total with them; it does not save an Encounter. See [calculation scope](encounter-budgets.md);
 - Encounter Builder: a Campaign owns a standalone Encounter definition with notes, party level and size, and named creature groups. The GM can revise or recover the plan while seeing its XP total against the pinned SRD budget. See [builder scope](encounter-builder.md);
-- reusable Encounter definitions and placements: definitions are available through the Builder; explicit Session/Scene placements are next;
+- reusable Encounter definitions and placements: a GM can place a Campaign Encounter in a Session or Scene more than once, remove a placement without deleting its definition, and carry available placements into a copied Session;
 - Encounter Run history;
 - Reward planning;
 - Reward Grants / ledger.

@@ -3,11 +3,12 @@ import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
+import { listSessionEncounterPlacements } from "@/modules/encounters";
 import { readError } from "../../../read-error";
 
 export default async function SessionRunPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  const { session, scenes, previous, characters, attendance } = await (async () => {
+  const { session, scenes, previous, characters, attendance, placements } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
     const session = await getOwnedSession(db, actor, sessionId);
@@ -17,6 +18,7 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
       previous: await getPreviousSessionContext(db, actor, sessionId),
       characters: await listOwnedPlayerCharacters(db, actor, session.campaignId),
       attendance: await listSessionAttendance(db, actor, sessionId),
+      placements: await listSessionEncounterPlacements(db, actor, sessionId),
     };
   })().catch(readError);
   const activeScenes = scenes.filter(scene => !scene.deletedAt);
@@ -53,12 +55,22 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
     <section id="preparation" className="run-section" aria-labelledby="run-preparation-heading">
       <h2 id="run-preparation-heading">Session preparation</h2>
       {session.preparation?.trim() ? <p className="preserve-lines">{session.preparation}</p> : <p>No preparation recorded yet.</p>}
+      {placements.filter(placement => !placement.sceneId).length > 0 && <><h3>Encounters</h3><ul>
+        {placements.filter(placement => !placement.sceneId).map(placement => <li key={placement.id}>
+          <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
+          {placement.encounterDeletedAt ? " (definition in trash)" : ""}</li>)}
+      </ul></>}
     </section>
     <section id="scenes" className="run-section" aria-labelledby="run-scenes-heading">
       <h2 id="run-scenes-heading">Scenes</h2>
       {activeScenes.length ? <ol className="run-scenes">{activeScenes.map(scene => <li key={scene.id}>
         <h3>{scene.title}</h3>
         {scene.preparation?.trim() ? <p className="preserve-lines">{scene.preparation}</p> : <p>No preparation recorded.</p>}
+        {placements.filter(placement => placement.sceneId === scene.id).length > 0 && <ul>
+          {placements.filter(placement => placement.sceneId === scene.id).map(placement => <li key={placement.id}>
+            <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
+            {placement.encounterDeletedAt ? " (definition in trash)" : ""}</li>)}
+        </ul>}
         {scene.outcome?.trim() && <details><summary>Recorded outcome</summary>
           <p className="preserve-lines">{scene.outcome}</p></details>}
       </li>)}</ol> : <p>No available scenes yet.</p>}

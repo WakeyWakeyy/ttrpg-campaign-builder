@@ -420,11 +420,30 @@ export const scene = pgTable("scene", {
   outcome: text("outcome"),
   deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
 }, table => [
+  uniqueIndex("scene_campaign_session_id_unique").on(table.campaignId, table.sessionId, table.id),
   index("scene_session_position_idx").on(table.sessionId, table.position),
   foreignKey({ name: "scene_session_fk", columns: [table.campaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
   check("scene_position_positive", sql`${table.position} > 0`),
   check("scene_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+]);
+
+export const encounterPlacement = pgTable("encounter_placement", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  sessionId: uuid("session_id").notNull(),
+  sceneId: uuid("scene_id"),
+  encounterId: uuid("encounter_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  index("encounter_placement_session_idx").on(table.sessionId),
+  index("encounter_placement_encounter_idx").on(table.encounterId),
+  foreignKey({ name: "encounter_placement_session_fk", columns: [table.campaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
+  foreignKey({ name: "encounter_placement_scene_fk", columns: [table.campaignId, table.sessionId, table.sceneId],
+    foreignColumns: [scene.campaignId, scene.sessionId, scene.id] }).onDelete("cascade"),
+  foreignKey({ name: "encounter_placement_encounter_fk", columns: [table.campaignId, table.encounterId],
+    foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
 ]);
 
 export const arc = pgTable("arc", {

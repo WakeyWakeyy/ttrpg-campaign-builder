@@ -4,18 +4,22 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, campaignRuleset, encounter, encounterCreature, encounterSrdPlan,
+import { campaign, campaignEntity, campaignRuleset, commandExecution, encounter, encounterCreature, encounterPlacement, encounterSrdPlan,
   rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature,
-  EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterRevisionConflictError,
+  EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError,
   getOwnedEncounter, InvalidEncounterInputError, listEncounterCreatures, listOwnedEncounters,
+  listSessionEncounterPlacements, placeEncounter, removeEncounterPlacement,
   restoreEncounter, trashEncounter, UnsupportedEncounterVersionError } from "../../src/modules/encounters";
 import type { Actor } from "../../src/modules/identity";
 import { calculateEncounterBudgetForGroups } from "../../src/modules/rulesets/encounter-budget";
 import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
 import { relationshipOptions } from "../../src/app/relationship-options";
 import { createTimelineEvent, listTimelineEventLinks } from "../../src/modules/timeline";
+import { createScene, createSession, getOwnedSession,
+  InvalidSessionInputError, listSessionScenes, reuseSessionPreparation, SessionNotFoundError,
+  SessionRevisionConflictError, trashSession } from "../../src/modules/sessions";
 
 const schema = `encounter_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -32,6 +36,7 @@ beforeAll(async () => {
     await pool.query((await readFile(`drizzle/${tag}.sql`, "utf8")).replaceAll('"public".', `"${schema}".`));
 });
 beforeEach(async () => {
+  await db.delete(commandExecution);
   await db.delete(campaign);
   await db.delete(userAccount);
   const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
@@ -81,6 +86,65 @@ test("offers encounters for links and snapshots their title in the timeline", as
   expect(await listTimelineEventLinks(db, actor, event.id)).toMatchObject([
     { targetEntityId: owned.id, targetTypeSnapshot: "ENCOUNTER", targetNameSnapshot: "Bridge" },
   ]);
+});
+
+test("places reusable encounters in a session or scene and copies available placements", async () => {
+  const definition = await createEncounter(db, actor, { campaignId, title: "Bridge", partyLevel: 3, partySize: 5 });
+  const foreignDefinition = await createEncounter(db, other, { campaignId: foreignCampaignId,
+    title: "Other", partyLevel: 3, partySize: 5 });
+  const source = await createSession(db, actor, { campaignId, title: "Crossing" });
+  const kept = await createScene(db, actor, source.id, { expectedRevision: 1, title: "Gate" });
+  await expect(placeEncounter(db, other, source.id, { expectedRevision: 2, encounterId: definition.id }))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(placeEncounter(db, actor, source.id, { expectedRevision: 2, encounterId: foreignDefinition.id }))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+  await expect(placeEncounter(db, actor, source.id, { expectedRevision: 2, encounterId: definition.id,
+    sceneId: randomUUID() })).rejects.toBeInstanceOf(InvalidSessionInputError);
+  const first = await placeEncounter(db, actor, source.id, { expectedRevision: 2, encounterId: definition.id });
+  await expect(db.insert(encounterPlacement).values({ campaignId, sessionId: source.id,
+    encounterId: foreignDefinition.id })).rejects.toMatchObject({ cause: { constraint: "encounter_placement_encounter_fk" } });
+  const foreignSession = await createSession(db, other, { campaignId: foreignCampaignId, title: "Other session" });
+  const foreignScene = await createScene(db, other, foreignSession.id, { expectedRevision: 1, title: "Other scene" });
+  await expect(db.insert(encounterPlacement).values({ campaignId, sessionId: source.id,
+    encounterId: definition.id, sceneId: foreignScene.id }))
+    .rejects.toMatchObject({ cause: { constraint: "encounter_placement_scene_fk" } });
+  await placeEncounter(db, actor, source.id, { expectedRevision: 3, encounterId: definition.id, sceneId: kept.id });
+  await expect(placeEncounter(db, actor, source.id, { expectedRevision: 3, encounterId: definition.id }))
+    .rejects.toBeInstanceOf(SessionRevisionConflictError);
+  expect(await listSessionEncounterPlacements(db, actor, source.id)).toHaveLength(2);
+  const copy = await reuseSessionPreparation(db, actor, source.id, 4, randomUUID());
+  const copied = await listSessionEncounterPlacements(db, actor, copy.id);
+  expect(copied).toHaveLength(2);
+  expect(copied.map(row => row.encounterId)).toEqual([definition.id, definition.id]);
+  expect(copied.find(row => row.sceneId)?.sceneId).toBe((await listSessionScenes(db, actor, copy.id))[0].id);
+  await expect(removeEncounterPlacement(db, other, source.id, first.id, 4))
+    .rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(removeEncounterPlacement(db, actor, source.id, randomUUID(), 4))
+    .rejects.toBeInstanceOf(EncounterPlacementNotFoundError);
+  await removeEncounterPlacement(db, actor, source.id, first.id, 4);
+  expect((await getOwnedSession(db, actor, source.id)).revision).toBe(5);
+  expect(await listSessionEncounterPlacements(db, actor, source.id)).toHaveLength(1);
+  expect((await getOwnedEncounter(db, actor, definition.id)).title).toBe("Bridge");
+  await trashSession(db, actor, source.id, 5);
+  await expect(placeEncounter(db, actor, source.id, { expectedRevision: 6, encounterId: definition.id }))
+    .rejects.toBeInstanceOf(InvalidSessionInputError);
+});
+
+test("keeps each placement with its scene when copying several scenes", async () => {
+  const first = await createEncounter(db, actor, { campaignId, title: "First", partyLevel: 2, partySize: 4 });
+  const second = await createEncounter(db, actor, { campaignId, title: "Second", partyLevel: 2, partySize: 4 });
+  const source = await createSession(db, actor, { campaignId, title: "Two scenes" });
+  const opening = await createScene(db, actor, source.id, { expectedRevision: 1, title: "Opening" });
+  const ending = await createScene(db, actor, source.id, { expectedRevision: 2, title: "Ending" });
+  await placeEncounter(db, actor, source.id, { expectedRevision: 3, sceneId: opening.id, encounterId: first.id });
+  await placeEncounter(db, actor, source.id, { expectedRevision: 4, sceneId: ending.id, encounterId: second.id });
+  const copy = await reuseSessionPreparation(db, actor, source.id, 5, randomUUID());
+  const scenes = await listSessionScenes(db, actor, copy.id);
+  const placements = await listSessionEncounterPlacements(db, actor, copy.id);
+  expect(placements.find(row => row.encounterId === first.id)?.sceneId)
+    .toBe(scenes.find(row => row.title === "Opening")?.id);
+  expect(placements.find(row => row.encounterId === second.id)?.sceneId)
+    .toBe(scenes.find(row => row.title === "Ending")?.id);
 });
 
 test("creature edits are revision-safe and remain in the same campaign", async () => {

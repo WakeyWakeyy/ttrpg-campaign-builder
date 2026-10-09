@@ -5,6 +5,8 @@ import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
 import { getCampaignRulesetVersion } from "../rulesets";
 import { calculateEncounterBudget } from "../rulesets/encounter-budget";
+export { EncounterPlacementNotFoundError, listSessionEncounterPlacements, placeEncounter,
+  removeEncounterPlacement } from "./placements";
 
 export class EncounterNotFoundError extends Error {}
 export class EncounterCreatureNotFoundError extends Error {}

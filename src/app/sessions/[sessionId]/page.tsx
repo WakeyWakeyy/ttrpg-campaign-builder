@@ -3,14 +3,15 @@ import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
+import { listOwnedEncounters, listSessionEncounterPlacements } from "@/modules/encounters";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { ActionForm } from "../../action-form";
-import { createSceneAction, reuseSessionPreparationAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
+import { createSceneAction, placeEncounterAction, removeEncounterPlacementAction, reuseSessionPreparationAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
 import { readError } from "../../read-error";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  const { item, scenes, previous, characters, attendance } = await (async () => {
+  const { item, scenes, previous, characters, attendance, encounters, placements } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
     const item = await getOwnedSession(db, actor, sessionId);
@@ -18,7 +19,9 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       scenes: await listSessionScenes(db, actor, sessionId),
       previous: await getPreviousSessionContext(db, actor, sessionId),
       characters: await listOwnedPlayerCharacters(db, actor, item.campaignId),
-      attendance: await listSessionAttendance(db, actor, sessionId) };
+      attendance: await listSessionAttendance(db, actor, sessionId),
+      encounters: await listOwnedEncounters(db, actor, item.campaignId),
+      placements: await listSessionEncounterPlacements(db, actor, sessionId) };
   })().catch(readError);
   return <main>
     <Link href={`/campaigns/${item.campaignId}#sessions`}>Back to campaign</Link>
@@ -29,7 +32,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <input type="hidden" name="expectedRevision" value={item.revision} />
       <input type="hidden" name="idempotencyKey" value={randomUUID()} />
       <button type="submit">Reuse preparation in a new session</button>
-      <p>Copies this plan and available scenes. Outcomes, attendance, and the planned date start empty.</p>
+      <p>Copies this plan, available scenes, and their encounter placements. Outcomes, attendance, and the planned date start empty.</p>
     </ActionForm>}
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this session to {item.archivedAt ? "Archived" : "Active"}.</p>}
@@ -82,11 +85,52 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         {item.deletedAt && <button name="intent" value="restore" formNoValidate>Restore</button>}
       </div>
     </ActionForm>
+    <section aria-labelledby="session-encounters-heading">
+      <h2 id="session-encounters-heading">Planned encounters</h2>
+      <p>Use the same encounter more than once. Removing a placement keeps its reusable definition.</p>
+      {placements.filter(placement => !placement.sceneId).map(placement => <div key={placement.id}>
+        <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
+        {placement.encounterDeletedAt ? " (definition in trash)" : ""}
+        {!item.deletedAt && <ActionForm action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
+          <input type="hidden" name="expectedRevision" value={item.revision} />
+          <button type="submit">Remove placement</button>
+        </ActionForm>}
+      </div>)}
+      {!item.deletedAt && <ActionForm action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
+        <input type="hidden" name="expectedRevision" value={item.revision} />
+        <label htmlFor="session-encounter">Encounter</label>
+        <select id="session-encounter" name="encounterId" required>
+          <option value="">Choose an encounter</option>
+          {encounters.filter(encounter => !encounter.deletedAt).map(encounter =>
+            <option key={encounter.id} value={encounter.id}>{encounter.title}</option>)}
+        </select>
+        <button type="submit">Place in session</button>
+      </ActionForm>}
+    </section>
     <section aria-labelledby="scenes-heading">
       <h2 id="scenes-heading">Scenes</h2>
       <p>Plan beats in order and record what happened without replacing the plan.</p>
       {scenes.length ? <ol>{scenes.map(scene => <li key={scene.id}>
         <h3>{scene.title}{scene.deletedAt ? " · In trash" : ""}</h3>
+        {placements.filter(placement => placement.sceneId === scene.id).map(placement => <div key={placement.id}>
+          <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
+          {placement.encounterDeletedAt ? " (definition in trash)" : ""}
+          {!item.deletedAt && <ActionForm action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
+            <input type="hidden" name="expectedRevision" value={item.revision} />
+            <button type="submit">Remove placement</button>
+          </ActionForm>}
+        </div>)}
+        {!item.deletedAt && !scene.deletedAt && <ActionForm action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
+          <input type="hidden" name="expectedRevision" value={item.revision} />
+          <input type="hidden" name="sceneId" value={scene.id} />
+          <label htmlFor={`scene-encounter-${scene.id}`}>Encounter</label>
+          <select id={`scene-encounter-${scene.id}`} name="encounterId" required>
+            <option value="">Choose an encounter</option>
+            {encounters.filter(encounter => !encounter.deletedAt).map(encounter =>
+              <option key={encounter.id} value={encounter.id}>{encounter.title}</option>)}
+          </select>
+          <button type="submit">Place in scene</button>
+        </ActionForm>}
         <ActionForm key={`${scene.id}-${item.revision}`} action={updateSceneAction.bind(null, item.id, scene.id)} reloadLabel="Reload session">
           <input type="hidden" name="expectedRevision" value={item.revision} />
           <label htmlFor={`scene-position-${scene.id}`}>Order</label>
