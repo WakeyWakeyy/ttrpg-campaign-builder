@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { campaignEntity, encounter, encounterCreature, encounterPlacement, encounterRun,
-  encounterRunCreature } from "../../infrastructure/db/schema";
+  encounterRunCreature, scene } from "../../infrastructure/db/schema";
 import type { Actor } from "../identity";
 import { getOwnedSession, InvalidSessionInputError, lockSession, uuid } from "../sessions/access";
 
@@ -27,17 +27,20 @@ export async function recordEncounterRun(db: NodePgDatabase, actor: Actor, sessi
     if (parent.deletedAt) throw new InvalidSessionInputError();
     let source: { encounterId: string; title: string } | null = null;
     if (input.placementId) {
-      const [placement] = await tx.select({ encounterId: encounter.id, title: encounter.title })
+      const [placement] = await tx.select({ encounterId: encounter.id, title: encounter.title,
+        sceneId: encounterPlacement.sceneId, sceneDeletedAt: scene.deletedAt })
         .from(encounterPlacement)
         .innerJoin(encounter, eq(encounter.id, encounterPlacement.encounterId))
         .innerJoin(campaignEntity, eq(campaignEntity.id, encounter.id))
+        .leftJoin(scene, eq(scene.id, encounterPlacement.sceneId))
         .where(and(eq(encounterPlacement.id, input.placementId),
           eq(encounterPlacement.sessionId, sessionId), eq(encounterPlacement.campaignId, parent.campaignId),
           isNull(campaignEntity.deletedAt))).for("share", { of: [encounterPlacement, campaignEntity] });
-      if (!placement) throw new InvalidEncounterRunInputError();
+      if (!placement || placement.sceneId && placement.sceneDeletedAt) throw new InvalidEncounterRunInputError();
       source = placement;
     }
     const [run] = await tx.insert(encounterRun).values({ campaignId: parent.campaignId, sessionId,
+      sourceCampaignId: source ? parent.campaignId : null, sourceSessionId: source ? sessionId : null,
       placementId: input.placementId || null, encounterId: source?.encounterId || null,
       title: source?.title || input.title!.trim(), outcome: input.outcome.trim() }).returning();
     if (source) {

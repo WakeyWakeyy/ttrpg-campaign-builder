@@ -1,5 +1,5 @@
 {
-  "id": "819e05c9-9a60-4b52-858c-f3f85f23e3e3",
+  "id": "858748f2-d3ab-4884-a717-1f694bfafa44",
   "prevId": "1bd84cff-8c8e-4cec-babc-0c55559608d2",
   "version": "7",
   "dialect": "postgresql",
@@ -1802,6 +1802,39 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "encounter_placement_run_source_unique": {
+          "name": "encounter_placement_run_source_unique",
+          "columns": [
+            {
+              "expression": "campaign_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "encounter_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1882,6 +1915,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "source_campaign_id": {
+          "name": "source_campaign_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_session_id": {
+          "name": "source_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "placement_id": {
           "name": "placement_id",
           "type": "uuid",
@@ -1953,28 +1998,21 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "encounter_run_placement_fk": {
-          "name": "encounter_run_placement_fk",
+        "encounter_run_source_fk": {
+          "name": "encounter_run_source_fk",
           "tableFrom": "encounter_run",
           "tableTo": "encounter_placement",
           "columnsFrom": [
-            "placement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "encounter_run_encounter_fk": {
-          "name": "encounter_run_encounter_fk",
-          "tableFrom": "encounter_run",
-          "tableTo": "encounter",
-          "columnsFrom": [
+            "source_campaign_id",
+            "source_session_id",
+            "placement_id",
             "encounter_id"
           ],
           "columnsTo": [
-            "id"
+            "campaign_id",
+            "session_id",
+            "id",
+            "encounter_id"
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
@@ -1984,6 +2022,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "encounter_run_source_scope": {
+          "name": "encounter_run_source_scope",
+          "value": "(\n    (\"encounter_run\".\"source_campaign_id\" IS NULL AND \"encounter_run\".\"source_session_id\" IS NULL\n      AND \"encounter_run\".\"placement_id\" IS NULL AND \"encounter_run\".\"encounter_id\" IS NULL)\n    OR (\"encounter_run\".\"source_campaign_id\" = \"encounter_run\".\"campaign_id\" AND \"encounter_run\".\"source_session_id\" = \"encounter_run\".\"session_id\"\n      AND \"encounter_run\".\"placement_id\" IS NOT NULL AND \"encounter_run\".\"encounter_id\" IS NOT NULL)\n  )"
+        },
         "encounter_run_title_nonempty": {
           "name": "encounter_run_title_nonempty",
           "value": "length(btrim(\"encounter_run\".\"title\")) > 0"

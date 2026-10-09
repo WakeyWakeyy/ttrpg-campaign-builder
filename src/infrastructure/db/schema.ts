@@ -438,6 +438,8 @@ export const encounterPlacement = pgTable("encounter_placement", {
 }, table => [
   index("encounter_placement_session_idx").on(table.sessionId),
   index("encounter_placement_encounter_idx").on(table.encounterId),
+  uniqueIndex("encounter_placement_run_source_unique").on(table.campaignId, table.sessionId,
+    table.id, table.encounterId),
   foreignKey({ name: "encounter_placement_session_fk", columns: [table.campaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
   foreignKey({ name: "encounter_placement_scene_fk", columns: [table.campaignId, table.sessionId, table.sceneId],
@@ -452,6 +454,8 @@ export const encounterRun = pgTable("encounter_run", {
   id: uuid("id").default(sql`uuidv7()`).primaryKey(),
   campaignId: uuid("campaign_id").notNull(),
   sessionId: uuid("session_id").notNull(),
+  sourceCampaignId: uuid("source_campaign_id"),
+  sourceSessionId: uuid("source_session_id"),
   placementId: uuid("placement_id"),
   encounterId: uuid("encounter_id"),
   title: text("title").notNull(),
@@ -461,10 +465,15 @@ export const encounterRun = pgTable("encounter_run", {
   index("encounter_run_session_idx").on(table.sessionId, table.occurredAt),
   foreignKey({ name: "encounter_run_session_fk", columns: [table.campaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
-  foreignKey({ name: "encounter_run_placement_fk", columns: [table.placementId],
-    foreignColumns: [encounterPlacement.id] }).onDelete("set null"),
-  foreignKey({ name: "encounter_run_encounter_fk", columns: [table.encounterId],
-    foreignColumns: [encounter.id] }).onDelete("set null"),
+  foreignKey({ name: "encounter_run_source_fk", columns: [table.sourceCampaignId, table.sourceSessionId,
+    table.placementId, table.encounterId], foreignColumns: [encounterPlacement.campaignId,
+    encounterPlacement.sessionId, encounterPlacement.id, encounterPlacement.encounterId] }).onDelete("set null"),
+  check("encounter_run_source_scope", sql`(
+    (${table.sourceCampaignId} IS NULL AND ${table.sourceSessionId} IS NULL
+      AND ${table.placementId} IS NULL AND ${table.encounterId} IS NULL)
+    OR (${table.sourceCampaignId} = ${table.campaignId} AND ${table.sourceSessionId} = ${table.sessionId}
+      AND ${table.placementId} IS NOT NULL AND ${table.encounterId} IS NOT NULL)
+  )`),
   check("encounter_run_title_nonempty", sql`length(btrim(${table.title})) > 0`),
   check("encounter_run_outcome_nonempty", sql`length(btrim(${table.outcome})) > 0`),
 ]);

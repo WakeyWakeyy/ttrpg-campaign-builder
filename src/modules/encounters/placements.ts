@@ -12,9 +12,10 @@ export async function listSessionEncounterPlacements(db: NodePgDatabase, actor: 
   const parent = await getOwnedSession(db, actor, sessionId);
   return db.select({ id: encounterPlacement.id, sceneId: encounterPlacement.sceneId,
     encounterId: encounterPlacement.encounterId, title: encounter.title,
-    encounterDeletedAt: campaignEntity.deletedAt }).from(encounterPlacement)
+    encounterDeletedAt: campaignEntity.deletedAt, sceneDeletedAt: scene.deletedAt }).from(encounterPlacement)
     .innerJoin(encounter, eq(encounter.id, encounterPlacement.encounterId))
     .innerJoin(campaignEntity, eq(campaignEntity.id, encounter.id))
+    .leftJoin(scene, eq(scene.id, encounterPlacement.sceneId))
     .where(and(eq(encounterPlacement.sessionId, sessionId), eq(encounterPlacement.campaignId, parent.campaignId)))
     .orderBy(asc(encounterPlacement.createdAt), asc(encounterPlacement.id));
 }

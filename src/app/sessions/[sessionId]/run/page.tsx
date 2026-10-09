@@ -90,7 +90,7 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
         </li>)}</ul>}
       </li>)}</ol> : <p>No encounters recorded yet.</p>}
       {!session.deletedAt && <>
-        {placements.filter(placement => !placement.encounterDeletedAt).map(placement =>
+        {placements.filter(placement => !placement.encounterDeletedAt && !placement.sceneDeletedAt).map(placement =>
           <ActionForm key={placement.id} action={recordEncounterRunAction.bind(null, session.id)} reloadLabel="Reload session">
             <input type="hidden" name="expectedRevision" value={session.revision} />
             <input type="hidden" name="placementId" value={placement.id} />
