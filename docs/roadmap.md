@@ -68,7 +68,7 @@ Make recurring preparation useful:
 
 Add deterministic game support:
 
-**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, Reward planning, and Reward Grants with a ledger are available. Campaign Intelligence is next.
+**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, Reward planning, and Reward Grants with a ledger are available. The first Campaign Intelligence continuity prompt is also available.
 
 - SRD-backed rules/reference foundation: a version-scoped, source-attributed index links GMs to selected sections of the official SRD from their Campaign workspace. This is a navigation foundation, not a complete rules compendium;
 - deterministic encounter calculations: a version-bound calculator shows low, moderate, and high XP budgets for an equal-level party and compares a creature XP total with them; it does not save an Encounter. See [calculation scope](encounter-budgets.md);
