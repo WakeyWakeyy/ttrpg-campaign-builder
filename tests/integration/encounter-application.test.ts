@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, campaignRuleset, encounter, encounterCreature, encounterPlacement, encounterSrdPlan,
+import { campaign, campaignEntity, campaignRuleset, commandExecution, encounter, encounterCreature, encounterPlacement, encounterSrdPlan,
   rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature,
@@ -36,6 +36,7 @@ beforeAll(async () => {
     await pool.query((await readFile(`drizzle/${tag}.sql`, "utf8")).replaceAll('"public".', `"${schema}".`));
 });
 beforeEach(async () => {
+  await db.delete(commandExecution);
   await db.delete(campaign);
   await db.delete(userAccount);
   const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
