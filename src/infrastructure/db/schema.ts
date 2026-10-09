@@ -377,6 +377,50 @@ export const rewardComponent = pgTable("reward_component", {
   check("reward_component_description_nonempty", sql`length(btrim(${table.description})) > 0`),
 ]);
 
+// Grants are historical records. Source links may disappear while the awarded snapshot remains.
+export const rewardGrant = pgTable("reward_grant", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  requestKey: uuid("request_key").notNull(),
+  requestHash: text("request_hash").notNull(),
+  sourceCampaignId: uuid("source_campaign_id"),
+  rewardId: uuid("reward_id"),
+  sessionCampaignId: uuid("session_campaign_id"),
+  sessionId: uuid("session_id"),
+  rewardTitle: text("reward_title").notNull(),
+  recipient: text("recipient").notNull(),
+  notes: text("notes"),
+  grantedAt: timestamp("granted_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  uniqueIndex("reward_grant_request_unique").on(table.campaignId, table.requestKey),
+  index("reward_grant_campaign_time_idx").on(table.campaignId, table.grantedAt),
+  foreignKey({ name: "reward_grant_campaign_fk", columns: [table.campaignId],
+    foreignColumns: [campaign.id] }).onDelete("cascade"),
+  foreignKey({ name: "reward_grant_source_fk", columns: [table.sourceCampaignId, table.rewardId],
+    foreignColumns: [reward.campaignId, reward.id] }).onDelete("set null"),
+  foreignKey({ name: "reward_grant_session_fk", columns: [table.sessionCampaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("set null"),
+  check("reward_grant_source_scope", sql`(${table.rewardId} IS NULL AND ${table.sourceCampaignId} IS NULL)
+    OR (${table.rewardId} IS NOT NULL AND ${table.sourceCampaignId} = ${table.campaignId})`),
+  check("reward_grant_session_scope", sql`(${table.sessionId} IS NULL AND ${table.sessionCampaignId} IS NULL)
+    OR (${table.sessionId} IS NOT NULL AND ${table.sessionCampaignId} = ${table.campaignId})`),
+  check("reward_grant_recipient_nonempty", sql`length(btrim(${table.recipient})) > 0`),
+  check("reward_grant_title_nonempty", sql`length(btrim(${table.rewardTitle})) > 0`),
+]);
+
+export const rewardGrantComponent = pgTable("reward_grant_component", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  grantId: uuid("grant_id").notNull(),
+  kind: text("kind").notNull(),
+  description: text("description").notNull(),
+}, table => [
+  index("reward_grant_component_grant_idx").on(table.grantId),
+  foreignKey({ name: "reward_grant_component_grant_fk", columns: [table.grantId],
+    foreignColumns: [rewardGrant.id] }).onDelete("cascade"),
+  check("reward_grant_component_kind_check", sql`${table.kind} IN ('MONEY', 'ITEM', 'INFORMATION', 'REPUTATION', 'FAVOR', 'ACCESS', 'PROGRESSION', 'OTHER')`),
+  check("reward_grant_component_description_nonempty", sql`length(btrim(${table.description})) > 0`),
+]);
+
 export const encounter = pgTable("encounter", {
   id: uuid("id").primaryKey(),
   campaignId: uuid("campaign_id").notNull(),

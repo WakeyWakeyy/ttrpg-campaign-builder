@@ -1,25 +1,30 @@
 import Link from "next/link";
+import { randomUUID } from "node:crypto";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedReward, listRewardComponents, rewardKinds } from "@/modules/rewards";
+import { listRewardGrants } from "@/modules/rewards/grants";
+import { listOwnedSessions } from "@/modules/sessions";
 import { ActionForm } from "../../action-form";
-import { addRewardComponentAction, updateRewardAction, updateRewardComponentAction } from "../../actions";
+import { addRewardComponentAction, recordRewardGrantAction, updateRewardAction, updateRewardComponentAction } from "../../actions";
 import { readError } from "../../read-error";
 
 export default async function RewardPage({ params }: { params: Promise<{ rewardId: string }> }) {
   const { rewardId } = await params;
-  const { item, components } = await (async () => {
+  const { item, components, grants, sessions } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
-    return { item: await getOwnedReward(db, actor, rewardId),
-      components: await listRewardComponents(db, actor, rewardId) };
+    const item = await getOwnedReward(db, actor, rewardId);
+    return { item, components: await listRewardComponents(db, actor, rewardId),
+      grants: await listRewardGrants(db, actor, item.campaignId),
+      sessions: await listOwnedSessions(db, actor, item.campaignId) };
   })().catch(readError);
   return <main>
     <Link href={`/campaigns/${item.campaignId}#rewards`}>Back to campaign</Link>
     <h1>{item.title}</h1>
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this reward to {item.archivedAt ? "Archived" : "Active"}.</p>}
-    <p>This is a plan. Record what was actually given in a future Reward Grant.</p>
+    <p>This plan can be reused. A grant records what was actually given and keeps a copy of the selected components.</p>
     <ActionForm key={item.revision} action={updateRewardAction.bind(null, item.id)} reloadLabel="Reload reward">
       <input type="hidden" name="expectedRevision" value={item.revision} />
       <label htmlFor="reward-title">Title</label>
@@ -67,6 +72,39 @@ export default async function RewardPage({ params }: { params: Promise<{ rewardI
           <button type="submit">Add component</button>
         </ActionForm>
       </>}
+    </section>
+    <section aria-labelledby="reward-grant-heading">
+      <h2 id="reward-grant-heading">Record a grant</h2>
+      {!item.deletedAt && components.some(component => !component.deletedAt) ?
+        <ActionForm action={recordRewardGrantAction.bind(null, item.id)} reloadLabel="Reload reward">
+          <input type="hidden" name="requestKey" value={randomUUID()} />
+          <input type="hidden" name="expectedRevision" value={item.revision} />
+          <fieldset><legend>Components actually given</legend>
+            {components.filter(component => !component.deletedAt).map(component =>
+              <label key={component.id}><input type="checkbox" name="componentIds" value={component.id} />
+                {component.kind.toLowerCase()}: {component.description}</label>)}</fieldset>
+          <label htmlFor="grant-recipient">Given to</label>
+          <input id="grant-recipient" name="recipient" required maxLength={200}
+            placeholder="Character, party, or other recipient" />
+          <label htmlFor="grant-session">Session (optional)</label>
+          <select id="grant-session" name="sessionId"><option value="">No session</option>
+            {sessions.filter(session => !session.deletedAt).map(session =>
+              <option key={session.id} value={session.id}>{session.title}</option>)}</select>
+          <label htmlFor="grant-notes">What happened (optional)</label>
+          <textarea id="grant-notes" name="notes" maxLength={10000} rows={3} />
+          <button type="submit">Record grant</button>
+        </ActionForm> : <p>Restore the plan and add an available component before recording a grant.</p>}
+    </section>
+    <section id="grant-history" aria-labelledby="grant-history-heading">
+      <h2 id="grant-history-heading">Grant ledger</h2>
+      {grants.length ? <ol>{grants.map(grant => <li key={grant.id}>
+        <strong>{grant.rewardTitle}</strong> to {grant.recipient} ·
+        <time dateTime={grant.grantedAt.toISOString()}>{grant.grantedAt.toLocaleString("en-US", { timeZone: "UTC" })} UTC</time>
+        {grant.sessionId && <span> · {sessions.find(session => session.id === grant.sessionId)?.title ?? "Session removed"}</span>}
+        <ul>{grant.components.map(component => <li key={component.id}>
+          {component.kind.toLowerCase()}: {component.description}</li>)}</ul>
+        {grant.notes && <p className="preserve-lines">{grant.notes}</p>}
+      </li>)}</ol> : <p>No grants recorded in this campaign yet.</p>}
     </section>
   </main>;
 }
