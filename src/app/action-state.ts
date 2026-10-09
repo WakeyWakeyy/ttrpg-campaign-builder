@@ -13,9 +13,15 @@ import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } f
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
 import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
+import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof EncounterRevisionConflictError) return { message: "This encounter changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof EncounterCreatureNotFoundError || error instanceof EncounterNotFoundError)
+    return { message: "Encounter or creature not found or unavailable." };
+  if (error instanceof UnsupportedEncounterVersionError) return { message: "Encounter building is unavailable for this campaign's ruleset version." };
+  if (error instanceof InvalidEncounterInputError) return { message: "Check the title, party level, party size, and creature values." };
   if (error instanceof SessionCopyIdempotencyConflictError) return { message: "This copy request belongs to another operation. Reload before trying again.", conflict: true };
   if (error instanceof SceneNotFoundError) return { message: "Scene not found or unavailable." };
   if (error instanceof SessionRevisionConflictError) return { message: "This session changed since you opened it. Reload before saving again.", conflict: true };

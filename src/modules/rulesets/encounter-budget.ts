@@ -35,3 +35,15 @@ export function calculateEncounterBudget(input: EncounterBudgetInput) {
     totalXp,
   };
 }
+
+export function calculateEncounterBudgetForGroups(input: Omit<EncounterBudgetInput, "creatureXp"> & {
+  creatures: { xp: number; quantity: number }[];
+}) {
+  const base = calculateEncounterBudget({ ...input, creatureXp: [] });
+  if (!Array.isArray(input.creatures) || input.creatures.some(group =>
+    !Number.isSafeInteger(group.xp) || group.xp < 0 || !Number.isInteger(group.quantity)
+    || group.quantity < 1 || group.quantity > 100)) throw new InvalidEncounterBudgetInputError();
+  const totalXp = input.creatures.reduce((sum, group) => sum + group.xp * group.quantity, 0);
+  if (!Number.isSafeInteger(totalXp)) throw new InvalidEncounterBudgetInputError();
+  return { budgets: base.budgets, totalXp };
+}

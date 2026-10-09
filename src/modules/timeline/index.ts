@@ -79,7 +79,7 @@ async function linkSnapshots(tx: Transaction, campaignId: string, entityIds: str
   const result = await tx.execute<{ id: string; type: string; name: string }>(sql`
     SELECT ce.id, ce.entity_type AS type,
       COALESCE(l.name, a.name, q.name, n.name, pc.name, p.name, f.name,
-        tr.name, i.name, sr.kind) AS name
+        tr.name, i.name, e.title, sr.kind) AS name
     FROM campaign_entity ce
     LEFT JOIN location l ON l.id = ce.id
     LEFT JOIN arc a ON a.id = ce.id
@@ -90,6 +90,7 @@ async function linkSnapshots(tx: Transaction, campaignId: string, entityIds: str
     LEFT JOIN faction f ON f.id = ce.id
     LEFT JOIN travel_route tr ON tr.id = ce.id
     LEFT JOIN item i ON i.id = ce.id
+    LEFT JOIN encounter e ON e.id = ce.id
     LEFT JOIN semantic_relationship sr ON sr.id = ce.id
     WHERE ce.campaign_id = ${campaignId} AND ${inArray(sql`ce.id`, entityIds)}
   `);
