@@ -7,6 +7,7 @@ import { getCampaignRulesetVersion } from "../rulesets";
 import { calculateEncounterBudget } from "../rulesets/encounter-budget";
 export { EncounterPlacementNotFoundError, listSessionEncounterPlacements, placeEncounter,
   removeEncounterPlacement } from "./placements";
+export { InvalidEncounterRunInputError, listSessionEncounterRuns, recordEncounterRun } from "./runs";
 
 export class EncounterNotFoundError extends Error {}
 export class EncounterCreatureNotFoundError extends Error {}

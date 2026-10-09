@@ -438,12 +438,59 @@ export const encounterPlacement = pgTable("encounter_placement", {
 }, table => [
   index("encounter_placement_session_idx").on(table.sessionId),
   index("encounter_placement_encounter_idx").on(table.encounterId),
+  uniqueIndex("encounter_placement_run_source_unique").on(table.campaignId, table.sessionId,
+    table.id, table.encounterId),
   foreignKey({ name: "encounter_placement_session_fk", columns: [table.campaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
   foreignKey({ name: "encounter_placement_scene_fk", columns: [table.campaignId, table.sessionId, table.sceneId],
     foreignColumns: [scene.campaignId, scene.sessionId, scene.id] }).onDelete("cascade"),
   foreignKey({ name: "encounter_placement_encounter_fk", columns: [table.campaignId, table.encounterId],
     foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
+]);
+
+// A run records what happened at the table. The optional source links may disappear;
+// title and creature rows remain an independent snapshot of that play history.
+export const encounterRun = pgTable("encounter_run", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  sessionId: uuid("session_id").notNull(),
+  sourceCampaignId: uuid("source_campaign_id"),
+  sourceSessionId: uuid("source_session_id"),
+  placementId: uuid("placement_id"),
+  encounterId: uuid("encounter_id"),
+  title: text("title").notNull(),
+  outcome: text("outcome").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  index("encounter_run_session_idx").on(table.sessionId, table.occurredAt),
+  foreignKey({ name: "encounter_run_session_fk", columns: [table.campaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
+  foreignKey({ name: "encounter_run_source_fk", columns: [table.sourceCampaignId, table.sourceSessionId,
+    table.placementId, table.encounterId], foreignColumns: [encounterPlacement.campaignId,
+    encounterPlacement.sessionId, encounterPlacement.id, encounterPlacement.encounterId] }).onDelete("set null"),
+  check("encounter_run_source_scope", sql`(
+    (${table.sourceCampaignId} IS NULL AND ${table.sourceSessionId} IS NULL
+      AND ${table.placementId} IS NULL AND ${table.encounterId} IS NULL)
+    OR (${table.sourceCampaignId} = ${table.campaignId} AND ${table.sourceSessionId} = ${table.sessionId}
+      AND ${table.placementId} IS NOT NULL AND ${table.encounterId} IS NOT NULL)
+  )`),
+  check("encounter_run_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+  check("encounter_run_outcome_nonempty", sql`length(btrim(${table.outcome})) > 0`),
+]);
+
+export const encounterRunCreature = pgTable("encounter_run_creature", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  runId: uuid("run_id").notNull(),
+  name: text("name").notNull(),
+  xp: integer("xp").notNull(),
+  quantity: integer("quantity").notNull(),
+}, table => [
+  index("encounter_run_creature_run_idx").on(table.runId),
+  foreignKey({ name: "encounter_run_creature_run_fk", columns: [table.runId],
+    foreignColumns: [encounterRun.id] }).onDelete("cascade"),
+  check("encounter_run_creature_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("encounter_run_creature_xp_nonnegative", sql`${table.xp} >= 0`),
+  check("encounter_run_creature_quantity_positive", sql`${table.quantity} > 0`),
 ]);
 
 export const arc = pgTable("arc", {

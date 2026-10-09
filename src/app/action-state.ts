@@ -13,10 +13,11 @@ import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } f
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
 import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
-import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
+import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, InvalidEncounterRunInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof InvalidEncounterRunInputError) return { message: "Choose an available encounter or enter an improvised title, then describe what happened." };
   if (error instanceof EncounterRevisionConflictError) return { message: "This encounter changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof EncounterCreatureNotFoundError || error instanceof EncounterNotFoundError)
     return { message: "Encounter or creature not found or unavailable." };

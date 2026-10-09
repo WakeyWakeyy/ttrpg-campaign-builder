@@ -12,7 +12,7 @@ import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/mod
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
-import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
+import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -189,6 +189,20 @@ export async function removeEncounterPlacementAction(sessionId: string, placemen
   revalidatePath(`/sessions/${sessionId}`);
   revalidatePath(`/sessions/${sessionId}/run`);
   redirect(`/sessions/${sessionId}`);
+}
+
+export async function recordEncounterRunAction(sessionId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await recordEncounterRun(db, await requireActor(db), sessionId, {
+      expectedRevision: Number(text(form, "expectedRevision")),
+      placementId: text(form, "placementId") || null,
+      title: text(form, "title"), outcome: text(form, "outcome"),
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/sessions/${sessionId}/run`);
+  redirect(`/sessions/${sessionId}/run#encounter-history`);
 }
 
 export async function updateSceneAction(sessionId: string, sceneId: string, _state: ActionState,
