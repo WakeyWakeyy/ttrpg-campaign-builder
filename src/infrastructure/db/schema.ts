@@ -401,9 +401,11 @@ export const rewardGrant = pgTable("reward_grant", {
   foreignKey({ name: "reward_grant_session_fk", columns: [table.sessionCampaignId, table.sessionId],
     foreignColumns: [session.campaignId, session.id] }).onDelete("set null"),
   check("reward_grant_source_scope", sql`(${table.rewardId} IS NULL AND ${table.sourceCampaignId} IS NULL)
-    OR (${table.rewardId} IS NOT NULL AND ${table.sourceCampaignId} = ${table.campaignId})`),
+    OR (${table.rewardId} IS NOT NULL AND ${table.sourceCampaignId} IS NOT NULL
+      AND ${table.sourceCampaignId} = ${table.campaignId})`),
   check("reward_grant_session_scope", sql`(${table.sessionId} IS NULL AND ${table.sessionCampaignId} IS NULL)
-    OR (${table.sessionId} IS NOT NULL AND ${table.sessionCampaignId} = ${table.campaignId})`),
+    OR (${table.sessionId} IS NOT NULL AND ${table.sessionCampaignId} IS NOT NULL
+      AND ${table.sessionCampaignId} = ${table.campaignId})`),
   check("reward_grant_recipient_nonempty", sql`length(btrim(${table.recipient})) > 0`),
   check("reward_grant_title_nonempty", sql`length(btrim(${table.rewardTitle})) > 0`),
 ]);

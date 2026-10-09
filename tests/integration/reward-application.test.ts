@@ -111,6 +111,12 @@ test("records an owned, immutable grant once and keeps its snapshot after plan e
   await expect(db.insert(rewardGrant).values({ campaignId: foreignCampaignId, requestKey: randomUUID(),
     requestHash: "x", sourceCampaignId: campaignId, rewardId: planned.id, rewardTitle: "Bad", recipient: "Bad" }))
     .rejects.toMatchObject({ cause: { constraint: "reward_grant_source_scope" } });
+  await expect(db.insert(rewardGrant).values({ campaignId, requestKey: randomUUID(),
+    requestHash: "x", rewardId: randomUUID(), rewardTitle: "Bad", recipient: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_source_scope" } });
+  await expect(db.insert(rewardGrant).values({ campaignId, requestKey: randomUUID(),
+    requestHash: "x", sessionId: randomUUID(), rewardTitle: "Bad", recipient: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_session_scope" } });
   await expect(db.insert(rewardGrantComponent).values({ grantId: first.id, kind: "INVALID", description: "Bad" }))
     .rejects.toMatchObject({ cause: { constraint: "reward_grant_component_kind_check" } });
 });

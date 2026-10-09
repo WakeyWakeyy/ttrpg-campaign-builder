@@ -3758,11 +3758,11 @@
       "checkConstraints": {
         "reward_grant_source_scope": {
           "name": "reward_grant_source_scope",
-          "value": "(\"reward_grant\".\"reward_id\" IS NULL AND \"reward_grant\".\"source_campaign_id\" IS NULL)\n    OR (\"reward_grant\".\"reward_id\" IS NOT NULL AND \"reward_grant\".\"source_campaign_id\" = \"reward_grant\".\"campaign_id\")"
+          "value": "(\"reward_grant\".\"reward_id\" IS NULL AND \"reward_grant\".\"source_campaign_id\" IS NULL)\n    OR (\"reward_grant\".\"reward_id\" IS NOT NULL AND \"reward_grant\".\"source_campaign_id\" IS NOT NULL\n      AND \"reward_grant\".\"source_campaign_id\" = \"reward_grant\".\"campaign_id\")"
         },
         "reward_grant_session_scope": {
           "name": "reward_grant_session_scope",
-          "value": "(\"reward_grant\".\"session_id\" IS NULL AND \"reward_grant\".\"session_campaign_id\" IS NULL)\n    OR (\"reward_grant\".\"session_id\" IS NOT NULL AND \"reward_grant\".\"session_campaign_id\" = \"reward_grant\".\"campaign_id\")"
+          "value": "(\"reward_grant\".\"session_id\" IS NULL AND \"reward_grant\".\"session_campaign_id\" IS NULL)\n    OR (\"reward_grant\".\"session_id\" IS NOT NULL AND \"reward_grant\".\"session_campaign_id\" IS NOT NULL\n      AND \"reward_grant\".\"session_campaign_id\" = \"reward_grant\".\"campaign_id\")"
         },
         "reward_grant_recipient_nonempty": {
           "name": "reward_grant_recipient_nonempty",

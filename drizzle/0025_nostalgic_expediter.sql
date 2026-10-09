@@ -12,9 +12,11 @@ CREATE TABLE "reward_grant" (
 	"notes" text,
 	"granted_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "reward_grant_source_scope" CHECK (("reward_grant"."reward_id" IS NULL AND "reward_grant"."source_campaign_id" IS NULL)
-    OR ("reward_grant"."reward_id" IS NOT NULL AND "reward_grant"."source_campaign_id" = "reward_grant"."campaign_id")),
+    OR ("reward_grant"."reward_id" IS NOT NULL AND "reward_grant"."source_campaign_id" IS NOT NULL
+      AND "reward_grant"."source_campaign_id" = "reward_grant"."campaign_id")),
 	CONSTRAINT "reward_grant_session_scope" CHECK (("reward_grant"."session_id" IS NULL AND "reward_grant"."session_campaign_id" IS NULL)
-    OR ("reward_grant"."session_id" IS NOT NULL AND "reward_grant"."session_campaign_id" = "reward_grant"."campaign_id")),
+    OR ("reward_grant"."session_id" IS NOT NULL AND "reward_grant"."session_campaign_id" IS NOT NULL
+      AND "reward_grant"."session_campaign_id" = "reward_grant"."campaign_id")),
 	CONSTRAINT "reward_grant_recipient_nonempty" CHECK (length(btrim("reward_grant"."recipient")) > 0),
 	CONSTRAINT "reward_grant_title_nonempty" CHECK (length(btrim("reward_grant"."reward_title")) > 0)
 );
