@@ -14,6 +14,8 @@ import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter,
 import type { Actor } from "../../src/modules/identity";
 import { calculateEncounterBudgetForGroups } from "../../src/modules/rulesets/encounter-budget";
 import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
+import { relationshipOptions } from "../../src/app/relationship-options";
+import { createTimelineEvent, listTimelineEventLinks } from "../../src/modules/timeline";
 
 const schema = `encounter_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -66,6 +68,19 @@ test("creates an owned, version-bound encounter and rejects invalid or foreign c
   await db.delete(campaignRuleset).where(eq(campaignRuleset.campaignId, campaignId));
   await expect(createEncounter(db, actor, { campaignId, title: "No pin", partyLevel: 1, partySize: 4 }))
     .rejects.toBeInstanceOf(UnsupportedEncounterVersionError);
+});
+
+test("offers encounters for links and snapshots their title in the timeline", async () => {
+  const owned = await createEncounter(db, actor, { campaignId, title: "Bridge", partyLevel: 3, partySize: 5 });
+  const foreign = await createEncounter(db, other, { campaignId: foreignCampaignId,
+    title: "Other bridge", partyLevel: 3, partySize: 5 });
+  const choices = await relationshipOptions(db, actor, campaignId);
+  expect(choices).toContainEqual({ id: owned.id, name: "Bridge", type: "Encounter", deletedAt: null });
+  expect(choices.some(choice => choice.id === foreign.id)).toBe(false);
+  const event = await createTimelineEvent(db, actor, { campaignId, title: "Crossing", entityIds: [owned.id] });
+  expect(await listTimelineEventLinks(db, actor, event.id)).toMatchObject([
+    { targetEntityId: owned.id, targetTypeSnapshot: "ENCOUNTER", targetNameSnapshot: "Bridge" },
+  ]);
 });
 
 test("creature edits are revision-safe and remain in the same campaign", async () => {
