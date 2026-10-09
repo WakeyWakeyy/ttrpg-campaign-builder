@@ -9,6 +9,7 @@ import { listOwnedRelationships } from "@/modules/relationships";
 import { listOwnedTimelineEvents } from "@/modules/timeline";
 import { listOwnedSessions } from "@/modules/sessions";
 import { listOwnedEncounters } from "@/modules/encounters";
+import { listOwnedRewards } from "@/modules/rewards";
 import { getCampaignRulesetVersion, listCampaignRulesReferences } from "@/modules/rulesets";
 import { EncounterBudgetCalculator } from "../../encounter-budget-calculator";
 import { relationshipOptions } from "../../relationship-options";
@@ -19,7 +20,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createRewardAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -38,6 +39,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
     const sessions = await listOwnedSessions(db, actor, campaignId);
     const encounters = await listOwnedEncounters(db, actor, campaignId);
+    const rewards = await listOwnedRewards(db, actor, campaignId);
     const rulesReferences = await listCampaignRulesReferences(db, actor, campaignId);
     const rulesetVersion = await getCampaignRulesetVersion(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
@@ -48,7 +50,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rewards, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -91,6 +93,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#timeline">Timeline</a>
         <a href="#sessions">Sessions</a>
         <a href="#encounters">Encounters</a>
+        <a href="#rewards">Rewards</a>
         <a href="#rules-reference">Rules reference</a>
       </nav>
       <div className="workspace-content">
@@ -126,6 +129,19 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
               <input id="new-encounter-size" name="partySize" type="number" min="1" max="20" defaultValue="4" required />
               <button type="submit">Create encounter</button>
             </ActionForm>}
+        </section>
+        <section id="rewards" aria-labelledby="rewards-heading" className="workspace-section">
+          <h2 id="rewards-heading">Rewards</h2>
+          <p>Plan what the party might earn, discover, or gain. Components can be resolved independently.</p>
+          {data.rewards.length ? <ul>{data.rewards.map(item => <li key={item.id}>
+            <Link href={`/rewards/${item.id}`}>{item.title}</Link>
+            {item.deletedAt ? " · In trash" : item.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No rewards planned yet.</p>}
+          {!data.campaign.deletedAt && <ActionForm action={createRewardAction.bind(null, campaignId)}>
+            <label htmlFor="new-reward-title">Title</label>
+            <input id="new-reward-title" name="title" required maxLength={200} />
+            <button type="submit">Plan reward</button>
+          </ActionForm>}
         </section>
         <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
           <h2 id="sessions-heading">Sessions</h2>

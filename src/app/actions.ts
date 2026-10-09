@@ -13,6 +13,7 @@ import { archiveRelationship, createRelationship, editRelationship, restoreRelat
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
+import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -73,6 +74,68 @@ function encounterCreatureInput(form: FormData) {
   const xp = text(form, "xp");
   return { name: text(form, "name"), xp: xp.trim() ? Number(xp) : Number.NaN,
     quantity: Number(text(form, "quantity")) };
+}
+
+function rewardInput(form: FormData) {
+  return { title: text(form, "title"), notes: text(form, "notes") || null };
+}
+function rewardComponentInput(form: FormData) {
+  return { kind: text(form, "kind") as RewardKind, description: text(form, "description") };
+}
+
+export async function createRewardAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createReward(db, await requireActor(db), { campaignId, ...rewardInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/rewards/${id}`);
+}
+
+export async function updateRewardAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editReward(db, actor, id,
+      { expectedRevision: revision, ...rewardInput(form) })
+      : intent === "archive" ? await archiveReward(db, actor, id, revision)
+      : intent === "trash" ? await trashReward(db, actor, id, revision)
+      : intent === "restore" ? await restoreReward(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a reward action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/rewards/${id}`);
+  redirect(`/rewards/${id}`);
+}
+
+export async function addRewardComponentAction(id: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await addRewardComponent(db, await requireActor(db), id,
+      { expectedRevision: Number(text(form, "expectedRevision")), ...rewardComponentInput(form) });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/rewards/${id}`);
+  redirect(`/rewards/${id}`);
+}
+
+export async function updateRewardComponentAction(id: string, componentId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const intent = text(form, "intent");
+    if (intent !== "save" && intent !== "trash" && intent !== "restore")
+      return { message: "Choose a component action." };
+    const db = getDatabase();
+    await editRewardComponent(db, await requireActor(db), id, componentId,
+      { expectedRevision: Number(text(form, "expectedRevision")), intent, ...rewardComponentInput(form) });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/rewards/${id}`);
+  redirect(`/rewards/${id}`);
 }
 
 export async function createEncounterAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

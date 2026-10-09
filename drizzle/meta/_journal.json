@@ -169,6 +169,13 @@
       "when": 1791563017293,
       "tag": "0023_dapper_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791563588271,
+      "tag": "0024_reward_planning",
+      "breakpoints": true
     }
   ]
 }
