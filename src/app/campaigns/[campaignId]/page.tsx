@@ -243,8 +243,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           </li>)}</ul> : <p>No quest continuity prompts right now.</p>}
           {timelineFindings.length > 0 && <><h3>Dates to review</h3>
             <p>These events share an in-world date and a related entity, but have different real dates. Check whether that is intentional.</p>
-            <ul>{timelineFindings.map(finding => <li key={`${finding.firstId}-${finding.secondId}-${finding.entityName}`}>
-              <Link href={`/timeline/${finding.firstId}`}>{finding.firstTitle}</Link> and <Link href={`/timeline/${finding.secondId}`}>{finding.secondTitle}</Link> both mention {finding.entityName} on {finding.inWorldDate}.
+            <ul>{timelineFindings.map(finding => <li key={`${finding.firstId}-${finding.secondId}-${finding.firstEntityName}`}>
+              <Link href={`/timeline/${finding.firstId}`}>{finding.firstTitle}</Link> ({finding.firstEntityName}) and <Link href={`/timeline/${finding.secondId}`}>{finding.secondTitle}</Link> ({finding.secondEntityName}) share {finding.inWorldDate}.
             </li>)}</ul></>}
         </section>
         <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">

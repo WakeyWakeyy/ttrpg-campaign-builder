@@ -3,7 +3,7 @@ type Event = { id: string; title: string; occurredAt: Date | null; inWorldDate: 
 type Link = { eventId: string; targetEntityId: string | null; targetNameSnapshot: string };
 
 export type TimelineContinuityFinding = { firstId: string; firstTitle: string; secondId: string;
-  secondTitle: string; entityName: string; inWorldDate: string };
+  secondTitle: string; firstEntityName: string; secondEntityName: string; inWorldDate: string };
 
 // A review prompt only: the two dates may intentionally describe different calendars.
 export function findTimelineContinuityIssues(events: readonly Event[], links: readonly Link[]): TimelineContinuityFinding[] {
@@ -13,7 +13,7 @@ export function findTimelineContinuityIssues(events: readonly Event[], links: re
   for (const link of links) {
     const event = available.get(link.eventId);
     if (!event || !link.targetEntityId) continue;
-    const key = `${link.targetEntityId}\0${event.inWorldDate!.trim().toLocaleLowerCase()}`;
+    const key = `${link.targetEntityId}\0${event.inWorldDate!.trim().toLowerCase()}`;
     const group = groups.get(key) ?? [];
     group.push({ event, entityName: link.targetNameSnapshot });
     groups.set(key, group);
@@ -25,7 +25,8 @@ export function findTimelineContinuityIssues(events: readonly Event[], links: re
       const b = group[second].event;
       if (a.occurredAt!.getTime() === b.occurredAt!.getTime()) continue;
       findings.push({ firstId: a.id, firstTitle: a.title, secondId: b.id, secondTitle: b.title,
-        entityName: group[first].entityName, inWorldDate: a.inWorldDate!.trim() });
+        firstEntityName: group[first].entityName, secondEntityName: group[second].entityName,
+        inWorldDate: a.inWorldDate!.trim() });
     }
   }
   return findings;
