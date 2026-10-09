@@ -82,7 +82,9 @@ Add deterministic game support:
 
 Add contextual assistance after enough structured campaign state exists:
 
-- continuity checks;
+**Current stage:** The first read-only Quest continuity prompt is available. Timeline, knowledge, summary, and proactive checks remain ahead.
+
+- continuity checks: the first read-only check highlights open or postponed Quests whose available parent is resolved, failed, or abandoned. It is an advisory on the Campaign workspace; the GM decides whether to change anything;
 - timeline conflicts;
 - inaccessible clues / secrets;
 - unresolved or abandoned threads;
