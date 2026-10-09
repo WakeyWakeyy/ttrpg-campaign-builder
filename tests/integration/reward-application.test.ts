@@ -4,12 +4,14 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, reward, rewardComponent, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignEntity, reward, rewardComponent, rewardGrant, rewardGrantComponent, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent,
   getOwnedReward, InvalidRewardInputError, listOwnedRewards, listRewardComponents,
   RewardNotFoundError, RewardRevisionConflictError, restoreReward, trashReward } from "../../src/modules/rewards";
+import { InvalidRewardGrantInputError, listRewardGrants, recordRewardGrant,
+  RewardGrantIdempotencyConflictError } from "../../src/modules/rewards/grants";
 
 const schema = `reward_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -83,4 +85,38 @@ test("protects edits, component resolution, and restoration", async () => {
   expect(restored.deletedAt).toBeNull();
   expect(await listRewardComponents(db, actor, planned.id)).toHaveLength(1);
   expect((await db.select().from(reward).where(eq(reward.id, planned.id))).length).toBe(1);
+});
+
+test("records an owned, immutable grant once and keeps its snapshot after plan edits", async () => {
+  const planned = await createReward(db, actor, { campaignId, title: "Crossing" });
+  const component = await addRewardComponent(db, actor, planned.id,
+    { expectedRevision: 1, kind: "INFORMATION", description: "The hidden route" });
+  const requestKey = randomUUID();
+  const input = { requestKey, expectedRevision: 2, componentIds: [component.id], recipient: "The party" };
+  await expect(recordRewardGrant(db, other, planned.id, input)).rejects.toBeInstanceOf(RewardNotFoundError);
+  await expect(recordRewardGrant(db, actor, planned.id, { ...input, componentIds: [randomUUID()] }))
+    .rejects.toBeInstanceOf(InvalidRewardGrantInputError);
+  const first = await recordRewardGrant(db, actor, planned.id, input);
+  expect((await recordRewardGrant(db, actor, planned.id, input)).id).toBe(first.id);
+  await expect(recordRewardGrant(db, actor, planned.id, { ...input, recipient: "Someone else" }))
+    .rejects.toBeInstanceOf(RewardGrantIdempotencyConflictError);
+  await expect(recordRewardGrant(db, actor, planned.id,
+    { ...input, requestKey: randomUUID() })).rejects.toBeInstanceOf(RewardRevisionConflictError);
+  await editRewardComponent(db, actor, planned.id, component.id,
+    { expectedRevision: 3, intent: "save", kind: "INFORMATION", description: "A changed route" });
+  const [ledger] = await listRewardGrants(db, actor, campaignId);
+  expect(ledger).toMatchObject({ id: first.id, rewardTitle: "Crossing", recipient: "The party",
+    components: [{ kind: "INFORMATION", description: "The hidden route" }] });
+  await expect(listRewardGrants(db, other, campaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(db.insert(rewardGrant).values({ campaignId: foreignCampaignId, requestKey: randomUUID(),
+    requestHash: "x", sourceCampaignId: campaignId, rewardId: planned.id, rewardTitle: "Bad", recipient: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_source_scope" } });
+  await expect(db.insert(rewardGrant).values({ campaignId, requestKey: randomUUID(),
+    requestHash: "x", rewardId: randomUUID(), rewardTitle: "Bad", recipient: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_source_scope" } });
+  await expect(db.insert(rewardGrant).values({ campaignId, requestKey: randomUUID(),
+    requestHash: "x", sessionId: randomUUID(), rewardTitle: "Bad", recipient: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_session_scope" } });
+  await expect(db.insert(rewardGrantComponent).values({ grantId: first.id, kind: "INVALID", description: "Bad" }))
+    .rejects.toMatchObject({ cause: { constraint: "reward_grant_component_kind_check" } });
 });

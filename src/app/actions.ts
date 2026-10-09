@@ -14,6 +14,7 @@ import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTi
 import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
+import { recordRewardGrant } from "@/modules/rewards/grants";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -81,6 +82,21 @@ function rewardInput(form: FormData) {
 }
 function rewardComponentInput(form: FormData) {
   return { kind: text(form, "kind") as RewardKind, description: text(form, "description") };
+}
+
+export async function recordRewardGrantAction(rewardId: string, _state: ActionState,
+  form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await recordRewardGrant(db, await requireActor(db), rewardId, {
+      requestKey: text(form, "requestKey"), expectedRevision: Number(text(form, "expectedRevision")),
+      componentIds: form.getAll("componentIds").filter((id): id is string => typeof id === "string"),
+      recipient: text(form, "recipient"), notes: text(form, "notes"),
+      sessionId: text(form, "sessionId") || null,
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/rewards/${rewardId}`);
+  redirect(`/rewards/${rewardId}#grant-history`);
 }
 
 export async function createRewardAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

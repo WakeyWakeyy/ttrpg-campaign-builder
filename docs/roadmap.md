@@ -68,7 +68,7 @@ Make recurring preparation useful:
 
 Add deterministic game support:
 
-**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, and Reward planning are available. Reward Grants and the ledger are next.
+**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, Reward planning, and Reward Grants with a ledger are available. Campaign Intelligence is next.
 
 - SRD-backed rules/reference foundation: a version-scoped, source-attributed index links GMs to selected sections of the official SRD from their Campaign workspace. This is a navigation foundation, not a complete rules compendium;
 - deterministic encounter calculations: a version-bound calculator shows low, moderate, and high XP budgets for an equal-level party and compares a creature XP total with them; it does not save an Encounter. See [calculation scope](encounter-budgets.md);
@@ -76,7 +76,7 @@ Add deterministic game support:
 - reusable Encounter definitions and placements: a GM can place a Campaign Encounter in a Session or Scene more than once, remove a placement without deleting its definition, and carry available placements into a copied Session;
 - Encounter Run history: the Run View records played or improvised encounters, the outcome, and a snapshot of planned creature groups. Later edits to the reusable definition do not rewrite the record. See [run history scope](encounter-run-history.md);
 - Reward planning: a Campaign holds reusable plans with individually editable components for material and narrative gains. Revision-safe edits and recovery preserve preparation without implying a grant. See [planning scope](reward-planning.md);
-- Reward Grants / ledger.
+- Reward Grants / ledger: grants capture the actual recipient, date, optional Session, and selected component snapshots without changing reusable plans. See [grant scope](reward-grants.md).
 
 ## 6. Campaign Intelligence
 

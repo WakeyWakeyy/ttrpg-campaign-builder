@@ -10,6 +10,7 @@ import { listOwnedTimelineEvents } from "@/modules/timeline";
 import { listOwnedSessions } from "@/modules/sessions";
 import { listOwnedEncounters } from "@/modules/encounters";
 import { listOwnedRewards } from "@/modules/rewards";
+import { listRewardGrants } from "@/modules/rewards/grants";
 import { getCampaignRulesetVersion, listCampaignRulesReferences } from "@/modules/rulesets";
 import { EncounterBudgetCalculator } from "../../encounter-budget-calculator";
 import { relationshipOptions } from "../../relationship-options";
@@ -40,6 +41,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const sessions = await listOwnedSessions(db, actor, campaignId);
     const encounters = await listOwnedEncounters(db, actor, campaignId);
     const rewards = await listOwnedRewards(db, actor, campaignId);
+    const grants = await listRewardGrants(db, actor, campaignId);
     const rulesReferences = await listCampaignRulesReferences(db, actor, campaignId);
     const rulesetVersion = await getCampaignRulesetVersion(db, actor, campaignId);
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
@@ -50,7 +52,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rewards, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -94,6 +96,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#sessions">Sessions</a>
         <a href="#encounters">Encounters</a>
         <a href="#rewards">Rewards</a>
+        <a href="#grant-ledger">Grant ledger</a>
         <a href="#rules-reference">Rules reference</a>
       </nav>
       <div className="workspace-content">
@@ -142,6 +145,18 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <input id="new-reward-title" name="title" required maxLength={200} />
             <button type="submit">Plan reward</button>
           </ActionForm>}
+        </section>
+        <section id="grant-ledger" aria-labelledby="grant-ledger-heading" className="workspace-section">
+          <h2 id="grant-ledger-heading">Grant ledger</h2>
+          <p>What was actually given, preserved as it was recorded.</p>
+          {data.grants.length ? <ol>{data.grants.map(grant => <li key={grant.id}>
+            <strong>{grant.rewardTitle}</strong> to {grant.recipient} ·
+            <time dateTime={grant.grantedAt.toISOString()}>{grant.grantedAt.toLocaleString("en-US", { timeZone: "UTC" })} UTC</time>
+            {grant.sessionId && <span> · {data.sessions.find(session => session.id === grant.sessionId)?.title ?? "Session removed"}</span>}
+            <ul>{grant.components.map(component => <li key={component.id}>
+              {component.kind.toLowerCase()}: {component.description}</li>)}</ul>
+            {grant.notes && <p className="preserve-lines">{grant.notes}</p>}
+          </li>)}</ol> : <p>No rewards granted yet.</p>}
         </section>
         <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
           <h2 id="sessions-heading">Sessions</h2>

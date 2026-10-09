@@ -15,9 +15,12 @@ import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEve
 import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
 import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, InvalidEncounterRunInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 import { InvalidRewardInputError, RewardComponentNotFoundError, RewardNotFoundError, RewardRevisionConflictError } from "@/modules/rewards";
+import { InvalidRewardGrantInputError, RewardGrantIdempotencyConflictError } from "@/modules/rewards/grants";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof RewardGrantIdempotencyConflictError) return { message: "This grant request was already used for another reward. Reload before retrying.", conflict: true };
+  if (error instanceof InvalidRewardGrantInputError) return { message: "Choose available components and a recipient, then check the session and notes." };
   if (error instanceof RewardRevisionConflictError) return { message: "This reward changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof RewardNotFoundError || error instanceof RewardComponentNotFoundError)
     return { message: "Reward or component not found or unavailable." };
