@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { and, asc, desc, eq, getTableColumns, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { campaign, campaignEntity, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
+import { campaign, campaignEntity, commandExecution, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
 
@@ -8,6 +9,7 @@ export class SessionNotFoundError extends Error {}
 export class SessionRevisionConflictError extends Error {}
 export class InvalidSessionInputError extends Error {}
 export class SceneNotFoundError extends Error {}
+export class SessionCopyIdempotencyConflictError extends Error {}
 
 type Fields = { title: string; plannedFor?: string | null; preparation?: string | null; outcome?: string | null };
 type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
@@ -108,8 +110,24 @@ export async function createSession(db: NodePgDatabase, actor: Actor, input: Fie
   });
 }
 export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, sourceId: string,
-  expectedRevision: number) {
+  expectedRevision: number, idempotencyKey: string) {
+  if (!uuid(sourceId) || !Number.isInteger(expectedRevision) || expectedRevision < 1
+    || expectedRevision > 2147483647 || typeof idempotencyKey !== "string"
+    || !idempotencyKey.trim() || idempotencyKey.length > 200) throw new InvalidSessionInputError();
+  const fingerprint = createHash("sha256").update(JSON.stringify([sourceId, expectedRevision])).digest("hex");
   return db.transaction(async tx => {
+    const inserted = await tx.insert(commandExecution).values({ scopeUserId: actor.userId,
+      commandKind: "SESSION_PREPARATION_COPY", idempotencyKey, requestFingerprint: fingerprint,
+      status: "IN_PROGRESS" }).onConflictDoNothing().returning({ id: commandExecution.id });
+    const [execution] = await tx.select().from(commandExecution).where(and(
+      eq(commandExecution.scopeUserId, actor.userId), eq(commandExecution.commandKind, "SESSION_PREPARATION_COPY"),
+      eq(commandExecution.idempotencyKey, idempotencyKey), isNull(commandExecution.scopeCampaignId))).for("update");
+    if (!execution || execution.requestFingerprint !== fingerprint) throw new SessionCopyIdempotencyConflictError();
+    if (execution.status === "SUCCEEDED") {
+      const result = execution.resultJson as { sessionId: string };
+      return getOwnedSession(tx, actor, result.sessionId);
+    }
+    if (!inserted.length || execution.status !== "IN_PROGRESS") throw new SessionCopyIdempotencyConflictError();
     const source = await lock(tx, actor, sourceId, expectedRevision);
     if (source.deletedAt) throw new InvalidSessionInputError();
     const sourceScenes = await tx.select().from(scene).where(and(eq(scene.sessionId, source.id),
@@ -123,6 +141,8 @@ export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, 
       campaignId: source.campaignId, sessionId: entity.id, position: index + 1,
       title: item.title, preparation: item.preparation,
     })));
+    await tx.update(commandExecution).set({ status: "SUCCEEDED", completedAt: new Date(),
+      resultSchemaVersion: 1, resultJson: { sessionId: entity.id } }).where(eq(commandExecution.id, execution.id));
     return { ...entity, ...typed };
   }, { isolationLevel: "read committed" });
 }
