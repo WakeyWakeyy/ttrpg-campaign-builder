@@ -446,6 +446,44 @@ export const encounterPlacement = pgTable("encounter_placement", {
     foreignColumns: [encounter.campaignId, encounter.id] }).onDelete("cascade"),
 ]);
 
+// A run records what happened at the table. The optional source links may disappear;
+// title and creature rows remain an independent snapshot of that play history.
+export const encounterRun = pgTable("encounter_run", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  sessionId: uuid("session_id").notNull(),
+  placementId: uuid("placement_id"),
+  encounterId: uuid("encounter_id"),
+  title: text("title").notNull(),
+  outcome: text("outcome").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+}, table => [
+  index("encounter_run_session_idx").on(table.sessionId, table.occurredAt),
+  foreignKey({ name: "encounter_run_session_fk", columns: [table.campaignId, table.sessionId],
+    foreignColumns: [session.campaignId, session.id] }).onDelete("cascade"),
+  foreignKey({ name: "encounter_run_placement_fk", columns: [table.placementId],
+    foreignColumns: [encounterPlacement.id] }).onDelete("set null"),
+  foreignKey({ name: "encounter_run_encounter_fk", columns: [table.encounterId],
+    foreignColumns: [encounter.id] }).onDelete("set null"),
+  check("encounter_run_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+  check("encounter_run_outcome_nonempty", sql`length(btrim(${table.outcome})) > 0`),
+]);
+
+export const encounterRunCreature = pgTable("encounter_run_creature", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  runId: uuid("run_id").notNull(),
+  name: text("name").notNull(),
+  xp: integer("xp").notNull(),
+  quantity: integer("quantity").notNull(),
+}, table => [
+  index("encounter_run_creature_run_idx").on(table.runId),
+  foreignKey({ name: "encounter_run_creature_run_fk", columns: [table.runId],
+    foreignColumns: [encounterRun.id] }).onDelete("cascade"),
+  check("encounter_run_creature_name_nonempty", sql`length(btrim(${table.name})) > 0`),
+  check("encounter_run_creature_xp_nonnegative", sql`${table.xp} >= 0`),
+  check("encounter_run_creature_quantity_positive", sql`${table.quantity} > 0`),
+]);
+
 export const arc = pgTable("arc", {
   id: uuid("id").primaryKey(),
   campaignId: uuid("campaign_id").notNull(),
