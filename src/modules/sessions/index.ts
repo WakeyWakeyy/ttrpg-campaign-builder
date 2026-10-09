@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, getTableColumns, isNull, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { campaign, campaignEntity, commandExecution, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
+import { campaign, campaignEntity, commandExecution, encounter, encounterPlacement, playerCharacter, scene, session, sessionAttendance } from "../../infrastructure/db/schema";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
 
@@ -10,6 +10,7 @@ export class SessionRevisionConflictError extends Error {}
 export class InvalidSessionInputError extends Error {}
 export class SceneNotFoundError extends Error {}
 export class SessionCopyIdempotencyConflictError extends Error {}
+export class EncounterPlacementNotFoundError extends Error {}
 
 type Fields = { title: string; plannedFor?: string | null; preparation?: string | null; outcome?: string | null };
 type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
@@ -137,9 +138,18 @@ export async function reuseSessionPreparation(db: NodePgDatabase, actor: Actor, 
       entityType: "SESSION", createdByUserId: actor.userId }).returning();
     const [typed] = await tx.insert(session).values({ id: entity.id, campaignId: entity.campaignId,
       title: `Copy of ${source.title}`, preparation: source.preparation }).returning();
-    if (sourceScenes.length) await tx.insert(scene).values(sourceScenes.map((item, index) => ({
+    const copiedScenes = sourceScenes.length ? await tx.insert(scene).values(sourceScenes.map((item, index) => ({
       campaignId: source.campaignId, sessionId: entity.id, position: index + 1,
       title: item.title, preparation: item.preparation,
+    }))).returning() : [];
+    const placements = await tx.select().from(encounterPlacement)
+      .where(eq(encounterPlacement.sessionId, sourceId));
+    const sceneIds = new Map(sourceScenes.map((old, index) => [old.id, copiedScenes[index].id]));
+    const copiedPlacements = placements.filter(placement => !placement.sceneId || sceneIds.has(placement.sceneId));
+    if (copiedPlacements.length) await tx.insert(encounterPlacement).values(copiedPlacements.map(placement => ({
+      campaignId: source.campaignId, sessionId: entity.id,
+      sceneId: placement.sceneId ? sceneIds.get(placement.sceneId) ?? null : null,
+      encounterId: placement.encounterId,
     })));
     await tx.update(commandExecution).set({ status: "SUCCEEDED", completedAt: new Date(),
       resultSchemaVersion: 1, resultJson: { sessionId: entity.id } }).where(eq(commandExecution.id, execution.id));
@@ -220,6 +230,55 @@ export async function listSessionScenes(db: NodePgDatabase, actor: Actor, sessio
   const parent = await getOwnedSession(db, actor, sessionId);
   return db.select().from(scene).where(and(eq(scene.sessionId, parent.id), eq(scene.campaignId, parent.campaignId)))
     .orderBy(asc(scene.position), asc(scene.id));
+}
+
+export async function listSessionEncounterPlacements(db: NodePgDatabase, actor: Actor, sessionId: string) {
+  const parent = await getOwnedSession(db, actor, sessionId);
+  return db.select({ id: encounterPlacement.id, sceneId: encounterPlacement.sceneId,
+    encounterId: encounterPlacement.encounterId, title: encounter.title,
+    encounterDeletedAt: campaignEntity.deletedAt }).from(encounterPlacement)
+    .innerJoin(encounter, eq(encounter.id, encounterPlacement.encounterId))
+    .innerJoin(campaignEntity, eq(campaignEntity.id, encounter.id))
+    .where(and(eq(encounterPlacement.sessionId, sessionId), eq(encounterPlacement.campaignId, parent.campaignId)))
+    .orderBy(asc(encounterPlacement.createdAt), asc(encounterPlacement.id));
+}
+
+export async function placeEncounter(db: NodePgDatabase, actor: Actor, sessionId: string,
+  input: { expectedRevision: number; encounterId: string; sceneId?: string | null }) {
+  if (!uuid(input.encounterId) || input.sceneId && !uuid(input.sceneId)) throw new InvalidSessionInputError();
+  return db.transaction(async tx => {
+    const parent = await lock(tx, actor, sessionId, input.expectedRevision);
+    if (parent.deletedAt) throw new InvalidSessionInputError();
+    const [definition] = await tx.select({ id: encounter.id }).from(encounter)
+      .innerJoin(campaignEntity, eq(campaignEntity.id, encounter.id))
+      .where(and(eq(encounter.id, input.encounterId), eq(encounter.campaignId, parent.campaignId),
+        isNull(campaignEntity.deletedAt))).for("share", { of: campaignEntity });
+    if (!definition) throw new InvalidSessionInputError();
+    if (input.sceneId) {
+      const [target] = await tx.select({ id: scene.id }).from(scene).where(and(eq(scene.id, input.sceneId),
+        eq(scene.sessionId, sessionId), eq(scene.campaignId, parent.campaignId), isNull(scene.deletedAt)))
+        .for("share");
+      if (!target) throw new InvalidSessionInputError();
+    }
+    const [placed] = await tx.insert(encounterPlacement).values({ campaignId: parent.campaignId,
+      sessionId, sceneId: input.sceneId || null, encounterId: input.encounterId }).returning();
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
+    return placed;
+  }, { isolationLevel: "read committed" });
+}
+
+export async function removeEncounterPlacement(db: NodePgDatabase, actor: Actor, sessionId: string,
+  placementId: string, expectedRevision: number) {
+  if (!uuid(placementId)) throw new EncounterPlacementNotFoundError();
+  return db.transaction(async tx => {
+    const parent = await lock(tx, actor, sessionId, expectedRevision);
+    if (parent.deletedAt) throw new InvalidSessionInputError();
+    const [removed] = await tx.delete(encounterPlacement).where(and(eq(encounterPlacement.id, placementId),
+      eq(encounterPlacement.sessionId, sessionId), eq(encounterPlacement.campaignId, parent.campaignId))).returning();
+    if (!removed) throw new EncounterPlacementNotFoundError();
+    await tx.update(campaignEntity).set(advance).where(eq(campaignEntity.id, sessionId));
+    return removed;
+  }, { isolationLevel: "read committed" });
 }
 
 export async function createScene(db: NodePgDatabase, actor: Actor, sessionId: string,

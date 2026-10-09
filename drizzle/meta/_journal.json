@@ -155,6 +155,13 @@
       "when": 1791515086774,
       "tag": "0021_classy_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791516499801,
+      "tag": "0022_confused_chronomancer",
+      "breakpoints": true
     }
   ]
 }

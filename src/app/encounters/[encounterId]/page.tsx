@@ -27,7 +27,7 @@ export default async function EncounterPage({ params }: { params: Promise<{ enco
     <h1>{item.title}</h1>
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this encounter to {item.archivedAt ? "Archived" : "Active"}.</p>}
-    <p>This definition is independent of a Session. Placement in a Session or Scene comes later.</p>
+    <p>This definition is reusable. Place it in a Session or Scene from that Session&apos;s page.</p>
     <ActionForm key={item.revision} action={updateEncounterAction.bind(null, item.id)} reloadLabel="Reload encounter">
       <input type="hidden" name="expectedRevision" value={item.revision} />
       <label htmlFor="encounter-title">Title</label>

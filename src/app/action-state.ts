@@ -12,7 +12,7 @@ import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevi
 import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
-import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
+import { EncounterPlacementNotFoundError, InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
 import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 
 export type ActionState = { message: string; conflict?: boolean };
@@ -24,9 +24,10 @@ export function actionError(error: unknown): ActionState {
   if (error instanceof InvalidEncounterInputError) return { message: "Check the title, party level, party size, and creature values." };
   if (error instanceof SessionCopyIdempotencyConflictError) return { message: "This copy request belongs to another operation. Reload before trying again.", conflict: true };
   if (error instanceof SceneNotFoundError) return { message: "Scene not found or unavailable." };
+  if (error instanceof EncounterPlacementNotFoundError) return { message: "Encounter placement not found. Reload the session." };
   if (error instanceof SessionRevisionConflictError) return { message: "This session changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof SessionNotFoundError) return { message: "Session not found or unavailable." };
-  if (error instanceof InvalidSessionInputError) return { message: "Enter a session title and check the planned date and notes." };
+  if (error instanceof InvalidSessionInputError) return { message: "Check the session details and choose an available encounter or scene in this campaign." };
   if (error instanceof TimelineEventRevisionConflictError) return { message: "This event changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof TimelineEventNotFoundError) return { message: "Timeline event not found or unavailable." };
   if (error instanceof InvalidTimelineEventInputError) return { message: "Enter an event title, a valid date, and available campaign entities." };

@@ -11,7 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { archiveSession, createScene, createSession, editScene, editSession, placeEncounter, recordSceneOutcome, recordSessionOutcome, removeEncounterPlacement, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
@@ -163,6 +163,31 @@ export async function createSceneAction(sessionId: string, _state: ActionState, 
         preparation: text(form, "preparation") || null, outcome: text(form, "outcome") || null });
   } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${sessionId}`);
+  redirect(`/sessions/${sessionId}`);
+}
+
+export async function placeEncounterAction(sessionId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await placeEncounter(db, await requireActor(db), sessionId, {
+      expectedRevision: Number(text(form, "expectedRevision")),
+      encounterId: text(form, "encounterId"), sceneId: text(form, "sceneId") || null,
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath(`/sessions/${sessionId}/run`);
+  redirect(`/sessions/${sessionId}`);
+}
+
+export async function removeEncounterPlacementAction(sessionId: string, placementId: string,
+  _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await removeEncounterPlacement(db, await requireActor(db), sessionId, placementId,
+      Number(text(form, "expectedRevision")));
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath(`/sessions/${sessionId}/run`);
   redirect(`/sessions/${sessionId}`);
 }
 
