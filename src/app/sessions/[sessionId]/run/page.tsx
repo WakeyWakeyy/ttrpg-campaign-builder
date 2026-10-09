@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
-import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionEncounterPlacements, listSessionScenes } from "@/modules/sessions";
+import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
+import { listSessionEncounterPlacements } from "@/modules/encounters";
 import { readError } from "../../../read-error";
 
 export default async function SessionRunPage({ params }: { params: Promise<{ sessionId: string }> }) {

@@ -11,8 +11,8 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, placeEncounter, recordSceneOutcome, recordSessionOutcome, removeEncounterPlacement, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
-import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, restoreEncounter, trashEncounter } from "@/modules/encounters";
+import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";

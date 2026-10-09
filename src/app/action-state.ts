@@ -12,8 +12,8 @@ import { InvalidTravelRouteInputError, TravelRouteNotFoundError, TravelRouteRevi
 import { InvalidItemInputError, ItemNotFoundError, ItemRevisionConflictError } from "@/modules/items";
 import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipRevisionConflictError } from "@/modules/relationships";
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
-import { EncounterPlacementNotFoundError, InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
-import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
+import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
+import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {

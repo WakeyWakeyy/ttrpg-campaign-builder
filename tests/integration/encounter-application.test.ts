@@ -8,17 +8,17 @@ import { campaign, campaignEntity, campaignRuleset, commandExecution, encounter,
   rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature,
-  EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterRevisionConflictError,
+  EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError,
   getOwnedEncounter, InvalidEncounterInputError, listEncounterCreatures, listOwnedEncounters,
+  listSessionEncounterPlacements, placeEncounter, removeEncounterPlacement,
   restoreEncounter, trashEncounter, UnsupportedEncounterVersionError } from "../../src/modules/encounters";
 import type { Actor } from "../../src/modules/identity";
 import { calculateEncounterBudgetForGroups } from "../../src/modules/rulesets/encounter-budget";
 import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
 import { relationshipOptions } from "../../src/app/relationship-options";
 import { createTimelineEvent, listTimelineEventLinks } from "../../src/modules/timeline";
-import { createScene, createSession, EncounterPlacementNotFoundError, getOwnedSession,
-  InvalidSessionInputError, listSessionEncounterPlacements, listSessionScenes, placeEncounter,
-  removeEncounterPlacement, reuseSessionPreparation, SessionNotFoundError,
+import { createScene, createSession, getOwnedSession,
+  InvalidSessionInputError, listSessionScenes, reuseSessionPreparation, SessionNotFoundError,
   SessionRevisionConflictError, trashSession } from "../../src/modules/sessions";
 
 const schema = `encounter_${randomUUID().replaceAll("-", "")}`;
@@ -128,6 +128,23 @@ test("places reusable encounters in a session or scene and copies available plac
   await trashSession(db, actor, source.id, 5);
   await expect(placeEncounter(db, actor, source.id, { expectedRevision: 6, encounterId: definition.id }))
     .rejects.toBeInstanceOf(InvalidSessionInputError);
+});
+
+test("keeps each placement with its scene when copying several scenes", async () => {
+  const first = await createEncounter(db, actor, { campaignId, title: "First", partyLevel: 2, partySize: 4 });
+  const second = await createEncounter(db, actor, { campaignId, title: "Second", partyLevel: 2, partySize: 4 });
+  const source = await createSession(db, actor, { campaignId, title: "Two scenes" });
+  const opening = await createScene(db, actor, source.id, { expectedRevision: 1, title: "Opening" });
+  const ending = await createScene(db, actor, source.id, { expectedRevision: 2, title: "Ending" });
+  await placeEncounter(db, actor, source.id, { expectedRevision: 3, sceneId: opening.id, encounterId: first.id });
+  await placeEncounter(db, actor, source.id, { expectedRevision: 4, sceneId: ending.id, encounterId: second.id });
+  const copy = await reuseSessionPreparation(db, actor, source.id, 5, randomUUID());
+  const scenes = await listSessionScenes(db, actor, copy.id);
+  const placements = await listSessionEncounterPlacements(db, actor, copy.id);
+  expect(placements.find(row => row.encounterId === first.id)?.sceneId)
+    .toBe(scenes.find(row => row.title === "Opening")?.id);
+  expect(placements.find(row => row.encounterId === second.id)?.sceneId)
+    .toBe(scenes.find(row => row.title === "Ending")?.id);
 });
 
 test("creature edits are revision-safe and remain in the same campaign", async () => {
