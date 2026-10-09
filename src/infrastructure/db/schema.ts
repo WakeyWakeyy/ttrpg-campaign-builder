@@ -285,7 +285,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER', 'REWARD')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -345,6 +345,36 @@ export const travelRoute = pgTable("travel_route", {
   check("travel_route_entity_type_check", sql`${table.entityType} = 'TRAVEL_ROUTE'`),
   check("travel_route_name_nonempty", sql`length(btrim(${table.name})) > 0`),
   check("travel_route_distinct_locations", sql`${table.fromLocationId} <> ${table.toLocationId}`),
+]);
+
+export const reward = pgTable("reward", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("REWARD").notNull(),
+  title: text("title").notNull(),
+  notes: text("notes"),
+}, table => [
+  uniqueIndex("reward_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("reward_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "reward_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("reward_entity_type_check", sql`${table.entityType} = 'REWARD'`),
+  check("reward_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+]);
+
+export const rewardComponent = pgTable("reward_component", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  rewardId: uuid("reward_id").notNull(),
+  kind: text("kind").notNull(),
+  description: text("description").notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+}, table => [
+  index("reward_component_reward_idx").on(table.rewardId),
+  foreignKey({ name: "reward_component_reward_fk", columns: [table.campaignId, table.rewardId],
+    foreignColumns: [reward.campaignId, reward.id] }).onDelete("cascade"),
+  check("reward_component_kind_check", sql`${table.kind} IN ('MONEY', 'ITEM', 'INFORMATION', 'REPUTATION', 'FAVOR', 'ACCESS', 'PROGRESSION', 'OTHER')`),
+  check("reward_component_description_nonempty", sql`length(btrim(${table.description})) > 0`),
 ]);
 
 export const encounter = pgTable("encounter", {

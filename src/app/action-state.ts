@@ -14,9 +14,14 @@ import { InvalidRelationshipInputError, RelationshipNotFoundError, RelationshipR
 import { InvalidTimelineEventInputError, TimelineEventNotFoundError, TimelineEventRevisionConflictError } from "@/modules/timeline";
 import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError } from "@/modules/sessions";
 import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, InvalidEncounterRunInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
+import { InvalidRewardInputError, RewardComponentNotFoundError, RewardNotFoundError, RewardRevisionConflictError } from "@/modules/rewards";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof RewardRevisionConflictError) return { message: "This reward changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof RewardNotFoundError || error instanceof RewardComponentNotFoundError)
+    return { message: "Reward or component not found or unavailable." };
+  if (error instanceof InvalidRewardInputError) return { message: "Enter a reward title and check its components." };
   if (error instanceof InvalidEncounterRunInputError) return { message: "Choose an available encounter or enter an improvised title, then describe what happened." };
   if (error instanceof EncounterRevisionConflictError) return { message: "This encounter changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof EncounterCreatureNotFoundError || error instanceof EncounterNotFoundError)
