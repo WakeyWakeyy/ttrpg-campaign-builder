@@ -27,6 +27,7 @@ beforeAll(async () => {
     await pool.query((await readFile(`drizzle/${tag}.sql`, "utf8")).replaceAll('"public".', `"${schema}".`));
 });
 beforeEach(async () => {
+  await db.delete(commandExecution);
   await db.delete(campaign);
   await db.delete(userAccount);
   const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
