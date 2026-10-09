@@ -3,13 +3,13 @@ import { readFile } from "node:fs/promises";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, campaignEntity, scene, session, sessionAttendance, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignEntity, commandExecution, scene, session, sessionAttendance, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { createParty, listPartyMemberIds } from "../../src/modules/parties";
 import { createPlayerCharacter } from "../../src/modules/player-characters";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, SceneNotFoundError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
+  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -27,6 +27,7 @@ beforeAll(async () => {
     await pool.query((await readFile(`drizzle/${tag}.sql`, "utf8")).replaceAll('"public".', `"${schema}".`));
 });
 beforeEach(async () => {
+  await db.delete(commandExecution);
   await db.delete(campaign);
   await db.delete(userAccount);
   const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
@@ -73,11 +74,15 @@ test("reuses available preparation in a new session without copying play history
   await editScene(db, actor, source.id, discarded.id, { expectedRevision: 3, intent: "trash", title: "" });
   const character = await createPlayerCharacter(db, actor, { campaignId, name: "Mira" });
   await setSessionAttendance(db, actor, source.id, { expectedRevision: 4, playerCharacterIds: [character.id] });
-  await expect(reuseSessionPreparation(db, other, source.id, 5))
+  const key = randomUUID();
+  await expect(reuseSessionPreparation(db, other, source.id, 5, key))
     .rejects.toBeInstanceOf(SessionNotFoundError);
-  await expect(reuseSessionPreparation(db, actor, source.id, 4))
+  await expect(reuseSessionPreparation(db, actor, source.id, 4, key))
     .rejects.toBeInstanceOf(SessionRevisionConflictError);
-  const copy = await reuseSessionPreparation(db, actor, source.id, 5);
+  const copy = await reuseSessionPreparation(db, actor, source.id, 5, key);
+  expect((await reuseSessionPreparation(db, actor, source.id, 5, key)).id).toBe(copy.id);
+  await expect(reuseSessionPreparation(db, actor, source.id, 4, key))
+    .rejects.toBeInstanceOf(SessionCopyIdempotencyConflictError);
   expect(copy).toMatchObject({ campaignId, title: "Copy of Crossing", preparation: "Meet the guard",
     outcome: null, plannedFor: null, attendanceSet: false, revision: 1 });
   expect(await listSessionAttendance(db, actor, copy.id)).toEqual([]);
@@ -88,8 +93,21 @@ test("reuses available preparation in a new session without copying play history
     .toBe("The guard fled");
   expect((await getOwnedSession(db, actor, source.id)).revision).toBe(5);
   await trashSession(db, actor, source.id, 5);
-  await expect(reuseSessionPreparation(db, actor, source.id, 6))
+  await expect(reuseSessionPreparation(db, actor, source.id, 6, randomUUID()))
     .rejects.toBeInstanceOf(InvalidSessionInputError);
+  expect(await listOwnedSessions(db, actor, campaignId)).toHaveLength(2);
+  expect((await db.select().from(commandExecution)).filter(row => row.commandKind === "SESSION_PREPARATION_COPY"))
+    .toHaveLength(1);
+});
+
+test("concurrent retries of the same preparation copy return one result", async () => {
+  const source = await createSession(db, actor, { campaignId, title: "Reusable" });
+  const key = randomUUID();
+  const [first, second] = await Promise.all([
+    reuseSessionPreparation(db, actor, source.id, 1, key),
+    reuseSessionPreparation(db, actor, source.id, 1, key),
+  ]);
+  expect(first.id).toBe(second.id);
   expect(await listOwnedSessions(db, actor, campaignId)).toHaveLength(2);
 });
 

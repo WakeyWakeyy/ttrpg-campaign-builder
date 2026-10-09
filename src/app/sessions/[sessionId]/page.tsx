@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
@@ -26,6 +27,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
     <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
     {!item.deletedAt && <ActionForm action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
       <input type="hidden" name="expectedRevision" value={item.revision} />
+      <input type="hidden" name="idempotencyKey" value={randomUUID()} />
       <button type="submit">Reuse preparation in a new session</button>
       <p>Copies this plan and available scenes. Outcomes, attendance, and the planned date start empty.</p>
     </ActionForm>}

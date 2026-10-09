@@ -128,7 +128,7 @@ export async function reuseSessionPreparationAction(sourceId: string, _state: Ac
   try {
     const db = getDatabase();
     created = await reuseSessionPreparation(db, await requireActor(db), sourceId,
-      Number(text(form, "expectedRevision")));
+      Number(text(form, "expectedRevision")), text(form, "idempotencyKey"));
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${created.campaignId}`);
   redirect(`/sessions/${created.id}`);

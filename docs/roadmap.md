@@ -62,7 +62,7 @@ Make recurring preparation useful:
 - attendance override: a Session records its own explicit set of attending Player Characters, including an intentional empty set, without editing Party membership (merged in [PR #42](https://github.com/WakeyWakeyy/ttrpg-campaign-builder/pull/42));
 - quick-reference / Run View: a focused table view of previous outcomes, attendance, preparation, and available Scenes, with a link back to editing;
 - post-session outcome capture: a dedicated recap page records the Session and individual Scene outcomes with revision protection while preserving their preparation;
-- reusable preparation when plans change: a GM can copy a Session's plan and available Scenes into a new Session, leaving the source intact and starting with empty outcomes, attendance, and date.
+- reusable preparation when plans change: a GM can copy a Session's plan and available Scenes into a new Session, leaving the source intact and starting with empty outcomes, attendance, and date. Retrying the same request returns the original copy.
 
 ## 5. Rules, Encounters, and Rewards
 
