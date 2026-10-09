@@ -236,7 +236,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           <h2 id="continuity-heading">Continuity</h2>
           <p>Open or postponed threads beneath a resolved, failed, or abandoned parent may need a second look. These are prompts for the GM, not automatic changes.</p>
           {continuityFindings.length ? <ul>{continuityFindings.map(finding => <li key={finding.questId}>
-            <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is still open beneath {finding.parentName}.
+            <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is {finding.questStatus.toLowerCase()} beneath {finding.parentName}.
           </li>)}</ul> : <p>No quest continuity prompts right now.</p>}
         </section>
         <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">

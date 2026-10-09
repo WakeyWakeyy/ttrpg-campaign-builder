@@ -13,6 +13,7 @@ test("flags available open children of closed threads without treating the state
     quest("ongoing", "OPEN"), quest("normal", "OPEN", "ongoing"),
   ]);
   expect(findings.map(finding => finding.questId)).toEqual(["open", "paused", "still-open"]);
+  expect(findings.map(finding => finding.questStatus)).toEqual(["OPEN", "POSTPONED", "OPEN"]);
 });
 
 test("excludes archived, trashed and already closed threads", () => {

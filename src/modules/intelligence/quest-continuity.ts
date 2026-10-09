@@ -10,6 +10,7 @@ type QuestSnapshot = {
 export type QuestContinuityFinding = {
   questId: string;
   questName: string;
+  questStatus: "OPEN" | "POSTPONED";
   parentName: string;
   kind: "OPEN_CHILD_OF_CLOSED_QUEST";
 };
@@ -22,7 +23,7 @@ export function findQuestContinuityIssues(quests: readonly QuestSnapshot[]): Que
     if (quest.status !== "OPEN" && quest.status !== "POSTPONED") return [];
     const parent = quest.parentQuestId ? available.get(quest.parentQuestId) : undefined;
     if (!parent || (parent.status !== "RESOLVED" && parent.status !== "FAILED" && parent.status !== "ABANDONED")) return [];
-    return [{ questId: quest.id, questName: quest.name, parentName: parent.name,
+    return [{ questId: quest.id, questName: quest.name, questStatus: quest.status as "OPEN" | "POSTPONED", parentName: parent.name,
       kind: "OPEN_CHILD_OF_CLOSED_QUEST" as const }];
   });
 }
