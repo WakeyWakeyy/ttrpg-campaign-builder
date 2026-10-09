@@ -54,7 +54,7 @@ Expand the connected domain model:
 
 Make recurring preparation useful:
 
-**Current stage:** Session preparation, Scenes, previous-session context, per-session attendance, Run View, focused post-session outcome capture, and reusable preparation are complete. Rules, Encounters, and Rewards is next.
+**Completed stage:** Session preparation, Scenes, previous-session context, per-session attendance, Run View, focused post-session outcome capture, and reusable preparation are complete.
 
 - Session preparation: A26 adds an owner-scoped Session with separate plan and outcome fields, revision-safe edits, and preservation lifecycle. See [A26 progress](a26-session-preparation.md);
 - Scenes: A27 adds ordered preparation beats within a Session, with separate outcomes, revision-safe edits, and recoverable trash. See [A27 progress](a27-session-scenes.md);
@@ -68,7 +68,7 @@ Make recurring preparation useful:
 
 Add deterministic game support:
 
-**Current stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, Reward planning, and Reward Grants with a ledger are available. The first Campaign Intelligence continuity prompt is also available.
+**Completed stage:** The SRD 5.2.1 reference index, deterministic XP budgets, Encounter Builder, reusable placements, Encounter Run history, Reward planning, and Reward Grants with a ledger are available.
 
 - SRD-backed rules/reference foundation: a version-scoped, source-attributed index links GMs to selected sections of the official SRD from their Campaign workspace. This is a navigation foundation, not a complete rules compendium;
 - deterministic encounter calculations: a version-bound calculator shows low, moderate, and high XP budgets for an equal-level party and compares a creature XP total with them; it does not save an Encounter. See [calculation scope](encounter-budgets.md);
@@ -82,10 +82,10 @@ Add deterministic game support:
 
 Add contextual assistance after enough structured campaign state exists:
 
-**Current stage:** The first read-only Quest continuity prompt is available. Timeline, knowledge, summary, and proactive checks remain ahead.
+**Current stage:** Read-only Quest and timeline date review prompts are available. Knowledge, summary, and proactive checks remain ahead.
 
 - continuity checks: the first read-only check highlights open or postponed Quests whose available parent is resolved, failed, or abandoned. It is an advisory on the Campaign workspace; the GM decides whether to change anything;
-- timeline conflicts;
+- timeline date review: when available events share an in-world date and linked entity but carry different real dates, the workspace asks the GM to review them. This is an advisory, not a claim that either date is wrong;
 - inaccessible clues / secrets;
 - unresolved or abandoned threads;
 - contextual suggestions;

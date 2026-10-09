@@ -6,7 +6,7 @@ import { listOwnedLocations } from "@/modules/locations";
 import { listOwnedTravelRoutes } from "@/modules/travel-routes";
 import { listOwnedItems } from "@/modules/items";
 import { listOwnedRelationships } from "@/modules/relationships";
-import { listOwnedTimelineEvents } from "@/modules/timeline";
+import { listCampaignTimelineEventLinks, listOwnedTimelineEvents } from "@/modules/timeline";
 import { listOwnedSessions } from "@/modules/sessions";
 import { listOwnedEncounters } from "@/modules/encounters";
 import { listOwnedRewards } from "@/modules/rewards";
@@ -17,6 +17,7 @@ import { relationshipOptions } from "../../relationship-options";
 import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { findQuestContinuityIssues } from "@/modules/intelligence/quest-continuity";
+import { findTimelineContinuityIssues } from "@/modules/intelligence/timeline-continuity";
 import { listOwnedNpcs } from "@/modules/npcs";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
@@ -39,6 +40,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const items = await listOwnedItems(db, actor, campaignId);
     const relationships = await listOwnedRelationships(db, actor, campaignId);
     const timeline = await listOwnedTimelineEvents(db, actor, campaignId);
+    const timelineLinks = await listCampaignTimelineEventLinks(db, actor, campaignId);
     const sessions = await listOwnedSessions(db, actor, campaignId);
     const encounters = await listOwnedEncounters(db, actor, campaignId);
     const rewards = await listOwnedRewards(db, actor, campaignId);
@@ -53,7 +55,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, timelineLinks, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -61,6 +63,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
   }))];
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
   const continuityFindings = findQuestContinuityIssues(data.quests);
+  const timelineFindings = findTimelineContinuityIssues(data.timeline, data.timelineLinks);
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
   const characterNames = new Map(data.characters.map(character => [character.id, character.name]));
@@ -238,6 +241,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           {continuityFindings.length ? <ul>{continuityFindings.map(finding => <li key={finding.questId}>
             <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is {finding.questStatus.toLowerCase()} beneath {finding.parentName}.
           </li>)}</ul> : <p>No quest continuity prompts right now.</p>}
+          {timelineFindings.length > 0 && <><h3>Dates to review</h3>
+            <p>These events share an in-world date and a related entity, but have different real dates. Check whether that is intentional.</p>
+            <ul>{timelineFindings.map(finding => <li key={`${finding.firstId}-${finding.secondId}-${finding.firstEntityName}`}>
+              <Link href={`/timeline/${finding.firstId}`}>{finding.firstTitle}</Link> ({finding.firstEntityName}) and <Link href={`/timeline/${finding.secondId}`}>{finding.secondTitle}</Link> ({finding.secondEntityName}) share {finding.inWorldDate}.
+            </li>)}</ul></>}
         </section>
         <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">
           <h2 id="npcs-heading">NPCs</h2>

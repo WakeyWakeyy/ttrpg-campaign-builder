@@ -30,6 +30,10 @@ export async function listOwnedTimelineEvents(db: NodePgDatabase, actor: Actor, 
   return owned(db, actor).where(eq(timelineEvent.campaignId, campaignId))
     .orderBy(asc(timelineEvent.occurredAt), asc(campaignEntity.createdAt));
 }
+export async function listCampaignTimelineEventLinks(db: NodePgDatabase, actor: Actor, campaignId: string) {
+  await getOwnedCampaign(db, actor, campaignId);
+  return db.select().from(timelineEventLink).where(eq(timelineEventLink.campaignId, campaignId));
+}
 export async function getOwnedTimelineEvent(db: NodePgDatabase, actor: Actor, id: string) {
   if (!uuid(id)) throw new TimelineEventNotFoundError();
   const [row] = await owned(db, actor).where(eq(timelineEvent.id, id));

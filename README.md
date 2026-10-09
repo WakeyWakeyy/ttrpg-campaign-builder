@@ -19,7 +19,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Consult rules and build encounters:** open selected sections of the SRD 5.2.1 with source attribution, calculate XP budgets, save a combat Encounter plan with creature groups, place it in Sessions or Scenes, and record what happened during play.
 - **Plan and record rewards:** prepare reusable packages for treasure, information, favors, and other gains, then record actual grants in a historical ledger.
 - **Keep control of changes:** edit with conflict protection and archive, discard, or restore supported campaign material without silently losing accepted work.
-- **Review continuity:** see a prompt when an open or postponed Quest sits beneath a closed parent, then decide whether that story thread needs attention.
+- **Review continuity:** see prompts for an open or postponed Quest beneath a closed parent, or timeline events with matching in-world dates and related entities but different real dates. The GM decides whether either case needs attention.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
 
@@ -35,7 +35,7 @@ The detailed implementation history is in the [roadmap](docs/roadmap.md).
 
 ## Estimated project status
 
-**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, and a first continuity prompt are implemented.** This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
+**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, and initial continuity prompts are implemented.** This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
 
 The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 
