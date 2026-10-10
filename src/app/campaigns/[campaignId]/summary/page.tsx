@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedCampaign } from "@/modules/campaigns";
-import { listOwnedSessions, listSessionScenes } from "@/modules/sessions";
+import { listCampaignOutcomeScenes, listOwnedSessions } from "@/modules/sessions";
 import { summarizeSessionOutcomes } from "@/modules/intelligence/session-summary";
 import { readError } from "../../../read-error";
 
@@ -13,8 +13,7 @@ export default async function CampaignSummaryPage({ params }: { params: Promise<
     const actor = await requireActor(db);
     const campaign = await getOwnedCampaign(db, actor, campaignId);
     const sessions = await listOwnedSessions(db, actor, campaignId);
-    const available = sessions.filter(session => !session.deletedAt && !session.archivedAt);
-    const scenes = (await Promise.all(available.map(item => listSessionScenes(db, actor, item.id)))).flat();
+    const scenes = await listCampaignOutcomeScenes(db, actor, campaignId);
     const summary = summarizeSessionOutcomes(sessions, scenes);
     return { campaign, summary };
   })().catch(readError);

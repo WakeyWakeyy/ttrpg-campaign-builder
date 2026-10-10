@@ -9,7 +9,7 @@ import type { Actor } from "../../src/modules/identity";
 import { createParty, listPartyMemberIds } from "../../src/modules/parties";
 import { createPlayerCharacter } from "../../src/modules/player-characters";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, InvalidSessionInputError,
-  getPreviousSessionContext, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
+  getPreviousSessionContext, listCampaignOutcomeScenes, listOwnedSessions, listSessionAttendance, listSessionScenes, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, SceneNotFoundError, SessionCopyIdempotencyConflictError, SessionNotFoundError, SessionRevisionConflictError, setSessionAttendance,
   trashSession } from "../../src/modules/sessions";
 
 const schema = `a26_session_${randomUUID().replaceAll("-", "")}`;
@@ -38,6 +38,22 @@ beforeEach(async () => {
   campaignId = owned.id; foreignCampaignId = foreign.id;
 });
 afterAll(async () => { try { await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally { await pool.end(); } });
+
+test("campaign outcome scene query respects ownership and unavailable records", async () => {
+  const current = await createSession(db, actor, { campaignId, title: "Current" });
+  const kept = await createScene(db, actor, current.id, { expectedRevision: 1, title: "Kept", outcome: "Found it" });
+  const removed = await createScene(db, actor, current.id, { expectedRevision: 2, title: "Removed", outcome: "Old" });
+  await editScene(db, actor, current.id, removed.id, { expectedRevision: 3, intent: "trash", title: "" });
+  const archived = await createSession(db, actor, { campaignId, title: "Archived" });
+  await createScene(db, actor, archived.id, { expectedRevision: 1, title: "Old", outcome: "Old" });
+  await archiveSession(db, actor, archived.id, 2);
+  const foreign = await createSession(db, other, { campaignId: foreignCampaignId, title: "Foreign" });
+  await createScene(db, other, foreign.id, { expectedRevision: 1, title: "Secret", outcome: "Hidden" });
+  expect(await listCampaignOutcomeScenes(db, actor, campaignId)).toMatchObject([
+    { id: kept.id, sessionId: current.id, title: "Kept", outcome: "Found it" },
+  ]);
+  await expect(listCampaignOutcomeScenes(db, other, campaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
+});
 
 test("outcome capture preserves preparation and rejects stale, foreign, or trashed writes", async () => {
   const parent = await createSession(db, actor, { campaignId, title: "Crossing", preparation: "Meet the guard" });
