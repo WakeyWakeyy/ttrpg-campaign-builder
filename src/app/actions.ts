@@ -15,6 +15,7 @@ import { archiveSession, createScene, createSession, editScene, editSession, rec
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant } from "@/modules/rewards/grants";
+import { archiveClue, createClue, editClue, restoreClue, trashClue } from "@/modules/knowledge";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -27,6 +28,41 @@ import { actionError, type ActionState } from "./action-state";
 function text(form: FormData, name: string) {
   const value = form.get(name);
   return typeof value === "string" ? value : "";
+}
+
+function clueInput(form: FormData) {
+  return { title: text(form, "title"), secret: text(form, "secret"),
+    discoveryLocationId: text(form, "discoveryLocationId") || null };
+}
+
+export async function createClueAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createClue(db, await requireActor(db), { campaignId, ...clueInput(form) })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/clues/${id}`);
+}
+
+export async function updateClueAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editClue(db, actor, id,
+      { expectedRevision: revision, ...clueInput(form) })
+      : intent === "archive" ? await archiveClue(db, actor, id, revision)
+      : intent === "trash" ? await trashClue(db, actor, id, revision)
+      : intent === "restore" ? await restoreClue(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a clue action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/clues/${id}`);
+  redirect(`/clues/${id}`);
 }
 
 function routeInput(form: FormData) {

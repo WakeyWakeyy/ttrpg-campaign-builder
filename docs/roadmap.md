@@ -82,11 +82,11 @@ Add deterministic game support:
 
 Add contextual assistance after enough structured campaign state exists:
 
-**Current stage:** Read-only Quest and timeline date review prompts are available. Knowledge, summary, and proactive checks remain ahead.
+**Current stage:** Read-only Quest, timeline date, and clue route review prompts are available. Broader Knowledge, summary, and proactive checks remain ahead.
 
 - continuity checks: the first read-only check highlights open or postponed Quests whose available parent is resolved, failed, or abandoned. It is an advisory on the Campaign workspace; the GM decides whether to change anything;
 - timeline date review: when available events share an in-world date and linked entity but carry different real dates, the workspace asks the GM to review them. This is an advisory, not a claim that either date is wrong;
-- inaccessible clues / secrets;
+- clue discovery route review: a GM can record a clue, the hidden information it reveals, and an optional discovery Location. The workspace asks for review when an active clue has no recorded Location or its Location is archived or trashed. This does not claim the clue is truly inaccessible; other paths and what characters know remain GM decisions. Dedicated Secrets and knowledge states remain ahead;
 - unresolved or abandoned threads;
 - contextual suggestions;
 - source-aware summaries;

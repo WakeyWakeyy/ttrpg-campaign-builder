@@ -18,12 +18,14 @@ import { listOwnedArcs } from "@/modules/arcs";
 import { listOwnedQuests } from "@/modules/quests";
 import { findQuestContinuityIssues } from "@/modules/intelligence/quest-continuity";
 import { findTimelineContinuityIssues } from "@/modules/intelligence/timeline-continuity";
+import { findClueContinuityIssues } from "@/modules/intelligence/clue-continuity";
+import { listOwnedClues } from "@/modules/knowledge";
 import { listOwnedNpcs } from "@/modules/npcs";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createRewardAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createClueAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createRewardAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -50,12 +52,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const relationshipChoices = await relationshipOptions(db, actor, campaignId);
     const arcs = await listOwnedArcs(db, actor, campaignId);
     const quests = await listOwnedQuests(db, actor, campaignId);
+    const clues = await listOwnedClues(db, actor, campaignId);
     const npcs = await listOwnedNpcs(db, actor, campaignId);
     const characters = await listOwnedPlayerCharacters(db, actor, campaignId);
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, timelineLinks, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, npcs, characters, parties, partyMembers, factions };
+    return { campaign, compass, locations, routes, items, relationships, timeline, timelineLinks, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, clues, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
@@ -64,6 +67,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
   const continuityFindings = findQuestContinuityIssues(data.quests);
   const timelineFindings = findTimelineContinuityIssues(data.timeline, data.timelineLinks);
+  const clueFindings = findClueContinuityIssues(data.clues, data.locations);
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
   const characterNames = new Map(data.characters.map(character => [character.id, character.name]));
@@ -90,6 +94,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
         <a href="#continuity">Continuity</a>
+        <a href="#clues">Clues</a>
         <a href="#npcs">NPCs</a>
         <a href="#player-characters">Player Characters</a>
         <a href="#parties">Parties</a>
@@ -246,6 +251,30 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <ul>{timelineFindings.map(finding => <li key={`${finding.firstId}-${finding.secondId}-${finding.firstEntityName}`}>
               <Link href={`/timeline/${finding.firstId}`}>{finding.firstTitle}</Link> ({finding.firstEntityName}) and <Link href={`/timeline/${finding.secondId}`}>{finding.secondTitle}</Link> ({finding.secondEntityName}) share {finding.inWorldDate}.
             </li>)}</ul></>}
+          {clueFindings.length > 0 && <><h3>Clue routes to review</h3>
+            <p>These clues have no available discovery location recorded. They may still be reachable another way.</p>
+            <ul>{clueFindings.map(finding => <li key={finding.clueId}>
+              <Link href={`/clues/${finding.clueId}`}>{finding.clueTitle}</Link>:
+              {finding.reason === "NO_ROUTE" ? " no discovery location recorded." : ` ${finding.locationName ?? "Its discovery location"} is unavailable.`}
+            </li>)}</ul></>}
+        </section>
+        <section id="clues" aria-labelledby="clues-heading" className="workspace-section">
+          <h2 id="clues-heading">Clues</h2>
+          <p>Record a discoverable hint and the hidden information it reveals. A location is one planned route, not the only possible route.</p>
+          {data.clues.length ? <ul>{data.clues.map(item => <li key={item.id}>
+            <Link href={`/clues/${item.id}`}>{item.title}</Link>
+            {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
+          </li>)}</ul> : <p>No clues yet.</p>}
+          {!data.campaign.deletedAt && <ActionForm action={createClueAction.bind(null, campaignId)}>
+            <label htmlFor="new-clue-title">Clue</label><input id="new-clue-title" name="title" required maxLength={200} />
+            <label htmlFor="new-clue-secret">Hidden information it reveals</label>
+            <textarea id="new-clue-secret" name="secret" required maxLength={10000} rows={3} />
+            <label htmlFor="new-clue-location">Discovery location (optional)</label>
+            <select id="new-clue-location" name="discoveryLocationId"><option value="">No location recorded</option>
+              {data.locations.filter(item => !item.archivedAt && !item.deletedAt).map(item =>
+                <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+            <button type="submit">Create clue</button>
+          </ActionForm>}
         </section>
         <section id="npcs" aria-labelledby="npcs-heading" className="workspace-section">
           <h2 id="npcs-heading">NPCs</h2>

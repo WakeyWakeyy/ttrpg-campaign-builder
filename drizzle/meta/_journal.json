@@ -183,6 +183,13 @@
       "when": 1791564447691,
       "tag": "0025_nostalgic_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791591955688,
+      "tag": "0026_free_serpent_society",
+      "breakpoints": true
     }
   ]
 }

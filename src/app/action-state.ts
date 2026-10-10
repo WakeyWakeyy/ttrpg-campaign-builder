@@ -16,9 +16,13 @@ import { InvalidSessionInputError, SceneNotFoundError, SessionCopyIdempotencyCon
 import { EncounterCreatureNotFoundError, EncounterNotFoundError, EncounterPlacementNotFoundError, EncounterRevisionConflictError, InvalidEncounterInputError, InvalidEncounterRunInputError, UnsupportedEncounterVersionError } from "@/modules/encounters";
 import { InvalidRewardInputError, RewardComponentNotFoundError, RewardNotFoundError, RewardRevisionConflictError } from "@/modules/rewards";
 import { InvalidRewardGrantInputError, RewardGrantIdempotencyConflictError } from "@/modules/rewards/grants";
+import { ClueNotFoundError, ClueRevisionConflictError, InvalidClueInputError } from "@/modules/knowledge";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof ClueRevisionConflictError) return { message: "This clue changed since you opened it. Reload before saving again.", conflict: true };
+  if (error instanceof ClueNotFoundError) return { message: "Clue not found or unavailable." };
+  if (error instanceof InvalidClueInputError) return { message: "Enter a clue and the hidden information it reveals, then choose an available location if needed." };
   if (error instanceof RewardGrantIdempotencyConflictError) return { message: "This grant request was already used for another reward. Reload before retrying.", conflict: true };
   if (error instanceof InvalidRewardGrantInputError) return { message: "Choose available components and a recipient, then check the session and notes." };
   if (error instanceof RewardRevisionConflictError) return { message: "This reward changed since you opened it. Reload before saving again.", conflict: true };
