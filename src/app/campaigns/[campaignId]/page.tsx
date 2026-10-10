@@ -94,6 +94,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
         <a href="#continuity">Continuity</a>
+        <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
         <a href="#clues">Clues</a>
         <a href="#npcs">NPCs</a>
         <a href="#player-characters">Player Characters</a>
@@ -172,6 +173,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <section id="sessions" aria-labelledby="sessions-heading" className="workspace-section">
           <h2 id="sessions-heading">Sessions</h2>
           <p>Prepare the next table session and keep its outcome separate from the plan.</p>
+          <p><Link href={`/campaigns/${campaignId}/summary`}>Read recorded outcomes across sessions</Link></p>
           {data.sessions.length ? <ul className="workspace-location-list">{data.sessions.map(item => <li key={item.id}>
             <Link href={`/sessions/${item.id}`}>{item.title}</Link>{item.plannedFor ? ` · ${item.plannedFor}` : ""}
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}

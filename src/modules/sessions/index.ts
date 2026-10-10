@@ -192,6 +192,17 @@ export async function listSessionScenes(db: NodePgDatabase, actor: Actor, sessio
     .orderBy(asc(scene.position), asc(scene.id));
 }
 
+export async function listCampaignOutcomeScenes(db: NodePgDatabase, actor: Actor, campaignId: string) {
+  await getOwnedCampaign(db, actor, campaignId);
+  return db.select({ id: scene.id, sessionId: scene.sessionId, title: scene.title,
+    outcome: scene.outcome, deletedAt: scene.deletedAt }).from(scene)
+    .innerJoin(session, and(eq(session.id, scene.sessionId), eq(session.campaignId, scene.campaignId)))
+    .innerJoin(campaignEntity, and(eq(campaignEntity.id, session.id), eq(campaignEntity.campaignId, campaignId)))
+    .where(and(eq(scene.campaignId, campaignId), isNull(scene.deletedAt),
+      isNull(campaignEntity.deletedAt), isNull(campaignEntity.archivedAt)))
+    .orderBy(asc(campaignEntity.createdAt), asc(scene.position), asc(scene.id));
+}
+
 export async function createScene(db: NodePgDatabase, actor: Actor, sessionId: string,
   input: SceneFields & { expectedRevision: number }) {
   const data = sceneValues(input);
