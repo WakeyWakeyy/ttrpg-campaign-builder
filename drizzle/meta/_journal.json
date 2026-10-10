@@ -197,6 +197,13 @@
       "when": 1791606972493,
       "tag": "0027_perpetual_morlun",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791607927145,
+      "tag": "0028_lyrical_lilith",
+      "breakpoints": true
     }
   ]
 }

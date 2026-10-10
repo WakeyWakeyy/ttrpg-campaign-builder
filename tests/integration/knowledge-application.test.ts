@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, clue, secret, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, clue, secret, secretKnowledge, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { createLocation, archiveLocation } from "../../src/modules/locations";
@@ -12,6 +12,8 @@ import { archiveClue, ClueNotFoundError, ClueRevisionConflictError, createClue, 
   getOwnedClue, InvalidClueInputError, restoreClue, trashClue, unarchiveClue } from "../../src/modules/knowledge";
 import { archiveSecret, createSecret, editSecret, getOwnedSecret, InvalidSecretInputError,
   restoreSecret, SecretNotFoundError, SecretRevisionConflictError, trashSecret, unarchiveSecret } from "../../src/modules/knowledge/secrets";
+import { listSecretKnowledge, setSecretKnowledge } from "../../src/modules/knowledge/secret-knowledge";
+import { createNpc } from "../../src/modules/npcs";
 
 const schema = `knowledge_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -38,6 +40,28 @@ beforeEach(async () => {
   campaignId = owned.id; foreignCampaignId = foreign.id;
 });
 afterAll(async () => { try { await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally { await pool.end(); } });
+
+test("knowledge states are owner-scoped, campaign-bound, and revision-safe", async () => {
+  const hidden = await createSecret(db, actor, { campaignId, title: "Pact", content: "Hidden truth" });
+  const holder = await createNpc(db, actor, { campaignId, name: "Mayor" });
+  const outsider = await createNpc(db, other, { campaignId: foreignCampaignId, name: "Outsider" });
+  const input = { expectedRevision: 1, holderId: holder.id, holderType: "NPC" as const,
+    state: "SUSPECTED" as const, notes: "Heard a rumor" };
+  await expect(setSecretKnowledge(db, other, hidden.id, input)).rejects.toBeInstanceOf(SecretNotFoundError);
+  await expect(setSecretKnowledge(db, actor, hidden.id, { ...input, holderId: outsider.id }))
+    .rejects.toBeInstanceOf(InvalidSecretInputError);
+  await expect(db.insert(secretKnowledge).values({ campaignId, secretId: hidden.id, holderId: outsider.id,
+    holderType: "NPC", state: "KNOWN" })).rejects.toMatchObject({ cause: { constraint: "secret_knowledge_holder_fk" } });
+  const saved = await setSecretKnowledge(db, actor, hidden.id, input);
+  expect(saved.revision).toBe(2);
+  expect(await listSecretKnowledge(db, actor, hidden.id)).toMatchObject([{ holderId: holder.id, state: "SUSPECTED" }]);
+  await expect(setSecretKnowledge(db, actor, hidden.id, input)).rejects.toBeInstanceOf(SecretRevisionConflictError);
+  const known = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 2, state: "KNOWN" });
+  expect(known.revision).toBe(3);
+  const cleared = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "NONE" });
+  expect(cleared.revision).toBe(4);
+  expect(await listSecretKnowledge(db, actor, hidden.id)).toEqual([]);
+});
 
 test("owns clues, validates discovery locations, and protects revisions", async () => {
   const place = await createLocation(db, actor, { campaignId, name: "Library" });
