@@ -11,7 +11,7 @@ export class InvalidClueInputError extends Error {}
 type Transaction = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 type Fields = { title: string; secret: string; discoveryLocationId: string | null };
 const uuid = (value: unknown): value is string => typeof value === "string"
-  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const columns = { ...getTableColumns(campaignEntity), ...getTableColumns(clue) };
 const join = and(eq(clue.id, campaignEntity.id), eq(clue.campaignId, campaignEntity.campaignId));
 const advance = { revision: sql`${campaignEntity.revision} + 1`, updatedAt: sql`clock_timestamp()` };
