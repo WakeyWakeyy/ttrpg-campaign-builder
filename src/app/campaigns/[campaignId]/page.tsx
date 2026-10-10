@@ -93,6 +93,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#compass">Campaign Compass</a>
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
+        <Link href={`/campaigns/${campaignId}/threads`}>Threads to review</Link>
         <a href="#continuity">Continuity</a>
         <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
         <a href="#clues">Clues</a>
@@ -244,6 +245,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         </section>
         <section id="continuity" aria-labelledby="continuity-heading" className="workspace-section">
           <h2 id="continuity-heading">Continuity</h2>
+          <p><Link href={`/campaigns/${campaignId}/threads`}>Review open, postponed, and abandoned threads</Link></p>
           <p>Open or postponed threads beneath a resolved, failed, or abandoned parent may need a second look. These are prompts for the GM, not automatic changes.</p>
           {continuityFindings.length ? <ul>{continuityFindings.map(finding => <li key={finding.questId}>
             <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is {finding.questStatus.toLowerCase()} beneath {finding.parentName}.
