@@ -15,7 +15,7 @@ import { archiveSession, createScene, createSession, editScene, editSession, rec
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant } from "@/modules/rewards/grants";
-import { archiveClue, createClue, editClue, restoreClue, trashClue } from "@/modules/knowledge";
+import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -55,6 +55,7 @@ export async function updateClueAction(id: string, _state: ActionState, form: Fo
     const updated = intent === "save" ? await editClue(db, actor, id,
       { expectedRevision: revision, ...clueInput(form) })
       : intent === "archive" ? await archiveClue(db, actor, id, revision)
+      : intent === "unarchive" ? await unarchiveClue(db, actor, id, revision)
       : intent === "trash" ? await trashClue(db, actor, id, revision)
       : intent === "restore" ? await restoreClue(db, actor, id, revision) : null;
     if (!updated) return { message: "Choose a clue action." };

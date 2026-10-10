@@ -40,6 +40,7 @@ export default async function CluePage({ params }: { params: Promise<{ clueId: s
       <div className="actions">
         {!clue.deletedAt && <button name="intent" value="save">Save clue</button>}
         {!clue.deletedAt && !clue.archivedAt && <button name="intent" value="archive" formNoValidate>Archive</button>}
+        {!clue.deletedAt && clue.archivedAt && <button name="intent" value="unarchive" formNoValidate>Return to active</button>}
         {!clue.deletedAt && <button name="intent" value="trash" formNoValidate>Trash</button>}
         {clue.deletedAt && <button name="intent" value="restore" formNoValidate>Restore</button>}
       </div>

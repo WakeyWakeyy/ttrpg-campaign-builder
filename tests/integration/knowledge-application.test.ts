@@ -9,7 +9,7 @@ import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { createLocation, archiveLocation } from "../../src/modules/locations";
 import { archiveClue, ClueNotFoundError, ClueRevisionConflictError, createClue, editClue,
-  getOwnedClue, InvalidClueInputError, restoreClue, trashClue } from "../../src/modules/knowledge";
+  getOwnedClue, InvalidClueInputError, restoreClue, trashClue, unarchiveClue } from "../../src/modules/knowledge";
 
 const schema = `knowledge_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -59,8 +59,11 @@ test("owns clues, validates discovery locations, and protects revisions", async 
     .resolves.toMatchObject({ revision: 3 });
   const archived = await archiveClue(db, actor, saved.id, 3);
   const trashed = await trashClue(db, actor, saved.id, archived.revision);
-  expect(trashed.purgeAfter).not.toBeNull();
+  expect(trashed.purgeAfter).toBeInstanceOf(Date);
   const restored = await restoreClue(db, actor, saved.id, trashed.revision);
-  expect(restored.archivedAt).not.toBeNull();
+  expect(restored.archivedAt).toBeInstanceOf(Date);
   expect(restored.deletedAt).toBeNull();
+  const active = await unarchiveClue(db, actor, saved.id, restored.revision);
+  expect(active.archivedAt).toBeNull();
+  expect(active.deletedAt).toBeNull();
 });
