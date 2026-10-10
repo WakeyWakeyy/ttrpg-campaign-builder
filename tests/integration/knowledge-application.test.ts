@@ -4,12 +4,14 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { campaign, clue, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, clue, secret, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import type { Actor } from "../../src/modules/identity";
 import { createLocation, archiveLocation } from "../../src/modules/locations";
 import { archiveClue, ClueNotFoundError, ClueRevisionConflictError, createClue, editClue,
   getOwnedClue, InvalidClueInputError, restoreClue, trashClue, unarchiveClue } from "../../src/modules/knowledge";
+import { archiveSecret, createSecret, editSecret, getOwnedSecret, InvalidSecretInputError,
+  restoreSecret, SecretNotFoundError, SecretRevisionConflictError, trashSecret, unarchiveSecret } from "../../src/modules/knowledge/secrets";
 
 const schema = `knowledge_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -66,4 +68,37 @@ test("owns clues, validates discovery locations, and protects revisions", async 
   const active = await unarchiveClue(db, actor, saved.id, restored.revision);
   expect(active.archivedAt).toBeNull();
   expect(active.deletedAt).toBeNull();
+});
+
+test("secrets are owner-scoped and clues can only link an available secret in the same campaign", async () => {
+  await expect(createSecret(db, actor, { campaignId: foreignCampaignId, title: "Stolen", content: "Truth" }))
+    .rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(createSecret(db, actor, { campaignId, title: " ", content: "Truth" }))
+    .rejects.toBeInstanceOf(InvalidSecretInputError);
+  const saved = await createSecret(db, actor, { campaignId, title: "The pact", content: "The mayor made a pact" });
+  expect(saved).toMatchObject({ entityType: "SECRET", revision: 1 });
+  await expect(getOwnedSecret(db, other, saved.id)).rejects.toBeInstanceOf(SecretNotFoundError);
+  await expect(db.insert(secret).values({ id: randomUUID(), campaignId, title: "Orphan", content: "Truth" }))
+    .rejects.toMatchObject({ cause: { constraint: "secret_entity_fk" } });
+  const foreign = await createSecret(db, other, { campaignId: foreignCampaignId, title: "Elsewhere", content: "Truth" });
+  await expect(createClue(db, actor, { campaignId, title: "Letter", secret: "Evidence", discoveryLocationId: null,
+    secretId: foreign.id })).rejects.toBeInstanceOf(InvalidClueInputError);
+  const clueRow = await createClue(db, actor, { campaignId, title: "Letter", secret: "Evidence",
+    discoveryLocationId: null, secretId: saved.id });
+  expect(clueRow.secretId).toBe(saved.id);
+  await expect(db.update(clue).set({ secretId: foreign.id }).where(eq(clue.id, clueRow.id)))
+    .rejects.toMatchObject({ cause: { constraint: "clue_secret_fk" } });
+  const edited = await editSecret(db, actor, saved.id, { expectedRevision: 1, title: "The pact", content: "A darker pact" });
+  expect(edited.revision).toBe(2);
+  await expect(editSecret(db, actor, saved.id, { expectedRevision: 1, title: "Old", content: "Truth" }))
+    .rejects.toBeInstanceOf(SecretRevisionConflictError);
+  const archived = await archiveSecret(db, actor, saved.id, 2);
+  await expect(createClue(db, actor, { campaignId, title: "Another", secret: "Evidence", discoveryLocationId: null,
+    secretId: saved.id })).rejects.toBeInstanceOf(InvalidClueInputError);
+  const trashed = await trashSecret(db, actor, saved.id, archived.revision);
+  const restored = await restoreSecret(db, actor, saved.id, trashed.revision);
+  expect(restored.archivedAt).toBeInstanceOf(Date);
+  expect(restored.deletedAt).toBeNull();
+  const active = await unarchiveSecret(db, actor, saved.id, restored.revision);
+  expect(active.archivedAt).toBeNull();
 });

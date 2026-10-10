@@ -15,10 +15,11 @@ import { SessionNotFoundError } from "@/modules/sessions";
 import { EncounterNotFoundError } from "@/modules/encounters";
 import { RewardNotFoundError } from "@/modules/rewards";
 import { ClueNotFoundError } from "@/modules/knowledge";
+import { SecretNotFoundError } from "@/modules/knowledge/secrets";
 import { UnauthenticatedError } from "@/modules/identity";
 
 export function readError(error: unknown): never {
   if (error instanceof UnauthenticatedError) redirect("/");
-  if (error instanceof CampaignNotFoundError || error instanceof LocationNotFoundError || error instanceof ArcNotFoundError || error instanceof QuestNotFoundError || error instanceof NpcNotFoundError || error instanceof PlayerCharacterNotFoundError || error instanceof PartyNotFoundError || error instanceof FactionNotFoundError || error instanceof TravelRouteNotFoundError || error instanceof ItemNotFoundError || error instanceof RelationshipNotFoundError || error instanceof TimelineEventNotFoundError || error instanceof SessionNotFoundError || error instanceof EncounterNotFoundError || error instanceof RewardNotFoundError || error instanceof ClueNotFoundError) notFound();
+  if (error instanceof CampaignNotFoundError || error instanceof LocationNotFoundError || error instanceof ArcNotFoundError || error instanceof QuestNotFoundError || error instanceof NpcNotFoundError || error instanceof PlayerCharacterNotFoundError || error instanceof PartyNotFoundError || error instanceof FactionNotFoundError || error instanceof TravelRouteNotFoundError || error instanceof ItemNotFoundError || error instanceof RelationshipNotFoundError || error instanceof TimelineEventNotFoundError || error instanceof SessionNotFoundError || error instanceof EncounterNotFoundError || error instanceof RewardNotFoundError || error instanceof ClueNotFoundError || error instanceof SecretNotFoundError) notFound();
   throw error;
 }
