@@ -16,6 +16,7 @@ import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter,
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant } from "@/modules/rewards/grants";
 import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
+import { archiveSecret, createSecret, editSecret, restoreSecret, trashSecret, unarchiveSecret } from "@/modules/knowledge/secrets";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -32,7 +33,39 @@ function text(form: FormData, name: string) {
 
 function clueInput(form: FormData) {
   return { title: text(form, "title"), secret: text(form, "secret"),
-    discoveryLocationId: text(form, "discoveryLocationId") || null };
+    discoveryLocationId: text(form, "discoveryLocationId") || null, secretId: text(form, "secretId") || null };
+}
+
+export async function createSecretAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const db = getDatabase();
+    id = (await createSecret(db, await requireActor(db), { campaignId, title: text(form, "title"),
+      content: text(form, "content") })).id;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/secrets/${id}`);
+}
+
+export async function updateSecretAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    const revision = Number(text(form, "expectedRevision"));
+    const intent = text(form, "intent");
+    const updated = intent === "save" ? await editSecret(db, actor, id,
+      { expectedRevision: revision, title: text(form, "title"), content: text(form, "content") })
+      : intent === "archive" ? await archiveSecret(db, actor, id, revision)
+      : intent === "unarchive" ? await unarchiveSecret(db, actor, id, revision)
+      : intent === "trash" ? await trashSecret(db, actor, id, revision)
+      : intent === "restore" ? await restoreSecret(db, actor, id, revision) : null;
+    if (!updated) return { message: "Choose a secret action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/secrets/${id}`);
+  redirect(`/secrets/${id}`);
 }
 
 export async function createClueAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

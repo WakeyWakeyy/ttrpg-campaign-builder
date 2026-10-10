@@ -285,7 +285,7 @@ export const campaignEntity = pgTable("campaign_entity", {
 }, (table) => [
   uniqueIndex("campaign_entity_campaign_id_id_unique").on(table.campaignId, table.id),
   uniqueIndex("campaign_entity_campaign_id_id_type_unique").on(table.campaignId, table.id, table.entityType),
-  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER', 'REWARD', 'CLUE')`),
+  check("campaign_entity_type_check", sql`${table.entityType} IN ('LOCATION', 'ARC', 'QUEST', 'NPC', 'PLAYER_CHARACTER', 'PARTY', 'FACTION', 'TRAVEL_ROUTE', 'ITEM', 'RELATIONSHIP', 'TIMELINE_EVENT', 'SESSION', 'ENCOUNTER', 'REWARD', 'CLUE', 'SECRET')`),
   check("campaign_entity_revision_positive", sql`${table.revision} > 0`),
   check("campaign_entity_trash_retention_check", sql`
     (${table.deletedAt} IS NULL AND ${table.purgeAfter} IS NULL) OR
@@ -822,6 +822,23 @@ export const item = pgTable("item", {
   check("item_one_locator", sql`num_nonnulls(${table.locationId}, ${table.npcHolderId}, ${table.playerCharacterHolderId}) <= 1`),
 ]);
 
+// Hidden campaign truth remains GM-authored and separate from any discovery route.
+export const secret = pgTable("secret", {
+  id: uuid("id").primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  entityType: text("entity_type").default("SECRET").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+}, table => [
+  uniqueIndex("secret_campaign_id_id_unique").on(table.campaignId, table.id),
+  index("secret_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "secret_entity_fk", columns: [table.campaignId, table.id, table.entityType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("secret_entity_type_check", sql`${table.entityType} = 'SECRET'`),
+  check("secret_title_nonempty", sql`length(btrim(${table.title})) > 0`),
+  check("secret_content_nonempty", sql`length(btrim(${table.content})) > 0`),
+]);
+
 // A clue is campaign truth; the discovery location is a planned route to it, not proof a PC knows it.
 export const clue = pgTable("clue", {
   id: uuid("id").primaryKey(),
@@ -829,6 +846,7 @@ export const clue = pgTable("clue", {
   entityType: text("entity_type").default("CLUE").notNull(),
   title: text("title").notNull(),
   secret: text("secret").notNull(),
+  secretId: uuid("secret_id"),
   discoveryLocationId: uuid("discovery_location_id"),
 }, table => [
   uniqueIndex("clue_campaign_id_id_unique").on(table.campaignId, table.id),
@@ -837,6 +855,8 @@ export const clue = pgTable("clue", {
     foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
   foreignKey({ name: "clue_discovery_location_fk", columns: [table.campaignId, table.discoveryLocationId],
     foreignColumns: [location.campaignId, location.id] }).onDelete("no action"),
+  foreignKey({ name: "clue_secret_fk", columns: [table.campaignId, table.secretId],
+    foreignColumns: [secret.campaignId, secret.id] }).onDelete("no action"),
   check("clue_entity_type_check", sql`${table.entityType} = 'CLUE'`),
   check("clue_title_nonempty", sql`length(btrim(${table.title})) > 0`),
   check("clue_secret_nonempty", sql`length(btrim(${table.secret})) > 0`),

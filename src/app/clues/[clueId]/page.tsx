@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedClue } from "@/modules/knowledge";
+import { listOwnedSecrets } from "@/modules/knowledge/secrets";
 import { listOwnedLocations } from "@/modules/locations";
 import { ActionForm } from "../../action-form";
 import { updateClueAction } from "../../actions";
@@ -9,11 +10,12 @@ import { readError } from "../../read-error";
 
 export default async function CluePage({ params }: { params: Promise<{ clueId: string }> }) {
   const { clueId } = await params;
-  const { clue, locations } = await (async () => {
+  const { clue, locations, secrets } = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
     const clue = await getOwnedClue(db, actor, clueId);
-    return { clue, locations: await listOwnedLocations(db, actor, clue.campaignId) };
+    return { clue, locations: await listOwnedLocations(db, actor, clue.campaignId),
+      secrets: await listOwnedSecrets(db, actor, clue.campaignId) };
   })().catch(readError);
   const location = locations.find(item => item.id === clue.discoveryLocationId);
   return <main>
@@ -29,6 +31,14 @@ export default async function CluePage({ params }: { params: Promise<{ clueId: s
       <label htmlFor="clue-secret">Hidden information it reveals</label>
       <textarea id="clue-secret" name="secret" defaultValue={clue.secret} required maxLength={10000}
         rows={5} readOnly={!!clue.deletedAt} />
+      <label htmlFor="clue-linked-secret">Related secret (optional)</label>
+      {clue.deletedAt ? <p>{secrets.find(item => item.id === clue.secretId)?.title ?? "No related secret"}</p> :
+        <select id="clue-linked-secret" name="secretId" defaultValue={clue.secretId ?? ""}>
+          <option value="">No related secret</option>
+          {secrets.filter(item => !item.archivedAt && !item.deletedAt || item.id === clue.secretId)
+            .map(item => <option key={item.id} value={item.id}>{item.title}
+              {item.archivedAt || item.deletedAt ? " (unavailable)" : ""}</option>)}
+        </select>}
       <label htmlFor="clue-location">Discovery location (optional)</label>
       {clue.deletedAt ? <p>{location?.name ?? "No location recorded"}</p> :
         <select id="clue-location" name="discoveryLocationId" defaultValue={clue.discoveryLocationId ?? ""}>
