@@ -28,9 +28,9 @@ export default async function CampaignSummaryPage({ params }: { params: Promise<
     {data.summary.length ? <ol>{data.summary.map(item => <li key={item.sessionId} className="workspace-section">
       <h2><Link href={`/sessions/${item.sessionId}`}>{item.title}</Link></h2>
       {item.plannedFor && <p>Planned for {item.plannedFor}</p>}
-      {item.outcome && <p>{item.outcome}</p>}
+      {item.outcome && <p className="preserve-lines">{item.outcome}</p>}
       {item.scenes.length > 0 && <ul>{item.scenes.map(scene => <li key={scene.id}>
-        <Link href={`/sessions/${item.sessionId}`}>{scene.title}</Link>: {scene.outcome}
+        <Link href={`/sessions/${item.sessionId}`}>{scene.title}</Link>: <span className="preserve-lines">{scene.outcome}</span>
       </li>)}</ul>}
     </li>)}</ol> : <p>No recorded session or scene outcomes yet.</p>}
   </main>;
