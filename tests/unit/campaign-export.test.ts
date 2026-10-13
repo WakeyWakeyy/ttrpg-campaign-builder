@@ -19,12 +19,18 @@ test("Markdown shows available GM material while JSON retains recoverable record
         { id: "early", archived_at: null, deleted_at: null, created_at: "2026-01-02T00:00:00Z" },
         { id: "quest", archived_at: null, deleted_at: null },
         { id: "gift", archived_at: null, deleted_at: null },
+        { id: "fight", archived_at: null, deleted_at: null },
         { id: "third", archived_at: null, deleted_at: null, created_at: "2026-01-03T00:00:00Z" },
       ],
       npc: [{ id: "alice", name: "Alice", role: "Guide" }],
       quest: [{ id: "quest", name: "Find the city", status: "OPEN" }],
       reward: [{ id: "gift", title: "The king's thanks" }],
       reward_component: [{ reward_id: "gift", kind: "FAVOR", description: "A royal audience", deleted_at: null }],
+      reward_grant: [{ id: "grant", reward_title: "The king's thanks", recipient: "Alice", granted_at: "2026-03-01 00:00:00+00" }],
+      reward_grant_component: [{ grant_id: "grant", kind: "ITEM", description: "Silver key" }],
+      encounter: [{ id: "fight", title: "Bridge fight" }],
+      encounter_srd_521_plan: [{ encounter_id: "fight", party_level: 5, party_size: 4 }],
+      encounter_srd_521_creature: [{ encounter_id: "fight", name: "Bandit", xp: 50, quantity: 3, deleted_at: null }],
       location: [{ id: "village", name: "The village" }, { id: "tower", name: "The tower" }],
       semantic_relationship: [{ id: "bond", source_entity_id: "alice", target_entity_id: "village", kind: "protects" }],
       travel_route: [{ id: "road", name: "Old road", from_location_id: "village", to_location_id: "tower", distance: "Three days" }],
@@ -32,6 +38,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
         { id: "late", title: "Later", occurred_at: "2026-02-01 00:00:00+00" },
         { id: "early", title: "Earlier", occurred_at: "2026-01-01 00:00:00+00" },
       ],
+      timeline_event_link: [{ event_id: "early", target_type_snapshot: "NPC", target_name_snapshot: "The guide" }],
       session: [
         { id: "one", title: "Arrival", planned_for: "2026-01-01", preparation: "Meet the guide", outcome: "They went north" },
         { id: "two", title: "Hidden", outcome: "Do not show" },
@@ -55,6 +62,11 @@ test("Markdown shows available GM material while JSON retains recoverable record
   expect(markdown).toContain("**Planned for:** 2026-01-01");
   expect(markdown).toContain("**Distance:**");
   expect(markdown).toContain("**FAVOR:** A royal audience");
+  expect(markdown).toContain("**Party:** level 5, 4 characters");
+  expect(markdown).toContain("3 × Bandit (50 XP each)");
+  expect(markdown).toContain("**Recipient:** Alice");
+  expect(markdown).toContain("**ITEM:** Silver key");
+  expect(markdown).toContain("Related: NPC — The guide");
   expect(markdown.indexOf("Earlier")).toBeLessThan(markdown.indexOf("Later"));
   expect(markdown.indexOf("Before arrival")).toBeLessThan(markdown.indexOf("Arrival"));
   expect(markdown.indexOf("On the road")).toBeLessThan(markdown.indexOf("At the gate"));

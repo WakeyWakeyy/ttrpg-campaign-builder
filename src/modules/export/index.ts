@@ -55,7 +55,7 @@ const sections = [
   ["Player characters", "player_character"], ["Parties", "party"],
   ["Factions", "faction"], ["Items", "item"], ["Relationships", "semantic_relationship"],
   ["Timeline", "timeline_event"], ["Sessions", "session"],
-  ["Encounters", "encounter"], ["Rewards", "reward"], ["Clues", "clue"],
+  ["Encounters", "encounter"], ["Rewards", "reward"], ["Reward grants", "reward_grant"], ["Clues", "clue"],
   ["Secrets (GM only)", "secret"],
 ] as const;
 
@@ -70,7 +70,7 @@ const detailFields = [
   "parent_quest_id", "location_id", "npc_holder_id", "player_character_holder_id",
   "distance", "duration", "mode", "hazards", "occurred_at", "in_world_date",
   "planned_for", "preparation", "outcome", "content", "secret", "secret_id",
-  "discovery_location_id", "notes",
+  "discovery_location_id", "reward_title", "recipient", "granted_at", "session_id", "notes",
 ] as const;
 const label = (key: string) => key.replaceAll("_", " ").replace(/^./, character => character.toUpperCase());
 const available = (record: Record<string, unknown>, entities: Map<unknown, Record<string, unknown>>) => {
@@ -94,7 +94,7 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
     }
   }
   for (const [heading, table] of sections) {
-    const entries = (rows[table] ?? []).filter(row => available(row, entities));
+    const entries = (rows[table] ?? []).filter(row => table === "reward_grant" || available(row, entities));
     if (!entries.length) continue;
     if (table === "timeline_event" || table === "session") {
       const dateField = table === "timeline_event" ? "occurred_at" : "planned_for";
@@ -107,7 +107,7 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
         ? `${entityNames.get(entry.source_entity_id) ?? "Unknown"} — ${line(entry.kind)} → ${entityNames.get(entry.target_entity_id) ?? "Unknown"}`
         : table === "travel_route"
           ? `${line(entry.name)}: ${entityNames.get(entry.from_location_id) ?? "Unknown"} → ${entityNames.get(entry.to_location_id) ?? "Unknown"}`
-        : line(entry.name ?? entry.title ?? entry.kind);
+        : line(entry.name ?? entry.title ?? entry.reward_title ?? entry.kind);
       out.push(`### ${title}`, "");
       for (const key of detailFields) {
         const value = entry[key];
@@ -128,6 +128,26 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
           out.push(`- **${line(component.kind)}:** ${line(component.description)}`);
         }
         if ((rows.reward_component ?? []).some(row => row.reward_id === entry.id && !row.deleted_at)) out.push("");
+      }
+      if (table === "reward_grant") {
+        for (const component of (rows.reward_grant_component ?? []).filter(row => row.grant_id === entry.id)) {
+          out.push(`- **${line(component.kind)}:** ${line(component.description)}`);
+        }
+        out.push("");
+      }
+      if (table === "encounter") {
+        const plan = (rows.encounter_srd_521_plan ?? []).find(row => row.encounter_id === entry.id);
+        if (plan) out.push(`**Party:** level ${plan.party_level}, ${plan.party_size} characters`, "");
+        for (const creature of (rows.encounter_srd_521_creature ?? []).filter(row => row.encounter_id === entry.id && !row.deleted_at)) {
+          out.push(`- ${creature.quantity} × ${line(creature.name)} (${creature.xp} XP each)`);
+        }
+        out.push("");
+      }
+      if (table === "timeline_event") {
+        for (const link of (rows.timeline_event_link ?? []).filter(row => row.event_id === entry.id)) {
+          out.push(`- Related: ${line(link.target_type_snapshot)} — ${line(link.target_name_snapshot)}`);
+        }
+        out.push("");
       }
     }
   }
