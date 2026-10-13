@@ -8,7 +8,7 @@ type Rows = Record<string, Record<string, unknown>[]>;
 export class UnsupportedRulesetExportError extends Error {}
 
 /** Ruleset-specific snapshot data stays behind the pinned Ruleset boundary. */
-export async function collectRulesetExport(db: NodePgDatabase, actor: Actor, campaignId: string): Promise<Rows> {
+export async function collectRulesetExport(db: NodePgDatabase, actor: Actor, campaignId: string) {
   const pinned = await getCampaignRulesetVersion(db, actor, campaignId);
   if (pinned?.rulesetKey !== "dnd-5e-2024" || pinned.version !== "5.2.1") {
     throw new UnsupportedRulesetExportError("This campaign's Ruleset Version has no export adapter.");
@@ -18,7 +18,7 @@ export async function collectRulesetExport(db: NodePgDatabase, actor: Actor, cam
     const result = await db.execute(sql`select * from ${sql.raw(table)} where campaign_id = ${campaignId} order by 1`);
     records[table] = result.rows as Record<string, unknown>[];
   }
-  return records;
+  return { ruleset: { key: pinned.rulesetKey, version: pinned.version, name: pinned.name }, records };
 }
 
 /** Formatting for SRD 5.2.1 encounter mechanics; campaign-neutral text stays in Export. */

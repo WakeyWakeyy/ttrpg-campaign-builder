@@ -24,6 +24,7 @@ const childTables = [
 export type CampaignExport = {
   formatVersion: 1;
   campaign: Record<string, unknown>;
+  ruleset: { key: string; version: string; name: string };
   records: Record<string, Record<string, unknown>[]>;
 };
 
@@ -44,9 +45,10 @@ export async function buildCampaignExport(db: NodePgDatabase, actor: Actor, camp
         where parent.campaign_id = ${campaignId} order by child.id`);
       records[table] = result.rows as Record<string, unknown>[];
     }
-    Object.assign(records, await collectRulesetExport(tx, actor, campaignId));
+    const rulesetExport = await collectRulesetExport(tx, actor, campaignId);
+    Object.assign(records, rulesetExport.records);
     const portableCampaign = Object.fromEntries(Object.entries(campaign).filter(([key]) => key !== "ownerUserId"));
-    return { formatVersion: 1, campaign: portableCampaign, records };
+    return { formatVersion: 1, campaign: portableCampaign, ruleset: rulesetExport.ruleset, records };
   }, { isolationLevel: "repeatable read" });
 }
 
@@ -60,7 +62,8 @@ const sections = [
   ["Secrets (GM only)", "secret"],
 ] as const;
 
-const line = (value: unknown) => typeof value === "string" ? value.replace(/\r?\n/g, " ").trim() : "";
+const line = (value: unknown) => value instanceof Date ? value.toISOString()
+  : typeof value === "string" ? value.replace(/\r?\n/g, " ").trim() : "";
 const timestamp = (value: unknown) => value ? new Date(String(value)).getTime() : Number.POSITIVE_INFINITY;
 const compareTime = (a: unknown, b: unknown) => {
   const left = timestamp(a), right = timestamp(b);
@@ -88,7 +91,8 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
     for (const row of rows[table] ?? []) entityNames.set(row.id, line(row.name ?? row.title ?? row.kind));
   }
   const compass = rows.campaign_compass?.[0];
-  const out = [`# ${line(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), "", "## Campaign compass", ""];
+  const out = [`# ${line(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), "",
+    `**Ruleset:** ${snapshot.ruleset.name} (${snapshot.ruleset.key} ${snapshot.ruleset.version})`, "", "## Campaign compass", ""];
   if (compass) {
     for (const [label, key] of [["Premise", "current_premise"], ["Setting", "setting"], ["Tone", "tone"]] as const) {
       if (compass[key]) out.push(`**${label}:** ${line(compass[key])}`, "");

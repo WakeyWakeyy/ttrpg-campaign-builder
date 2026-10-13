@@ -5,6 +5,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
   const snapshot: CampaignExport = {
     formatVersion: 1,
     campaign: { name: "The long road", description: "A journey" },
+    ruleset: { key: "dnd-5e-2024", version: "5.2.1", name: "SRD 5.2.1" },
     records: {
       campaign_compass: [{ current_premise: "Find the lost city", setting: "The coast", tone: "Mysterious" }],
       campaign_entity: [
@@ -33,7 +34,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
       encounter_srd_521_plan: [{ encounter_id: "fight", party_level: 5, party_size: 4 }],
       encounter_srd_521_creature: [{ encounter_id: "fight", name: "Bandit", xp: 50, quantity: 3, deleted_at: null }],
       encounter_placement: [{ session_id: "one", encounter_id: "fight", scene_id: "first" }],
-      encounter_run: [{ id: "run", session_id: "one", title: "Bridge fight", outcome: "The party escaped", occurred_at: "2026-01-02 00:00:00+00" }],
+      encounter_run: [{ id: "run", session_id: "one", title: "Bridge fight", outcome: "The party escaped", occurred_at: new Date("2026-01-02T00:00:00Z") }],
       encounter_run_creature: [{ run_id: "run", name: "Veteran", xp: 700, quantity: 1 }],
       secret: [{ id: "truth", title: "The king's plan", content: "A hidden pact" }],
       secret_knowledge: [{ secret_id: "truth", holder_id: "alice", state: "SUSPECTED", notes: "Saw the seal" }],
@@ -75,6 +76,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
   expect(markdown).toContain("Related: NPC — The guide");
   expect(markdown).toContain("Planned encounter: Bridge fight in On the road");
   expect(markdown).toContain("Encounter run: Bridge fight");
+  expect(markdown).toContain("Bridge fight (2026-01-02T00:00:00.000Z)");
   expect(markdown).toContain("1 × Veteran (700 XP each)");
   expect(markdown).toContain("Alice: SUSPECTED — Saw the seal");
   expect(markdown.indexOf("Earlier")).toBeLessThan(markdown.indexOf("Later"));

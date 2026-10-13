@@ -43,6 +43,7 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
 
   const exported = await buildCampaignExport(db, { userId: owner.id }, first.id);
   expect(exported.formatVersion).toBe(1);
+  expect(exported.ruleset).toMatchObject({ key: "dnd-5e-2024", version: "5.2.1" });
   expect(exported.campaign).toMatchObject({ id: first.id, name: "Mine" });
   expect("ownerUserId" in exported.campaign).toBe(false);
   expect("created_by_user_id" in exported.records.campaign_entity[0]).toBe(false);
