@@ -98,7 +98,7 @@ Add contextual assistance after enough structured campaign state exists:
 
 Turn structured data into practical GM outputs:
 
-- Markdown / JSON portability;
+- Markdown / JSON portability: a GM can download a readable Markdown reference of available campaign material and a versioned JSON snapshot with campaign-owned records, relationships, history, and recoverable material. Import remains a later step;
 - session sheets;
 - campaign overview;
 - detailed module-style output;
