@@ -19,6 +19,7 @@ import { listOwnedQuests } from "@/modules/quests";
 import { findQuestContinuityIssues } from "@/modules/intelligence/quest-continuity";
 import { findTimelineContinuityIssues } from "@/modules/intelligence/timeline-continuity";
 import { findClueContinuityIssues } from "@/modules/intelligence/clue-continuity";
+import { suggestSecretDiscoveryPaths } from "@/modules/intelligence/secret-suggestions";
 import { listOwnedClues } from "@/modules/knowledge";
 import { listOwnedSecrets } from "@/modules/knowledge/secrets";
 import { listOwnedNpcs } from "@/modules/npcs";
@@ -70,6 +71,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
   const continuityFindings = findQuestContinuityIssues(data.quests);
   const timelineFindings = findTimelineContinuityIssues(data.timeline, data.timelineLinks);
   const clueFindings = findClueContinuityIssues(data.clues, data.locations);
+  const secretSuggestions = suggestSecretDiscoveryPaths(data.secrets, data.clues);
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
   const characterNames = new Map(data.characters.map(character => [character.id, character.name]));
@@ -97,6 +99,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#quests">Quests</a>
         <Link href={`/campaigns/${campaignId}/threads`}>Threads to review</Link>
         <a href="#continuity">Continuity</a>
+        <a href="#suggestions">Suggestions</a>
         <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
         <a href="#clues">Clues</a>
         <a href="#secrets">Secrets</a>
@@ -264,6 +267,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
               <Link href={`/clues/${finding.clueId}`}>{finding.clueTitle}</Link>:
               {finding.reason === "NO_ROUTE" ? " no discovery location recorded." : ` ${finding.locationName ?? "Its discovery location"} is unavailable.`}
             </li>)}</ul></>}
+        </section>
+        <section id="suggestions" aria-labelledby="suggestions-heading" className="workspace-section">
+          <h2 id="suggestions-heading">Preparation suggestions</h2>
+          <p>These Secrets have no available Clue linked to them. You might plan a discovery path if you want one; keeping a Secret hidden is also a valid choice.</p>
+          {secretSuggestions.length ? <ul>{secretSuggestions.map(suggestion => <li key={suggestion.secretId}>
+            <Link href={`/secrets/${suggestion.secretId}`}>{suggestion.secretTitle}</Link>: consider whether the players need a way to discover it.
+          </li>)}</ul> : <p>No discovery path suggestions right now.</p>}
         </section>
         <section id="clues" aria-labelledby="clues-heading" className="workspace-section">
           <h2 id="clues-heading">Clues</h2>

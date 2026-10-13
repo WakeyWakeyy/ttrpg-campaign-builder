@@ -23,6 +23,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Review story threads:** see open, postponed, and abandoned Quests together, with links back to each record.
 - **Keep hidden information connected:** record GM-authored Secrets and optionally link discoverable Clues to them without implying that any character knows the truth.
 - **Record who knows a Secret:** mark a character or group as suspecting, partly knowing, or knowing a Secret, with optional GM notes.
+- **Consider discovery paths:** see an optional preparation suggestion when an available Secret has no available linked Clue.
 - **Recall what happened:** read recorded Session and Scene outcomes together, with links back to each source record.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.

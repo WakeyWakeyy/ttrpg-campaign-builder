@@ -82,7 +82,7 @@ Add deterministic game support:
 
 Add contextual assistance after enough structured campaign state exists:
 
-**Current stage:** Read-only Quest, timeline date, and clue route review prompts are available. A source-linked summary of recorded session and scene outcomes and a Quest thread review are available. GM-authored Secrets can be linked to Clues, and the GM can record a character or group's current understanding of a Secret. Proactive checks remain ahead.
+**Current stage:** Read-only Quest, timeline date, and clue route review prompts are available. A source-linked summary of recorded session and scene outcomes and a Quest thread review are available. GM-authored Secrets can be linked to Clues, and the GM can record a character or group's current understanding of a Secret. The first contextual preparation suggestion is available. Configurable proactive checks remain ahead.
 
 - continuity checks: the first read-only check highlights open or postponed Quests whose available parent is resolved, failed, or abandoned. It is an advisory on the Campaign workspace; the GM decides whether to change anything;
 - timeline date review: when available events share an in-world date and linked entity but carry different real dates, the workspace asks the GM to review them. This is an advisory, not a claim that either date is wrong;
@@ -90,7 +90,7 @@ Add contextual assistance after enough structured campaign state exists:
 - Secrets foundation: a GM can record hidden campaign truth as a recoverable, revision-safe Secret and optionally link a Clue to it. Existing Clue text stays intact. A link describes preparation, not who knows the truth;
 - knowledge states: a GM can mark a PC, NPC, Party, or Faction as suspecting, partly knowing, or knowing a Secret, add a note, change that state, or remove it. A missing state means nothing has been recorded; a Clue link does not assign knowledge automatically;
 - unresolved or abandoned threads: a dedicated reading view groups available open, postponed, and abandoned Quests with links to their source records and visible parent context. It leaves their status and narrative meaning to the GM;
-- contextual suggestions;
+- contextual suggestions: the workspace suggests considering a discovery path for an available Secret without an available linked Clue. It leaves intentional hidden truths alone and never creates a Clue automatically;
 - source-aware summaries: the first reading view collects accepted Session and Scene outcomes in the GM's words and links to their source records. It omits unavailable records and does not synthesize new campaign facts; broader summaries remain ahead;
 - configurable proactive assistance.
 
