@@ -58,6 +58,10 @@ test("knowledge states are owner-scoped, campaign-bound, and revision-safe", asy
   await expect(setSecretKnowledge(db, actor, hidden.id, input)).rejects.toBeInstanceOf(SecretRevisionConflictError);
   const known = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 2, state: "KNOWN" });
   expect(known.revision).toBe(3);
+  const anotherHolder = await createNpc(db, actor, { campaignId, name: "Witness" });
+  const unchanged = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3,
+    holderId: anotherHolder.id, state: "NONE" });
+  expect(unchanged.revision).toBe(3);
   await archiveNpc(db, actor, holder.id, holder.revision);
   await expect(setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "PARTIAL" }))
     .rejects.toBeInstanceOf(InvalidSecretInputError);

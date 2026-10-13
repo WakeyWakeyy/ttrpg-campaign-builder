@@ -49,7 +49,8 @@ export async function setSecretKnowledge(db: NodePgDatabase, actor: Actor, secre
         await tx.update(secretKnowledge).set({ state: input.state, notes }).where(eq(secretKnowledge.id, existing.id));
     } else await tx.insert(secretKnowledge).values({ campaignId: current.campaignId, secretId,
       holderId: input.holderId, holderType: input.holderType, state: input.state, notes });
-    if (existing?.state !== input.state || (input.state !== "NONE" && existing?.notes !== notes))
+    const changed = input.state === "NONE" ? !!existing : !existing || existing.state !== input.state || existing.notes !== notes;
+    if (changed)
       await tx.update(campaignEntity).set({ revision: sql`${campaignEntity.revision} + 1`,
         updatedAt: sql`clock_timestamp()` }).where(eq(campaignEntity.id, secretId));
     return getOwnedSecret(tx, actor, secretId);
