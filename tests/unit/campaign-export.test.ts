@@ -28,12 +28,15 @@ test("Markdown shows available GM material while JSON retains recoverable record
       quest: [{ id: "quest", name: "Find the city", status: "OPEN" }],
       reward: [{ id: "gift", title: "The king's thanks" }],
       reward_component: [{ reward_id: "gift", kind: "FAVOR", description: "A royal audience", deleted_at: null }],
-      reward_grant: [{ id: "grant", reward_title: "The king's thanks", recipient: "Alice", granted_at: "2026-03-01 00:00:00+00" }],
+      reward_grant: [{ id: "grant", reward_title: "The king's thanks", recipient: "Alice", granted_at: new Date("2026-03-01T00:00:00Z") }],
       reward_grant_component: [{ grant_id: "grant", kind: "ITEM", description: "Silver key" }],
       encounter: [{ id: "fight", title: "Bridge fight" }],
       encounter_srd_521_plan: [{ encounter_id: "fight", party_level: 5, party_size: 4 }],
       encounter_srd_521_creature: [{ encounter_id: "fight", name: "Bandit", xp: 50, quantity: 3, deleted_at: null }],
-      encounter_placement: [{ session_id: "one", encounter_id: "fight", scene_id: "first" }],
+      encounter_placement: [
+        { session_id: "one", encounter_id: "fight", scene_id: "first" },
+        { session_id: "one", encounter_id: "fight", scene_id: "gone" },
+      ],
       encounter_run: [{ id: "run", session_id: "one", title: "Bridge fight", outcome: "The party escaped", occurred_at: new Date("2026-01-02T00:00:00Z") }],
       encounter_run_creature: [{ run_id: "run", name: "Veteran", xp: 700, quantity: 1 }],
       secret: [{ id: "truth", title: "The king's plan", content: "A hidden pact" }],
@@ -42,7 +45,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
       semantic_relationship: [{ id: "bond", source_entity_id: "alice", target_entity_id: "village", kind: "protects" }],
       travel_route: [{ id: "road", name: "Old road", from_location_id: "village", to_location_id: "tower", distance: "Three days" }],
       timeline_event: [
-        { id: "late", title: "Later", occurred_at: "2026-02-01 00:00:00+00" },
+        { id: "late", title: "Later", occurred_at: new Date("2026-02-01T00:00:00Z") },
         { id: "early", title: "Earlier", occurred_at: "2026-01-01 00:00:00+00" },
       ],
       timeline_event_link: [{ event_id: "early", target_type_snapshot: "NPC", target_name_snapshot: "The guide" }],
@@ -54,6 +57,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
       scene: [
         { id: "later", session_id: "one", position: 2, title: "At the gate", outcome: "The gate opened", deleted_at: null },
         { id: "first", session_id: "one", position: 1, title: "On the road", outcome: "They arrived", deleted_at: null },
+        { id: "gone", session_id: "one", position: 3, title: "Removed scene", deleted_at: "2026-01-01" },
       ],
     },
   };
@@ -65,16 +69,18 @@ test("Markdown shows available GM material while JSON retains recoverable record
   expect(markdown).toContain("Old road: The village → The tower");
   expect(markdown).toContain("**Role:** Guide");
   expect(markdown).toContain("**Status:** OPEN");
-  expect(markdown).toContain("**Occurred at:** 2026-02-01 00:00:00+00");
+  expect(markdown).toContain("**Occurred at:** 2026-02-01T00:00:00.000Z");
   expect(markdown).toContain("**Planned for:** 2026-01-01");
   expect(markdown).toContain("**Distance:**");
   expect(markdown).toContain("**FAVOR:** A royal audience");
   expect(markdown).toContain("**Party:** level 5, 4 characters");
   expect(markdown).toContain("3 × Bandit (50 XP each)");
   expect(markdown).toContain("**Recipient:** Alice");
+  expect(markdown).toContain("**Granted at:** 2026-03-01T00:00:00.000Z");
   expect(markdown).toContain("**ITEM:** Silver key");
   expect(markdown).toContain("Related: NPC — The guide");
   expect(markdown).toContain("Planned encounter: Bridge fight in On the road");
+  expect(markdown.split("Planned encounter: Bridge fight")).toHaveLength(2);
   expect(markdown).toContain("Encounter run: Bridge fight");
   expect(markdown).toContain("Bridge fight (2026-01-02T00:00:00.000Z)");
   expect(markdown).toContain("1 × Veteran (700 XP each)");

@@ -117,7 +117,7 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
       for (const key of detailFields) {
         const value = entry[key];
         if (value === null || value === undefined || value === "") continue;
-        const display = key.endsWith("_id") ? entityNames.get(value) ?? String(value) : String(value).trim();
+        const display = key.endsWith("_id") ? entityNames.get(value) ?? String(value) : line(value) || String(value).trim();
         out.push(`**${label(key)}:** ${display}`, "");
       }
       if (table === "session") {
@@ -129,7 +129,8 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
         }
         for (const placement of (rows.encounter_placement ?? []).filter(row => row.session_id === entry.id
           && entities.get(row.encounter_id) && !entities.get(row.encounter_id)?.deleted_at
-          && !entities.get(row.encounter_id)?.archived_at)) {
+          && !entities.get(row.encounter_id)?.archived_at
+          && (!row.scene_id || (rows.scene ?? []).some(scene => scene.id === row.scene_id && !scene.deleted_at)))) {
           const scene = (rows.scene ?? []).find(row => row.id === placement.scene_id && !row.deleted_at);
           out.push(`- Planned encounter: ${entityNames.get(placement.encounter_id) ?? "Unknown"}${scene ? ` in ${line(scene.title)}` : ""}`);
         }
