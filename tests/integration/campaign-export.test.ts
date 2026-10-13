@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, expect, test } from "vitest";
-import { campaign, campaignCompass, campaignEntity, location, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignCompass, campaignEntity, campaignRuleset, location, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import { buildCampaignExport } from "../../src/modules/export";
 
@@ -27,6 +27,10 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
     { ownerUserId: owner.id, name: "Mine" },
     { ownerUserId: stranger.id, name: "Theirs" },
   ]).returning();
+  const [family] = await db.insert(ruleset).values({ key: "dnd-5e-2024", name: "D&D" }).returning();
+  const [version] = await db.insert(rulesetVersion).values({ rulesetId: family.id, version: "5.2.1", name: "SRD 5.2.1" }).returning();
+  await db.insert(campaignRuleset).values([first, second].map(row => ({ campaignId: row.id,
+    rulesetId: family.id, rulesetVersionId: version.id })));
   await db.insert(campaignCompass).values([
     { campaignId: first.id, originalPremise: "My premise", currentPremise: "My premise" },
     { campaignId: second.id, originalPremise: "Other premise", currentPremise: "Other premise" },

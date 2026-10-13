@@ -2,14 +2,14 @@ import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { getOwnedCampaign } from "../campaigns";
 import type { Actor } from "../identity";
+import { collectRulesetExport, renderRulesetEncounterMarkdown } from "../rulesets/export";
 
 // These are campaign-owned product records, not operational logs or account data.
 // Keep this list explicit when adding new campaign tables so exports remain reviewable.
 const campaignTables = [
   "campaign_ruleset", "campaign_compass", "campaign_intelligence_preferences",
   "campaign_compass_guideline", "campaign_entity", "location", "travel_route",
-  "reward", "reward_component", "reward_grant", "encounter", "encounter_srd_521_plan",
-  "encounter_srd_521_creature", "session", "scene", "encounter_placement",
+  "reward", "reward_component", "reward_grant", "encounter", "session", "scene", "encounter_placement",
   "encounter_run", "arc", "npc", "player_character", "party", "party_member",
   "session_attendance", "faction", "faction_membership", "quest", "arc_quest",
   "timeline_event", "timeline_event_link", "semantic_relationship", "item",
@@ -44,6 +44,7 @@ export async function buildCampaignExport(db: NodePgDatabase, actor: Actor, camp
         where parent.campaign_id = ${campaignId} order by child.id`);
       records[table] = result.rows as Record<string, unknown>[];
     }
+    Object.assign(records, await collectRulesetExport(tx, actor, campaignId));
     const portableCampaign = Object.fromEntries(Object.entries(campaign).filter(([key]) => key !== "ownerUserId"));
     return { formatVersion: 1, campaign: portableCampaign, records };
   }, { isolationLevel: "repeatable read" });
@@ -122,6 +123,21 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
           if (scene.preparation) out.push(String(scene.preparation).trim(), "");
           if (scene.outcome) out.push(`Outcome: ${String(scene.outcome).trim()}`, "");
         }
+        for (const placement of (rows.encounter_placement ?? []).filter(row => row.session_id === entry.id
+          && entities.get(row.encounter_id) && !entities.get(row.encounter_id)?.deleted_at
+          && !entities.get(row.encounter_id)?.archived_at)) {
+          const scene = (rows.scene ?? []).find(row => row.id === placement.scene_id && !row.deleted_at);
+          out.push(`- Planned encounter: ${entityNames.get(placement.encounter_id) ?? "Unknown"}${scene ? ` in ${line(scene.title)}` : ""}`);
+        }
+        for (const run of (rows.encounter_run ?? []).filter(row => row.session_id === entry.id)
+          .sort((a, b) => compareTime(a.occurred_at, b.occurred_at))) {
+          out.push(`- Encounter run: ${line(run.title)} (${line(run.occurred_at)})`, "");
+          out.push(`  Outcome: ${line(run.outcome)}`);
+          for (const creature of (rows.encounter_run_creature ?? []).filter(row => row.run_id === run.id)) {
+            out.push(`  - ${creature.quantity} × ${line(creature.name)} (${creature.xp} XP each)`);
+          }
+          out.push("");
+        }
       }
       if (table === "reward") {
         for (const component of (rows.reward_component ?? []).filter(row => row.reward_id === entry.id && !row.deleted_at)) {
@@ -136,16 +152,19 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
         out.push("");
       }
       if (table === "encounter") {
-        const plan = (rows.encounter_srd_521_plan ?? []).find(row => row.encounter_id === entry.id);
-        if (plan) out.push(`**Party:** level ${plan.party_level}, ${plan.party_size} characters`, "");
-        for (const creature of (rows.encounter_srd_521_creature ?? []).filter(row => row.encounter_id === entry.id && !row.deleted_at)) {
-          out.push(`- ${creature.quantity} × ${line(creature.name)} (${creature.xp} XP each)`);
-        }
-        out.push("");
+        out.push(...renderRulesetEncounterMarkdown(rows, entry.id));
       }
       if (table === "timeline_event") {
         for (const link of (rows.timeline_event_link ?? []).filter(row => row.event_id === entry.id)) {
           out.push(`- Related: ${line(link.target_type_snapshot)} — ${line(link.target_name_snapshot)}`);
+        }
+        out.push("");
+      }
+      if (table === "secret") {
+        for (const knowledge of (rows.secret_knowledge ?? []).filter(row => row.secret_id === entry.id
+          && entities.get(row.holder_id) && !entities.get(row.holder_id)?.deleted_at
+          && !entities.get(row.holder_id)?.archived_at)) {
+          out.push(`- ${entityNames.get(knowledge.holder_id) ?? "Unknown"}: ${line(knowledge.state)}${knowledge.notes ? ` — ${line(knowledge.notes)}` : ""}`);
         }
         out.push("");
       }

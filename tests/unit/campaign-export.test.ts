@@ -20,6 +20,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
         { id: "quest", archived_at: null, deleted_at: null },
         { id: "gift", archived_at: null, deleted_at: null },
         { id: "fight", archived_at: null, deleted_at: null },
+        { id: "truth", archived_at: null, deleted_at: null },
         { id: "third", archived_at: null, deleted_at: null, created_at: "2026-01-03T00:00:00Z" },
       ],
       npc: [{ id: "alice", name: "Alice", role: "Guide" }],
@@ -31,6 +32,11 @@ test("Markdown shows available GM material while JSON retains recoverable record
       encounter: [{ id: "fight", title: "Bridge fight" }],
       encounter_srd_521_plan: [{ encounter_id: "fight", party_level: 5, party_size: 4 }],
       encounter_srd_521_creature: [{ encounter_id: "fight", name: "Bandit", xp: 50, quantity: 3, deleted_at: null }],
+      encounter_placement: [{ session_id: "one", encounter_id: "fight", scene_id: "first" }],
+      encounter_run: [{ id: "run", session_id: "one", title: "Bridge fight", outcome: "The party escaped", occurred_at: "2026-01-02 00:00:00+00" }],
+      encounter_run_creature: [{ run_id: "run", name: "Veteran", xp: 700, quantity: 1 }],
+      secret: [{ id: "truth", title: "The king's plan", content: "A hidden pact" }],
+      secret_knowledge: [{ secret_id: "truth", holder_id: "alice", state: "SUSPECTED", notes: "Saw the seal" }],
       location: [{ id: "village", name: "The village" }, { id: "tower", name: "The tower" }],
       semantic_relationship: [{ id: "bond", source_entity_id: "alice", target_entity_id: "village", kind: "protects" }],
       travel_route: [{ id: "road", name: "Old road", from_location_id: "village", to_location_id: "tower", distance: "Three days" }],
@@ -67,6 +73,10 @@ test("Markdown shows available GM material while JSON retains recoverable record
   expect(markdown).toContain("**Recipient:** Alice");
   expect(markdown).toContain("**ITEM:** Silver key");
   expect(markdown).toContain("Related: NPC — The guide");
+  expect(markdown).toContain("Planned encounter: Bridge fight in On the road");
+  expect(markdown).toContain("Encounter run: Bridge fight");
+  expect(markdown).toContain("1 × Veteran (700 XP each)");
+  expect(markdown).toContain("Alice: SUSPECTED — Saw the seal");
   expect(markdown.indexOf("Earlier")).toBeLessThan(markdown.indexOf("Later"));
   expect(markdown.indexOf("Before arrival")).toBeLessThan(markdown.indexOf("Arrival"));
   expect(markdown.indexOf("On the road")).toBeLessThan(markdown.indexOf("At the gate"));
