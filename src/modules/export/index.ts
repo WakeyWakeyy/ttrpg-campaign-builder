@@ -61,6 +61,18 @@ const sections = [
 
 const line = (value: unknown) => typeof value === "string" ? value.replace(/\r?\n/g, " ").trim() : "";
 const timestamp = (value: unknown) => value ? new Date(String(value)).getTime() : Number.POSITIVE_INFINITY;
+const compareTime = (a: unknown, b: unknown) => {
+  const left = timestamp(a), right = timestamp(b);
+  return left === right ? 0 : left < right ? -1 : 1;
+};
+const detailFields = [
+  "description", "status", "role", "player_name", "purpose", "significance", "current_state",
+  "parent_quest_id", "location_id", "npc_holder_id", "player_character_holder_id",
+  "distance", "duration", "mode", "hazards", "occurred_at", "in_world_date",
+  "planned_for", "preparation", "outcome", "content", "secret", "secret_id",
+  "discovery_location_id", "notes",
+] as const;
+const label = (key: string) => key.replaceAll("_", " ").replace(/^./, character => character.toUpperCase());
 const available = (record: Record<string, unknown>, entities: Map<unknown, Record<string, unknown>>) => {
   const entity = entities.get(record.id);
   return entity && !entity.deleted_at && !entity.archived_at;
@@ -84,8 +96,11 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
   for (const [heading, table] of sections) {
     const entries = (rows[table] ?? []).filter(row => available(row, entities));
     if (!entries.length) continue;
-    if (table === "timeline_event") entries.sort((a, b) => timestamp(a.occurred_at) - timestamp(b.occurred_at)
-      || timestamp(entities.get(a.id)?.created_at) - timestamp(entities.get(b.id)?.created_at));
+    if (table === "timeline_event" || table === "session") {
+      const dateField = table === "timeline_event" ? "occurred_at" : "planned_for";
+      entries.sort((a, b) => compareTime(a[dateField], b[dateField])
+        || compareTime(entities.get(a.id)?.created_at, entities.get(b.id)?.created_at));
+    }
     out.push(`## ${heading}`, "");
     for (const entry of entries) {
       const title = table === "semantic_relationship"
@@ -94,8 +109,11 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
           ? `${line(entry.name)}: ${entityNames.get(entry.from_location_id) ?? "Unknown"} → ${entityNames.get(entry.to_location_id) ?? "Unknown"}`
         : line(entry.name ?? entry.title ?? entry.kind);
       out.push(`### ${title}`, "");
-      for (const key of ["description", "content", "secret", "current_state", "preparation", "outcome", "notes"]) {
-        if (entry[key]) out.push(`**${key.replaceAll("_", " ")}:** ${String(entry[key]).trim()}`, "");
+      for (const key of detailFields) {
+        const value = entry[key];
+        if (value === null || value === undefined || value === "") continue;
+        const display = key.endsWith("_id") ? entityNames.get(value) ?? String(value) : String(value).trim();
+        out.push(`**${label(key)}:** ${display}`, "");
       }
       if (table === "session") {
         for (const scene of (rows.scene ?? []).filter(row => row.session_id === entry.id && !row.deleted_at)
@@ -104,6 +122,12 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
           if (scene.preparation) out.push(String(scene.preparation).trim(), "");
           if (scene.outcome) out.push(`Outcome: ${String(scene.outcome).trim()}`, "");
         }
+      }
+      if (table === "reward") {
+        for (const component of (rows.reward_component ?? []).filter(row => row.reward_id === entry.id && !row.deleted_at)) {
+          out.push(`- **${line(component.kind)}:** ${line(component.description)}`);
+        }
+        if ((rows.reward_component ?? []).some(row => row.reward_id === entry.id && !row.deleted_at)) out.push("");
       }
     }
   }
