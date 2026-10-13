@@ -2,7 +2,9 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { campaignEntity, secretKnowledge } from "../../infrastructure/db/schema";
 import type { Actor } from "../identity";
-import { getOwnedSecret, InvalidSecretInputError, SecretRevisionConflictError } from "./secrets";
+import { getOwnedSecret, SecretRevisionConflictError } from "./secrets";
+
+export class InvalidSecretKnowledgeInputError extends Error {}
 
 export type KnowledgeState = "SUSPECTED" | "PARTIAL" | "KNOWN";
 type HolderType = "PLAYER_CHARACTER" | "NPC" | "PARTY" | "FACTION";
@@ -23,16 +25,16 @@ export async function setSecretKnowledge(db: NodePgDatabase, actor: Actor, secre
   if (!uuid(input.holderId) || !holderTypes.includes(input.holderType) ||
     (input.state !== "NONE" && !states.includes(input.state)) ||
     (input.notes !== null && (typeof input.notes !== "string" || input.notes.length > 2000 || input.notes.includes("\0"))))
-    throw new InvalidSecretInputError();
+    throw new InvalidSecretKnowledgeInputError();
   return db.transaction(async tx => {
     await getOwnedSecret(tx, actor, secretId);
     const [locked] = await tx.select({ id: campaignEntity.id }).from(campaignEntity)
       .where(eq(campaignEntity.id, secretId)).for("update");
-    if (!locked) throw new InvalidSecretInputError();
+    if (!locked) throw new InvalidSecretKnowledgeInputError();
     const current = await getOwnedSecret(tx, actor, secretId);
     if (!Number.isInteger(input.expectedRevision) || current.revision !== input.expectedRevision)
       throw new SecretRevisionConflictError();
-    if (current.deletedAt || current.archivedAt) throw new InvalidSecretInputError();
+    if (current.deletedAt || current.archivedAt) throw new InvalidSecretKnowledgeInputError();
     const [holder] = await tx.select({ id: campaignEntity.id, deletedAt: campaignEntity.deletedAt,
       archivedAt: campaignEntity.archivedAt }).from(campaignEntity).where(and(
       eq(campaignEntity.id, input.holderId), eq(campaignEntity.campaignId, current.campaignId),
@@ -40,7 +42,7 @@ export async function setSecretKnowledge(db: NodePgDatabase, actor: Actor, secre
     const [existing] = await tx.select().from(secretKnowledge).where(and(
       eq(secretKnowledge.secretId, secretId), eq(secretKnowledge.holderId, input.holderId)));
     if (!holder || (input.state !== "NONE" && (holder.deletedAt || holder.archivedAt)))
-      throw new InvalidSecretInputError();
+      throw new InvalidSecretKnowledgeInputError();
     const notes = input.notes?.trim() || null;
     if (input.state === "NONE") {
       if (existing) await tx.delete(secretKnowledge).where(eq(secretKnowledge.id, existing.id));

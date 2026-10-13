@@ -12,7 +12,7 @@ import { archiveClue, ClueNotFoundError, ClueRevisionConflictError, createClue, 
   getOwnedClue, InvalidClueInputError, restoreClue, trashClue, unarchiveClue } from "../../src/modules/knowledge";
 import { archiveSecret, createSecret, editSecret, getOwnedSecret, InvalidSecretInputError,
   restoreSecret, SecretNotFoundError, SecretRevisionConflictError, trashSecret, unarchiveSecret } from "../../src/modules/knowledge/secrets";
-import { listSecretKnowledge, setSecretKnowledge } from "../../src/modules/knowledge/secret-knowledge";
+import { InvalidSecretKnowledgeInputError, listSecretKnowledge, setSecretKnowledge } from "../../src/modules/knowledge/secret-knowledge";
 import { archiveNpc, createNpc } from "../../src/modules/npcs";
 
 const schema = `knowledge_${randomUUID().replaceAll("-", "")}`;
@@ -49,7 +49,7 @@ test("knowledge states are owner-scoped, campaign-bound, and revision-safe", asy
     state: "SUSPECTED" as const, notes: "Heard a rumor" };
   await expect(setSecretKnowledge(db, other, hidden.id, input)).rejects.toBeInstanceOf(SecretNotFoundError);
   await expect(setSecretKnowledge(db, actor, hidden.id, { ...input, holderId: outsider.id }))
-    .rejects.toBeInstanceOf(InvalidSecretInputError);
+    .rejects.toBeInstanceOf(InvalidSecretKnowledgeInputError);
   await expect(db.insert(secretKnowledge).values({ campaignId, secretId: hidden.id, holderId: outsider.id,
     holderType: "NPC", state: "KNOWN" })).rejects.toMatchObject({ cause: { constraint: "secret_knowledge_holder_fk" } });
   const saved = await setSecretKnowledge(db, actor, hidden.id, input);
@@ -64,7 +64,7 @@ test("knowledge states are owner-scoped, campaign-bound, and revision-safe", asy
   expect(unchanged.revision).toBe(3);
   await archiveNpc(db, actor, holder.id, holder.revision);
   await expect(setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "PARTIAL" }))
-    .rejects.toBeInstanceOf(InvalidSecretInputError);
+    .rejects.toBeInstanceOf(InvalidSecretKnowledgeInputError);
   const cleared = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "NONE" });
   expect(cleared.revision).toBe(4);
   expect(await listSecretKnowledge(db, actor, hidden.id)).toEqual([]);
