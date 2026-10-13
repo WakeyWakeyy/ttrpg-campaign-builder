@@ -7,7 +7,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
     campaign: { name: "The long road", description: "A journey" },
     ruleset: { key: "dnd-5e-2024", version: "5.2.1", name: "SRD 5.2.1" },
     records: {
-      campaign_compass: [{ current_premise: "Find the lost city", setting: "The coast", tone: "Mysterious" }],
+      campaign_compass: [{ original_premise: "Search the coast", current_premise: "Find the lost city", original_notes: "First sketch", setting: "The coast", tone: "Mysterious" }],
       campaign_entity: [
         { id: "one", archived_at: null, deleted_at: null },
         { id: "two", archived_at: "2026-01-01", deleted_at: null },
@@ -22,9 +22,20 @@ test("Markdown shows available GM material while JSON retains recoverable record
         { id: "gift", archived_at: null, deleted_at: null },
         { id: "fight", archived_at: null, deleted_at: null },
         { id: "truth", archived_at: null, deleted_at: null },
+        { id: "arc", archived_at: null, deleted_at: null },
+        { id: "party", archived_at: null, deleted_at: null },
+        { id: "faction", archived_at: null, deleted_at: null },
+        { id: "pc", archived_at: null, deleted_at: null },
         { id: "third", archived_at: null, deleted_at: null, created_at: "2026-01-03T00:00:00Z" },
       ],
       npc: [{ id: "alice", name: "Alice", role: "Guide" }],
+      player_character: [{ id: "pc", name: "Mira" }],
+      arc: [{ id: "arc", name: "The search" }],
+      arc_quest: [{ arc_id: "arc", quest_id: "quest" }],
+      party: [{ id: "party", name: "The travelers" }],
+      party_member: [{ party_id: "party", player_character_id: "pc" }],
+      faction: [{ id: "faction", name: "Wardens" }],
+      faction_membership: [{ faction_id: "faction", npc_id: "alice", role: "Scout", rank: "Junior", status: "ACTIVE" }],
       quest: [{ id: "quest", name: "Find the city", status: "OPEN" }],
       reward: [{ id: "gift", title: "The king's thanks" }],
       reward_component: [{ reward_id: "gift", kind: "FAVOR", description: "A royal audience", deleted_at: null }],
@@ -50,7 +61,7 @@ test("Markdown shows available GM material while JSON retains recoverable record
       ],
       timeline_event_link: [{ event_id: "early", target_type_snapshot: "NPC", target_name_snapshot: "The guide" }],
       session: [
-        { id: "one", title: "Arrival", planned_for: "2026-01-01", preparation: "Meet the guide", outcome: "They went north" },
+        { id: "one", title: "Arrival", planned_for: "2026-01-01", preparation: "Meet the guide", outcome: "They went north", attendance_set: true },
         { id: "two", title: "Hidden", outcome: "Do not show" },
         { id: "third", title: "Before arrival", planned_for: "2025-12-31" },
       ],
@@ -59,11 +70,14 @@ test("Markdown shows available GM material while JSON retains recoverable record
         { id: "first", session_id: "one", position: 1, title: "On the road", outcome: "They arrived", deleted_at: null },
         { id: "gone", session_id: "one", position: 3, title: "Removed scene", deleted_at: "2026-01-01" },
       ],
+      session_attendance: [{ session_id: "one", player_character_id: "pc" }],
     },
   };
   const markdown = renderCampaignMarkdown(snapshot);
   expect(markdown).toContain("# The long road");
   expect(markdown).toContain("Find the lost city");
+  expect(markdown).toContain("**Original premise:** Search the coast");
+  expect(markdown).toContain("**Original notes:** First sketch");
   expect(markdown).toContain("The gate opened");
   expect(markdown).toContain("Alice — protects → The village");
   expect(markdown).toContain("Old road: The village → The tower");
@@ -85,6 +99,10 @@ test("Markdown shows available GM material while JSON retains recoverable record
   expect(markdown).toContain("Bridge fight (2026-01-02T00:00:00.000Z)");
   expect(markdown).toContain("1 × Veteran (700 XP each)");
   expect(markdown).toContain("Alice: SUSPECTED — Saw the seal");
+  expect(markdown).toContain("- Quest: Find the city");
+  expect(markdown).toContain("- Member: Mira");
+  expect(markdown).toContain("- Member: Alice — Scout (Junior) [ACTIVE]");
+  expect(markdown).toContain("**Attendance:** Mira");
   expect(markdown.indexOf("Earlier")).toBeLessThan(markdown.indexOf("Later"));
   expect(markdown.indexOf("Before arrival")).toBeLessThan(markdown.indexOf("Arrival"));
   expect(markdown.indexOf("On the road")).toBeLessThan(markdown.indexOf("At the gate"));

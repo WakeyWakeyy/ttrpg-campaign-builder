@@ -94,10 +94,15 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
   const out = [`# ${line(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), "",
     `**Ruleset:** ${snapshot.ruleset.name} (${snapshot.ruleset.key} ${snapshot.ruleset.version})`, "", "## Campaign compass", ""];
   if (compass) {
-    for (const [label, key] of [["Premise", "current_premise"], ["Setting", "setting"], ["Tone", "tone"]] as const) {
+    for (const [label, key] of [["Original premise", "original_premise"], ["Current premise", "current_premise"],
+      ["Setting", "setting"], ["Tone", "tone"], ["Original notes", "original_notes"]] as const) {
       if (compass[key]) out.push(`**${label}:** ${line(compass[key])}`, "");
     }
   }
+  const visibleName = (id: unknown) => {
+    const entity = entities.get(id);
+    return entity && !entity.deleted_at && !entity.archived_at ? entityNames.get(id) : undefined;
+  };
   for (const [heading, table] of sections) {
     const entries = (rows[table] ?? []).filter(row => table === "reward_grant" || available(row, entities));
     if (!entries.length) continue;
@@ -120,7 +125,33 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
         const display = key.endsWith("_id") ? entityNames.get(value) ?? String(value) : line(value) || String(value).trim();
         out.push(`**${label(key)}:** ${display}`, "");
       }
+      if (table === "arc") {
+        for (const link of (rows.arc_quest ?? []).filter(row => row.arc_id === entry.id)) {
+          const name = visibleName(link.quest_id);
+          if (name) out.push(`- Quest: ${name}`);
+        }
+        out.push("");
+      }
+      if (table === "party") {
+        for (const member of (rows.party_member ?? []).filter(row => row.party_id === entry.id)) {
+          const name = visibleName(member.player_character_id);
+          if (name) out.push(`- Member: ${name}`);
+        }
+        out.push("");
+      }
+      if (table === "faction") {
+        for (const member of (rows.faction_membership ?? []).filter(row => row.faction_id === entry.id)) {
+          const name = visibleName(member.npc_id ?? member.player_character_id);
+          if (name) out.push(`- Member: ${name}${member.role ? ` — ${line(member.role)}` : ""}${member.rank ? ` (${line(member.rank)})` : ""} [${line(member.status)}]`);
+        }
+        out.push("");
+      }
       if (table === "session") {
+        if (entry.attendance_set) {
+          const attendees = (rows.session_attendance ?? []).filter(row => row.session_id === entry.id)
+            .map(row => visibleName(row.player_character_id)).filter((name): name is string => Boolean(name));
+          out.push(`**Attendance:** ${attendees.length ? attendees.join(", ") : "None recorded"}`, "");
+        }
         for (const scene of (rows.scene ?? []).filter(row => row.session_id === entry.id && !row.deleted_at)
           .sort((a, b) => Number(a.position) - Number(b.position))) {
           out.push(`- **Scene: ${line(scene.title)}**`, "");
