@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { and, eq } from "drizzle-orm";
 import { Pool } from "pg";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { campaign, campaignCompass, campaignEntity, campaignRuleset, location, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
@@ -27,8 +28,9 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
     { ownerUserId: owner.id, name: "Mine" },
     { ownerUserId: stranger.id, name: "Theirs" },
   ]).returning();
-  const [family] = await db.insert(ruleset).values({ key: "dnd-5e-2024", name: "D&D" }).returning();
-  const [version] = await db.insert(rulesetVersion).values({ rulesetId: family.id, version: "5.2.1", name: "SRD 5.2.1" }).returning();
+  const [family] = await db.select().from(ruleset).where(eq(ruleset.key, "dnd-5e-2024"));
+  const [version] = await db.select().from(rulesetVersion).where(and(eq(rulesetVersion.rulesetId, family.id),
+    eq(rulesetVersion.version, "5.2.1")));
   await db.insert(campaignRuleset).values([first, second].map(row => ({ campaignId: row.id,
     rulesetId: family.id, rulesetVersionId: version.id })));
   await db.insert(campaignCompass).values([
