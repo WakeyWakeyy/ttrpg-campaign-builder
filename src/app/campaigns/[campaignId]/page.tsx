@@ -20,6 +20,7 @@ import { findQuestContinuityIssues } from "@/modules/intelligence/quest-continui
 import { findTimelineContinuityIssues } from "@/modules/intelligence/timeline-continuity";
 import { findClueContinuityIssues } from "@/modules/intelligence/clue-continuity";
 import { suggestSecretDiscoveryPaths } from "@/modules/intelligence/secret-suggestions";
+import { getIntelligencePreferences } from "@/modules/intelligence/preferences";
 import { listOwnedClues } from "@/modules/knowledge";
 import { listOwnedSecrets } from "@/modules/knowledge/secrets";
 import { listOwnedNpcs } from "@/modules/npcs";
@@ -27,7 +28,7 @@ import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { listOwnedParties, listCampaignPartyMemberIds } from "@/modules/parties";
 import { listOwnedFactions } from "@/modules/factions";
 import { ActionForm } from "../../action-form";
-import { createArcAction, createClueAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createRewardAction, createSecretAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction } from "../../actions";
+import { createArcAction, createClueAction, createEncounterAction, createFactionAction, createItemAction, createLocationAction, createNpcAction, createPartyAction, createPlayerCharacterAction, createQuestAction, createRelationshipAction, createRewardAction, createSecretAction, createSessionAction, createTimelineEventAction, createTravelRouteAction, editCompassAction, setIntelligencePreferencesAction } from "../../actions";
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
@@ -38,6 +39,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const db = getDatabase();
     const actor = await requireActor(db);
     const campaign = await getOwnedCampaign(db, actor, campaignId);
+    const intelligencePreferences = await getIntelligencePreferences(db, actor, campaignId);
     const compass = await getOwnedCompass(db, actor, campaignId);
     const locations = await listOwnedLocations(db, actor, campaignId);
     const routes = await listOwnedTravelRoutes(db, actor, campaignId);
@@ -61,17 +63,17 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     const parties = await listOwnedParties(db, actor, campaignId);
     const factions = await listOwnedFactions(db, actor, campaignId);
     const partyMembers = await listCampaignPartyMemberIds(db, actor, campaignId);
-    return { campaign, compass, locations, routes, items, relationships, timeline, timelineLinks, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, clues, secrets, npcs, characters, parties, partyMembers, factions };
+    return { campaign, intelligencePreferences, compass, locations, routes, items, relationships, timeline, timelineLinks, sessions, encounters, rewards, grants, rulesReferences, rulesetVersion, relationshipChoices, arcs, quests, clues, secrets, npcs, characters, parties, partyMembers, factions };
   })().catch(readError);
   const activeArcs = data.arcs.filter(arc => !arc.deletedAt && !arc.archivedAt).length;
   const timelineChoices = [...data.relationshipChoices, ...data.relationships.map(row => ({
     id: row.id, name: row.kind, type: "Relationship", deletedAt: row.deletedAt,
   }))];
   const activeQuests = data.quests.filter(quest => !quest.deletedAt && !quest.archivedAt).length;
-  const continuityFindings = findQuestContinuityIssues(data.quests);
-  const timelineFindings = findTimelineContinuityIssues(data.timeline, data.timelineLinks);
-  const clueFindings = findClueContinuityIssues(data.clues, data.locations);
-  const secretSuggestions = suggestSecretDiscoveryPaths(data.secrets, data.clues);
+  const continuityFindings = data.intelligencePreferences.questContinuity ? findQuestContinuityIssues(data.quests) : [];
+  const timelineFindings = data.intelligencePreferences.timelineDates ? findTimelineContinuityIssues(data.timeline, data.timelineLinks) : [];
+  const clueFindings = data.intelligencePreferences.clueRoutes ? findClueContinuityIssues(data.clues, data.locations) : [];
+  const secretSuggestions = data.intelligencePreferences.secretDiscovery ? suggestSecretDiscoveryPaths(data.secrets, data.clues) : [];
   const activeNpcs = data.npcs.filter(npc => !npc.deletedAt && !npc.archivedAt).length;
   const activeCharacters = data.characters.filter(character => !character.deletedAt && !character.archivedAt).length;
   const characterNames = new Map(data.characters.map(character => [character.id, character.name]));
@@ -251,11 +253,20 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         </section>
         <section id="continuity" aria-labelledby="continuity-heading" className="workspace-section">
           <h2 id="continuity-heading">Continuity</h2>
+          <ActionForm action={setIntelligencePreferencesAction.bind(null, campaignId)} reloadLabel="Reload preferences">
+            <p>Choose which preparation prompts appear in this campaign. Turning one off leaves your records intact.</p>
+            <input type="hidden" name="revision" value={data.intelligencePreferences.revision} />
+            <p><label><input type="checkbox" name="questContinuity" defaultChecked={data.intelligencePreferences.questContinuity} /> Quest threads</label></p>
+            <p><label><input type="checkbox" name="timelineDates" defaultChecked={data.intelligencePreferences.timelineDates} /> Timeline dates</label></p>
+            <p><label><input type="checkbox" name="clueRoutes" defaultChecked={data.intelligencePreferences.clueRoutes} /> Clue routes</label></p>
+            <p><label><input type="checkbox" name="secretDiscovery" defaultChecked={data.intelligencePreferences.secretDiscovery} /> Secret discovery</label></p>
+            <button type="submit">Save prompt preferences</button>
+          </ActionForm>
           <p><Link href={`/campaigns/${campaignId}/threads`}>Review open, postponed, and abandoned threads</Link></p>
-          <p>Open or postponed threads beneath a resolved, failed, or abandoned parent may need a second look. These are prompts for the GM, not automatic changes.</p>
+          {data.intelligencePreferences.questContinuity && <><p>Open or postponed threads beneath a resolved, failed, or abandoned parent may need a second look. These are prompts for the GM, not automatic changes.</p>
           {continuityFindings.length ? <ul>{continuityFindings.map(finding => <li key={finding.questId}>
             <Link href={`/quests/${finding.questId}`}>{finding.questName}</Link> is {finding.questStatus.toLowerCase()} beneath {finding.parentName}.
-          </li>)}</ul> : <p>No quest continuity prompts right now.</p>}
+          </li>)}</ul> : <p>No quest continuity prompts right now.</p>}</>}
           {timelineFindings.length > 0 && <><h3>Dates to review</h3>
             <p>These events share an in-world date and a related entity, but have different real dates. Check whether that is intentional.</p>
             <ul>{timelineFindings.map(finding => <li key={`${finding.firstId}-${finding.secondId}-${finding.firstEntityName}`}>
@@ -270,10 +281,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         </section>
         <section id="suggestions" aria-labelledby="suggestions-heading" className="workspace-section">
           <h2 id="suggestions-heading">Preparation suggestions</h2>
+          {!data.intelligencePreferences.secretDiscovery ? <p>Secret discovery suggestions are turned off for this campaign.</p> : <>
           <p>These Secrets have no available Clue linked to them. You might plan a discovery path if you want one; keeping a Secret hidden is also a valid choice.</p>
           {secretSuggestions.length ? <ul>{secretSuggestions.map(suggestion => <li key={suggestion.secretId}>
             <Link href={`/secrets/${suggestion.secretId}`}>{suggestion.secretTitle}</Link>: consider whether the players need a way to discover it.
-          </li>)}</ul> : <p>No discovery path suggestions right now.</p>}
+          </li>)}</ul> : <p>No discovery path suggestions right now.</p>}</>}
         </section>
         <section id="clues" aria-labelledby="clues-heading" className="workspace-section">
           <h2 id="clues-heading">Clues</h2>

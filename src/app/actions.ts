@@ -25,11 +25,25 @@ import { archivePlayerCharacter, createPlayerCharacter, editPlayerCharacter, res
 import { archiveParty, createParty, editParty, restoreParty, trashParty } from "@/modules/parties";
 import { archiveFaction, createFaction, editFaction, restoreFaction, setFactionMembership, trashFaction, type MembershipInput } from "@/modules/factions";
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
+import { setIntelligencePreferences } from "@/modules/intelligence/preferences";
 import { actionError, type ActionState } from "./action-state";
 
 function text(form: FormData, name: string) {
   const value = form.get(name);
   return typeof value === "string" ? value : "";
+}
+
+export async function setIntelligencePreferencesAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    const db = getDatabase();
+    await setIntelligencePreferences(db, await requireActor(db), campaignId, {
+      revision: Number(text(form, "revision")),
+      questContinuity: form.has("questContinuity"), timelineDates: form.has("timelineDates"),
+      clueRoutes: form.has("clueRoutes"), secretDiscovery: form.has("secretDiscovery"),
+    });
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  redirect(`/campaigns/${campaignId}#continuity`);
 }
 
 function clueInput(form: FormData) {

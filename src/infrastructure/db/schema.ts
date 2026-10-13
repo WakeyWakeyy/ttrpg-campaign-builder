@@ -215,6 +215,15 @@ export const campaignCompass = pgTable("campaign_compass", {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
 }, (table) => [check("campaign_compass_revision_positive", sql`${table.revision} > 0`)]);
 
+export const campaignIntelligencePreferences = pgTable("campaign_intelligence_preferences", {
+  campaignId: uuid("campaign_id").primaryKey().references(() => campaign.id, { onDelete: "cascade" }),
+  questContinuity: boolean("quest_continuity").default(true).notNull(),
+  timelineDates: boolean("timeline_dates").default(true).notNull(),
+  clueRoutes: boolean("clue_routes").default(true).notNull(),
+  secretDiscovery: boolean("secret_discovery").default(true).notNull(),
+  revision: integer("revision").default(1).notNull(),
+}, table => [check("campaign_intelligence_preferences_revision_positive", sql`${table.revision} > 0`)]);
+
 export const campaignCompassGuideline = pgTable("campaign_compass_guideline", {
   id: uuid("id").default(sql`uuidv7()`).primaryKey(),
   campaignId: uuid("campaign_id").notNull()
