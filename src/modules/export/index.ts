@@ -60,6 +60,7 @@ const sections = [
 ] as const;
 
 const line = (value: unknown) => typeof value === "string" ? value.replace(/\r?\n/g, " ").trim() : "";
+const timestamp = (value: unknown) => value ? new Date(String(value)).getTime() : Number.POSITIVE_INFINITY;
 const available = (record: Record<string, unknown>, entities: Map<unknown, Record<string, unknown>>) => {
   const entity = entities.get(record.id);
   return entity && !entity.deleted_at && !entity.archived_at;
@@ -83,10 +84,14 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
   for (const [heading, table] of sections) {
     const entries = (rows[table] ?? []).filter(row => available(row, entities));
     if (!entries.length) continue;
+    if (table === "timeline_event") entries.sort((a, b) => timestamp(a.occurred_at) - timestamp(b.occurred_at)
+      || timestamp(entities.get(a.id)?.created_at) - timestamp(entities.get(b.id)?.created_at));
     out.push(`## ${heading}`, "");
     for (const entry of entries) {
       const title = table === "semantic_relationship"
         ? `${entityNames.get(entry.source_entity_id) ?? "Unknown"} — ${line(entry.kind)} → ${entityNames.get(entry.target_entity_id) ?? "Unknown"}`
+        : table === "travel_route"
+          ? `${line(entry.name)}: ${entityNames.get(entry.from_location_id) ?? "Unknown"} → ${entityNames.get(entry.to_location_id) ?? "Unknown"}`
         : line(entry.name ?? entry.title ?? entry.kind);
       out.push(`### ${title}`, "");
       for (const key of ["description", "content", "secret", "current_state", "preparation", "outcome", "notes"]) {
