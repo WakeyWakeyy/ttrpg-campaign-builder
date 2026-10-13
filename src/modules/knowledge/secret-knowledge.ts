@@ -33,13 +33,14 @@ export async function setSecretKnowledge(db: NodePgDatabase, actor: Actor, secre
     if (!Number.isInteger(input.expectedRevision) || current.revision !== input.expectedRevision)
       throw new SecretRevisionConflictError();
     if (current.deletedAt || current.archivedAt) throw new InvalidSecretInputError();
-    const [holder] = await tx.select({ id: campaignEntity.id }).from(campaignEntity).where(and(
+    const [holder] = await tx.select({ id: campaignEntity.id, deletedAt: campaignEntity.deletedAt,
+      archivedAt: campaignEntity.archivedAt }).from(campaignEntity).where(and(
       eq(campaignEntity.id, input.holderId), eq(campaignEntity.campaignId, current.campaignId),
-      eq(campaignEntity.entityType, input.holderType), sql`${campaignEntity.deletedAt} IS NULL`,
-      sql`${campaignEntity.archivedAt} IS NULL`));
-    if (!holder) throw new InvalidSecretInputError();
+      eq(campaignEntity.entityType, input.holderType)));
     const [existing] = await tx.select().from(secretKnowledge).where(and(
       eq(secretKnowledge.secretId, secretId), eq(secretKnowledge.holderId, input.holderId)));
+    if (!holder || (input.state !== "NONE" && (holder.deletedAt || holder.archivedAt)))
+      throw new InvalidSecretInputError();
     const notes = input.notes?.trim() || null;
     if (input.state === "NONE") {
       if (existing) await tx.delete(secretKnowledge).where(eq(secretKnowledge.id, existing.id));

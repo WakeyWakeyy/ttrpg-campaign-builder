@@ -13,7 +13,7 @@ import { archiveClue, ClueNotFoundError, ClueRevisionConflictError, createClue, 
 import { archiveSecret, createSecret, editSecret, getOwnedSecret, InvalidSecretInputError,
   restoreSecret, SecretNotFoundError, SecretRevisionConflictError, trashSecret, unarchiveSecret } from "../../src/modules/knowledge/secrets";
 import { listSecretKnowledge, setSecretKnowledge } from "../../src/modules/knowledge/secret-knowledge";
-import { createNpc } from "../../src/modules/npcs";
+import { archiveNpc, createNpc } from "../../src/modules/npcs";
 
 const schema = `knowledge_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -58,6 +58,9 @@ test("knowledge states are owner-scoped, campaign-bound, and revision-safe", asy
   await expect(setSecretKnowledge(db, actor, hidden.id, input)).rejects.toBeInstanceOf(SecretRevisionConflictError);
   const known = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 2, state: "KNOWN" });
   expect(known.revision).toBe(3);
+  await archiveNpc(db, actor, holder.id, holder.revision);
+  await expect(setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "PARTIAL" }))
+    .rejects.toBeInstanceOf(InvalidSecretInputError);
   const cleared = await setSecretKnowledge(db, actor, hidden.id, { ...input, expectedRevision: 3, state: "NONE" });
   expect(cleared.revision).toBe(4);
   expect(await listSecretKnowledge(db, actor, hidden.id)).toEqual([]);

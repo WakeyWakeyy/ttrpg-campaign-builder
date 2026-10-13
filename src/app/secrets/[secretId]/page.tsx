@@ -24,10 +24,10 @@ export default async function SecretPage({ params }: { params: Promise<{ secretI
       listOwnedParties(db, actor, secret.campaignId), listOwnedFactions(db, actor, secret.campaignId),
     ]);
     const holders = [
-      ...npcs.map(row => ({ id: row.id, name: row.name, type: "NPC" })),
-      ...pcs.map(row => ({ id: row.id, name: row.name, type: "PLAYER_CHARACTER" })),
-      ...parties.map(row => ({ id: row.id, name: row.name, type: "PARTY" })),
-      ...factions.map(row => ({ id: row.id, name: row.name, type: "FACTION" })),
+      ...npcs.map(row => ({ id: row.id, name: row.name, type: "NPC", archivedAt: row.archivedAt, deletedAt: row.deletedAt })),
+      ...pcs.map(row => ({ id: row.id, name: row.name, type: "PLAYER_CHARACTER", archivedAt: row.archivedAt, deletedAt: row.deletedAt })),
+      ...parties.map(row => ({ id: row.id, name: row.name, type: "PARTY", archivedAt: row.archivedAt, deletedAt: row.deletedAt })),
+      ...factions.map(row => ({ id: row.id, name: row.name, type: "FACTION", archivedAt: row.archivedAt, deletedAt: row.deletedAt })),
     ];
     return { secret, clues, knowledge, holders };
   })().catch(readError);
@@ -60,13 +60,19 @@ export default async function SecretPage({ params }: { params: Promise<{ secretI
     {knowledge.length ? <ul>{knowledge.map(row => <li key={row.id}>
       {holders.find(holder => holder.id === row.holderId)?.name ?? "Unavailable holder"}: {row.state.toLowerCase()}
       {row.notes && <> — {row.notes}</>}
+      {!secret.archivedAt && !secret.deletedAt && <ActionForm action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
+        <input type="hidden" name="expectedRevision" value={secret.revision} />
+        <input type="hidden" name="holder" value={`${row.holderType}:${row.holderId}`} />
+        <input type="hidden" name="state" value="NONE" />
+        <button>Remove recorded state</button>
+      </ActionForm>}
     </li>)}</ul> : <p>No knowledge states recorded.</p>}
     {!secret.archivedAt && !secret.deletedAt && <ActionForm key={secret.revision} action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
       <input type="hidden" name="expectedRevision" value={secret.revision} />
       <label htmlFor="knowledge-holder">Character or group</label>
       <select id="knowledge-holder" name="holder" required defaultValue="">
         <option value="" disabled>Choose one</option>
-        {holders.filter(holder => !("deletedAt" in holder && holder.deletedAt) && !("archivedAt" in holder && holder.archivedAt))
+        {holders.filter(holder => !holder.deletedAt && !holder.archivedAt)
           .map(holder => <option key={holder.id} value={`${holder.type}:${holder.id}`}>{holder.name} ({holder.type.toLowerCase().replaceAll("_", " ")})</option>)}
       </select>
       <label htmlFor="knowledge-state">Understanding</label>
