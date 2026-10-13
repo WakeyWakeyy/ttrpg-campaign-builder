@@ -34,7 +34,9 @@ export async function buildCampaignExport(db: NodePgDatabase, actor: Actor, camp
     const records: CampaignExport["records"] = {};
     for (const table of campaignTables) {
       const result = await tx.execute(sql`select * from ${sql.raw(table)} where campaign_id = ${campaignId} order by 1`);
-      records[table] = result.rows as Record<string, unknown>[];
+      records[table] = (result.rows as Record<string, unknown>[]).map(row => table === "campaign_entity"
+        ? Object.fromEntries(Object.entries(row).filter(([key]) => key !== "created_by_user_id"))
+        : row);
     }
     for (const [table, parent, foreignKey] of childTables) {
       const result = await tx.execute(sql`select child.* from ${sql.raw(table)} child
@@ -67,6 +69,10 @@ const available = (record: Record<string, unknown>, entities: Map<unknown, Recor
 export function renderCampaignMarkdown(snapshot: CampaignExport): string {
   const rows = snapshot.records;
   const entities = new Map((rows.campaign_entity ?? []).map(row => [row.id, row]));
+  const entityNames = new Map<unknown, string>();
+  for (const [, table] of sections) {
+    for (const row of rows[table] ?? []) entityNames.set(row.id, line(row.name ?? row.title ?? row.kind));
+  }
   const compass = rows.campaign_compass?.[0];
   const out = [`# ${line(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), "", "## Campaign compass", ""];
   if (compass) {
@@ -79,12 +85,16 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
     if (!entries.length) continue;
     out.push(`## ${heading}`, "");
     for (const entry of entries) {
-      out.push(`### ${line(entry.name ?? entry.title ?? entry.kind)}`, "");
+      const title = table === "semantic_relationship"
+        ? `${entityNames.get(entry.source_entity_id) ?? "Unknown"} — ${line(entry.kind)} → ${entityNames.get(entry.target_entity_id) ?? "Unknown"}`
+        : line(entry.name ?? entry.title ?? entry.kind);
+      out.push(`### ${title}`, "");
       for (const key of ["description", "content", "secret", "current_state", "preparation", "outcome", "notes"]) {
         if (entry[key]) out.push(`**${key.replaceAll("_", " ")}:** ${String(entry[key]).trim()}`, "");
       }
       if (table === "session") {
-        for (const scene of (rows.scene ?? []).filter(row => row.session_id === entry.id && !row.deleted_at)) {
+        for (const scene of (rows.scene ?? []).filter(row => row.session_id === entry.id && !row.deleted_at)
+          .sort((a, b) => Number(a.position) - Number(b.position))) {
           out.push(`- **Scene: ${line(scene.title)}**`, "");
           if (scene.preparation) out.push(String(scene.preparation).trim(), "");
           if (scene.outcome) out.push(`Outcome: ${String(scene.outcome).trim()}`, "");
