@@ -42,7 +42,8 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
   expect("created_by_user_id" in exported.records.campaign_entity[0]).toBe(false);
   expect(exported.records.campaign_compass).toMatchObject([{ current_premise: "My premise" }]);
   expect(exported.records.location).toMatchObject([{ id: entity.id, name: "Old tower" }]);
-  expect(exported.records.campaign_entity).toMatchObject([{ id: entity.id, archived_at: new Date("2026-01-01T00:00:00Z") }]);
+  expect(exported.records.campaign_entity[0].id).toBe(entity.id);
+  expect(new Date(String(exported.records.campaign_entity[0].archived_at)).toISOString()).toBe("2026-01-01T00:00:00.000Z");
   expect(JSON.stringify(exported).includes("Other premise")).toBe(false);
   await expect(buildCampaignExport(db, { userId: stranger.id }, first.id)).rejects.toBeInstanceOf(CampaignNotFoundError);
   await expect(buildCampaignExport(db, { userId: owner.id }, second.id)).rejects.toBeInstanceOf(CampaignNotFoundError);
