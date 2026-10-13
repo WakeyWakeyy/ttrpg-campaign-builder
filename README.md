@@ -22,6 +22,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Review continuity:** see prompts for an open or postponed Quest beneath a closed parent, timeline dates that may need review, or a clue without an available recorded discovery Location. The GM decides whether any case needs attention.
 - **Review story threads:** see open, postponed, and abandoned Quests together, with links back to each record.
 - **Keep hidden information connected:** record GM-authored Secrets and optionally link discoverable Clues to them without implying that any character knows the truth.
+- **Record who knows a Secret:** mark a character or group as suspecting, partly knowing, or knowing a Secret, with optional GM notes.
 - **Recall what happened:** read recorded Session and Scene outcomes together, with links back to each source record.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
@@ -38,7 +39,7 @@ The detailed implementation history is in the [roadmap](docs/roadmap.md).
 
 ## Estimated project status
 
-**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, initial continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets are implemented.** Clues can link to Secrets; knowledge states remain ahead. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
+**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, initial continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets with recorded knowledge states are implemented.** Clues can link to Secrets without assigning knowledge automatically. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
 
 The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 

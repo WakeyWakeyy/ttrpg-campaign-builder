@@ -839,6 +839,26 @@ export const secret = pgTable("secret", {
   check("secret_content_nonempty", sql`length(btrim(${table.content})) > 0`),
 ]);
 
+// Current GM-recorded understanding of a Secret. A missing row means no state was recorded.
+export const secretKnowledge = pgTable("secret_knowledge", {
+  id: uuid("id").default(sql`uuidv7()`).primaryKey(),
+  campaignId: uuid("campaign_id").notNull(),
+  secretId: uuid("secret_id").notNull(),
+  holderId: uuid("holder_id").notNull(),
+  holderType: text("holder_type").notNull(),
+  state: text("state").notNull(),
+  notes: text("notes"),
+}, table => [
+  uniqueIndex("secret_knowledge_holder_unique").on(table.secretId, table.holderId),
+  index("secret_knowledge_campaign_idx").on(table.campaignId),
+  foreignKey({ name: "secret_knowledge_secret_fk", columns: [table.campaignId, table.secretId],
+    foreignColumns: [secret.campaignId, secret.id] }).onDelete("cascade"),
+  foreignKey({ name: "secret_knowledge_holder_fk", columns: [table.campaignId, table.holderId, table.holderType],
+    foreignColumns: [campaignEntity.campaignId, campaignEntity.id, campaignEntity.entityType] }).onDelete("cascade"),
+  check("secret_knowledge_holder_type_check", sql`${table.holderType} IN ('PLAYER_CHARACTER', 'NPC', 'PARTY', 'FACTION')`),
+  check("secret_knowledge_state_check", sql`${table.state} IN ('SUSPECTED', 'PARTIAL', 'KNOWN')`),
+]);
+
 // A clue is campaign truth; the discovery location is a planned route to it, not proof a PC knows it.
 export const clue = pgTable("clue", {
   id: uuid("id").primaryKey(),

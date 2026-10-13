@@ -18,9 +18,11 @@ import { InvalidRewardInputError, RewardComponentNotFoundError, RewardNotFoundEr
 import { InvalidRewardGrantInputError, RewardGrantIdempotencyConflictError } from "@/modules/rewards/grants";
 import { ClueNotFoundError, ClueRevisionConflictError, InvalidClueInputError } from "@/modules/knowledge";
 import { InvalidSecretInputError, SecretNotFoundError, SecretRevisionConflictError } from "@/modules/knowledge/secrets";
+import { InvalidSecretKnowledgeInputError } from "@/modules/knowledge/secret-knowledge";
 
 export type ActionState = { message: string; conflict?: boolean };
 export function actionError(error: unknown): ActionState {
+  if (error instanceof InvalidSecretKnowledgeInputError) return { message: "Choose an available character or group and check the knowledge state. Reload if their status changed." };
   if (error instanceof SecretRevisionConflictError) return { message: "This secret changed since you opened it. Reload before saving again.", conflict: true };
   if (error instanceof SecretNotFoundError) return { message: "Secret not found or unavailable." };
   if (error instanceof InvalidSecretInputError) return { message: "Enter a secret title and its hidden information." };

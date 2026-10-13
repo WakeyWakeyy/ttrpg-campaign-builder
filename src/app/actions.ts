@@ -17,6 +17,7 @@ import { addRewardComponent, archiveReward, createReward, editReward, editReward
 import { recordRewardGrant } from "@/modules/rewards/grants";
 import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
 import { archiveSecret, createSecret, editSecret, restoreSecret, trashSecret, unarchiveSecret } from "@/modules/knowledge/secrets";
+import { setSecretKnowledge, type KnowledgeState } from "@/modules/knowledge/secret-knowledge";
 import { archiveArc, createArc, editArc, restoreArc, trashArc } from "@/modules/arcs";
 import { archiveQuest, createQuest, editQuest, restoreQuest, trashQuest, type QuestStatus } from "@/modules/quests";
 import { archiveNpc, createNpc, editNpc, restoreNpc, trashNpc } from "@/modules/npcs";
@@ -61,6 +62,23 @@ export async function updateSecretAction(id: string, _state: ActionState, form: 
       : intent === "trash" ? await trashSecret(db, actor, id, revision)
       : intent === "restore" ? await restoreSecret(db, actor, id, revision) : null;
     if (!updated) return { message: "Choose a secret action." };
+    campaignId = updated.campaignId;
+  } catch (error) { return actionError(error); }
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath(`/secrets/${id}`);
+  redirect(`/secrets/${id}`);
+}
+
+export async function setSecretKnowledgeAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let campaignId: string;
+  try {
+    const db = getDatabase();
+    const [holderType, holderId] = text(form, "holder").split(":");
+    const updated = await setSecretKnowledge(db, await requireActor(db), id, {
+      expectedRevision: Number(text(form, "expectedRevision")), holderId,
+      holderType: holderType as "PLAYER_CHARACTER" | "NPC" | "PARTY" | "FACTION",
+      state: text(form, "state") as KnowledgeState | "NONE", notes: text(form, "notes") || null,
+    });
     campaignId = updated.campaignId;
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
