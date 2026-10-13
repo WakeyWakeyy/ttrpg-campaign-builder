@@ -24,6 +24,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Keep hidden information connected:** record GM-authored Secrets and optionally link discoverable Clues to them without implying that any character knows the truth.
 - **Record who knows a Secret:** mark a character or group as suspecting, partly knowing, or knowing a Secret, with optional GM notes.
 - **Consider discovery paths:** see an optional preparation suggestion when an available Secret has no available linked Clue.
+- **Choose preparation prompts:** turn each continuity or discovery prompt on or off for a Campaign without changing its records.
 - **Recall what happened:** read recorded Session and Scene outcomes together, with links back to each source record.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
@@ -40,7 +41,7 @@ The detailed implementation history is in the [roadmap](docs/roadmap.md).
 
 ## Estimated project status
 
-**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, initial continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets with recorded knowledge states are implemented.** Clues can link to Secrets without assigning knowledge automatically. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
+**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, configurable continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets with recorded knowledge states are implemented.** Clues can link to Secrets without assigning knowledge automatically. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
 
 The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 
