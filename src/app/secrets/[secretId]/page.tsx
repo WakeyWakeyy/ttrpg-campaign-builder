@@ -60,6 +60,18 @@ export default async function SecretPage({ params }: { params: Promise<{ secretI
     {knowledge.length ? <ul>{knowledge.map(row => <li key={row.id}>
       {holders.find(holder => holder.id === row.holderId)?.name ?? "Unavailable holder"}: {row.state.toLowerCase()}
       {row.notes && <> — {row.notes}</>}
+      {!secret.archivedAt && !secret.deletedAt && holders.some(holder => holder.id === row.holderId && !holder.archivedAt && !holder.deletedAt) &&
+        <ActionForm key={`${secret.revision}:${row.id}`} action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
+          <input type="hidden" name="expectedRevision" value={secret.revision} />
+          <input type="hidden" name="holder" value={`${row.holderType}:${row.holderId}`} />
+          <label htmlFor={`knowledge-state-${row.id}`}>Understanding</label>
+          <select id={`knowledge-state-${row.id}`} name="state" defaultValue={row.state}>
+            <option value="SUSPECTED">Suspected</option><option value="PARTIAL">Partial</option><option value="KNOWN">Known</option>
+          </select>
+          <label htmlFor={`knowledge-notes-${row.id}`}>GM notes</label>
+          <textarea id={`knowledge-notes-${row.id}`} name="notes" defaultValue={row.notes ?? ""} maxLength={2000} rows={3} />
+          <button>Update knowledge state</button>
+        </ActionForm>}
       {!secret.archivedAt && !secret.deletedAt && <ActionForm action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
         <input type="hidden" name="expectedRevision" value={secret.revision} />
         <input type="hidden" name="holder" value={`${row.holderType}:${row.holderId}`} />
@@ -67,18 +79,19 @@ export default async function SecretPage({ params }: { params: Promise<{ secretI
         <button>Remove recorded state</button>
       </ActionForm>}
     </li>)}</ul> : <p>No knowledge states recorded.</p>}
-    {!secret.archivedAt && !secret.deletedAt && <ActionForm key={secret.revision} action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
+    {!secret.archivedAt && !secret.deletedAt && holders.some(holder => !holder.deletedAt && !holder.archivedAt && !knowledge.some(row => row.holderId === holder.id)) &&
+      <ActionForm key={secret.revision} action={setSecretKnowledgeAction.bind(null, secret.id)} reloadLabel="Reload secret">
       <input type="hidden" name="expectedRevision" value={secret.revision} />
       <label htmlFor="knowledge-holder">Character or group</label>
       <select id="knowledge-holder" name="holder" required defaultValue="">
         <option value="" disabled>Choose one</option>
-        {holders.filter(holder => !holder.deletedAt && !holder.archivedAt)
+        {holders.filter(holder => !holder.deletedAt && !holder.archivedAt && !knowledge.some(row => row.holderId === holder.id))
           .map(holder => <option key={holder.id} value={`${holder.type}:${holder.id}`}>{holder.name} ({holder.type.toLowerCase().replaceAll("_", " ")})</option>)}
       </select>
       <label htmlFor="knowledge-state">Understanding</label>
       <select id="knowledge-state" name="state" defaultValue="KNOWN">
         <option value="SUSPECTED">Suspected</option><option value="PARTIAL">Partial</option>
-        <option value="KNOWN">Known</option><option value="NONE">Remove recorded state</option>
+        <option value="KNOWN">Known</option>
       </select>
       <label htmlFor="knowledge-notes">GM notes</label>
       <textarea id="knowledge-notes" name="notes" maxLength={2000} rows={3} />
