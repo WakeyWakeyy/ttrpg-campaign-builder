@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq } from "drizzle-orm";
 import { Pool } from "pg";
 import { afterAll, beforeAll, expect, test } from "vitest";
-import { campaign, campaignCompass, campaignEntity, campaignRuleset, location, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
+import { campaign, campaignCompass, campaignEntity, campaignRuleset, location, rewardGrant, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
 import { buildCampaignExport } from "../../src/modules/export";
 
@@ -40,6 +40,8 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
   const [entity] = await db.insert(campaignEntity).values({ campaignId: first.id, entityType: "LOCATION", createdByUserId: owner.id,
     archivedAt: new Date("2026-01-01T00:00:00Z") }).returning();
   await db.insert(location).values({ id: entity.id, campaignId: first.id, name: "Old tower" });
+  const [grant] = await db.insert(rewardGrant).values({ campaignId: first.id, requestKey: randomUUID(),
+    requestHash: "retry-only", rewardTitle: "Old favor", recipient: "The party" }).returning();
 
   const exported = await buildCampaignExport(db, { userId: owner.id }, first.id);
   expect(exported.formatVersion).toBe(1);
@@ -47,6 +49,9 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
   expect(exported.campaign).toMatchObject({ id: first.id, name: "Mine" });
   expect("ownerUserId" in exported.campaign).toBe(false);
   expect("created_by_user_id" in exported.records.campaign_entity[0]).toBe(false);
+  expect(exported.records.reward_grant).toMatchObject([{ id: grant.id, reward_title: "Old favor" }]);
+  expect("request_key" in exported.records.reward_grant[0]).toBe(false);
+  expect("request_hash" in exported.records.reward_grant[0]).toBe(false);
   expect(exported.records.campaign_compass).toMatchObject([{ current_premise: "My premise" }]);
   expect(exported.records.location).toMatchObject([{ id: entity.id, name: "Old tower" }]);
   expect(exported.records.campaign_entity[0].id).toBe(entity.id);

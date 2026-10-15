@@ -21,6 +21,11 @@ const childTables = [
   ["encounter_run_creature", "encounter_run", "run_id"],
 ] as const;
 
+const internalFields: Record<string, ReadonlySet<string>> = {
+  campaign_entity: new Set(["created_by_user_id"]),
+  reward_grant: new Set(["request_key", "request_hash"]),
+};
+
 export type CampaignExport = {
   formatVersion: 1;
   campaign: Record<string, unknown>;
@@ -35,8 +40,8 @@ export async function buildCampaignExport(db: NodePgDatabase, actor: Actor, camp
     const records: CampaignExport["records"] = {};
     for (const table of campaignTables) {
       const result = await tx.execute(sql`select * from ${sql.raw(table)} where campaign_id = ${campaignId} order by 1`);
-      records[table] = (result.rows as Record<string, unknown>[]).map(row => table === "campaign_entity"
-        ? Object.fromEntries(Object.entries(row).filter(([key]) => key !== "created_by_user_id"))
+      records[table] = (result.rows as Record<string, unknown>[]).map(row => internalFields[table]
+        ? Object.fromEntries(Object.entries(row).filter(([key]) => !internalFields[table].has(key)))
         : row);
     }
     for (const [table, parent, foreignKey] of childTables) {
