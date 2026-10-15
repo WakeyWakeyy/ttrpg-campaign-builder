@@ -9,6 +9,7 @@ export function renderCampaignOverview(snapshot: CampaignExport, origin: string)
   const rows = snapshot.records;
   const available = new Set((rows.campaign_entity ?? [])
     .filter(entity => !entity.archived_at && !entity.deleted_at).map(entity => entity.id));
+  const createdAt = new Map((rows.campaign_entity ?? []).map(entity => [entity.id, entity.created_at]));
   const source = (path: string, id: unknown) => new URL(`/${path}/${encodeURIComponent(String(id))}`, origin).href;
   const out = [`# ${label(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), ""];
   const compass = rows.campaign_compass?.[0];
@@ -36,7 +37,7 @@ export function renderCampaignOverview(snapshot: CampaignExport, origin: string)
   section("Factions", "faction", "factions");
   section("Places", "location", "locations");
   const sessions = (rows.session ?? []).filter(row => available.has(row.id))
-    .sort((a, b) => date(b.planned_for).localeCompare(date(a.planned_for))).slice(0, 5);
+    .sort((a, b) => date(b.planned_for ?? createdAt.get(b.id)).localeCompare(date(a.planned_for ?? createdAt.get(a.id)))).slice(0, 5);
   if (sessions.length) {
     out.push("## Sessions", "");
     for (const session of sessions) {
