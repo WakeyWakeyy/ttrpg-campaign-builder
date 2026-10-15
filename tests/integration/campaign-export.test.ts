@@ -6,7 +6,11 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { campaign, campaignCompass, campaignEntity, campaignRuleset, location, rewardGrant, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
 import { CampaignNotFoundError } from "../../src/modules/campaigns";
+import { archiveEncounter, createEncounter, placeEncounter } from "../../src/modules/encounters";
 import { buildCampaignExport } from "../../src/modules/export";
+import { buildSessionSheet } from "../../src/modules/export/session-sheet";
+import { createPlayerCharacter } from "../../src/modules/player-characters";
+import { createScene, createSession, editScene, getOwnedSession, setSessionAttendance, SessionNotFoundError } from "../../src/modules/sessions";
 
 const schema = `export_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -59,4 +63,36 @@ test("exports only the owner's campaign and preserves recoverable records", asyn
   expect(JSON.stringify(exported).includes("Other premise")).toBe(false);
   await expect(buildCampaignExport(db, { userId: stranger.id }, first.id)).rejects.toBeInstanceOf(CampaignNotFoundError);
   await expect(buildCampaignExport(db, { userId: owner.id }, second.id)).rejects.toBeInstanceOf(CampaignNotFoundError);
+});
+
+test("session sheet is owner scoped and omits unavailable scenes and encounters", async () => {
+  const [owner, stranger] = await db.insert(userAccount).values([{}, {}]).returning();
+  const [owned] = await db.insert(campaign).values({ ownerUserId: owner.id, name: "My campaign" }).returning();
+  const [family] = await db.select().from(ruleset).where(eq(ruleset.key, "dnd-5e-2024"));
+  const [version] = await db.select().from(rulesetVersion).where(and(eq(rulesetVersion.rulesetId, family.id),
+    eq(rulesetVersion.version, "5.2.1")));
+  await db.insert(campaignRuleset).values({ campaignId: owned.id, rulesetId: family.id, rulesetVersionId: version.id });
+  const actor = { userId: owner.id };
+  const previous = await createSession(db, actor, { campaignId: owned.id, title: "Arrival", outcome: "The party entered." });
+  const current = await createSession(db, actor, { campaignId: owned.id, title: "The gate", preparation: "Meet the watch." });
+  const kept = await createScene(db, actor, current.id, { expectedRevision: 1, title: "Watch", preparation: "Ask for entry." });
+  const removed = await createScene(db, actor, current.id, { expectedRevision: 2, title: "Removed scene", preparation: "Old plan" });
+  await editScene(db, actor, current.id, removed.id, { expectedRevision: 3, intent: "trash", title: "" });
+  const visible = await createEncounter(db, actor, { campaignId: owned.id, title: "Gate watch", partyLevel: 1, partySize: 4 });
+  const hidden = await createEncounter(db, actor, { campaignId: owned.id, title: "Archived fight", partyLevel: 1, partySize: 4 });
+  await placeEncounter(db, actor, current.id, { expectedRevision: 4, encounterId: visible.id, sceneId: kept.id });
+  await placeEncounter(db, actor, current.id, { expectedRevision: 5, encounterId: hidden.id });
+  await archiveEncounter(db, actor, hidden.id, 1);
+  const pc = await createPlayerCharacter(db, actor, { campaignId: owned.id, name: "Mira" });
+  await setSessionAttendance(db, actor, current.id, { expectedRevision: 6, playerCharacterIds: [pc.id] });
+
+  const sheet = await buildSessionSheet(db, actor, current.id);
+  expect(sheet).toMatchObject({ campaignName: "My campaign", title: "The gate", preparation: "Meet the watch.",
+    attendance: ["Mira"], previous: { title: previous.title, outcome: "The party entered." },
+    scenes: [{ id: kept.id, title: "Watch" }], encounters: [{ title: "Gate watch", sceneId: kept.id }] });
+  expect(sheet.scenes).toHaveLength(1);
+  expect(sheet.encounters).toHaveLength(1);
+  expect((await getOwnedSession(db, actor, current.id)).revision).toBe(7);
+  await expect(buildSessionSheet(db, { userId: stranger.id }, current.id)).rejects.toBeInstanceOf(SessionNotFoundError);
+  await expect(buildSessionSheet(db, actor, randomUUID())).rejects.toBeInstanceOf(SessionNotFoundError);
 });
