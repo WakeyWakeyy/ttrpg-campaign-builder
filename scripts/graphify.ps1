@@ -25,8 +25,12 @@ if (Test-Path -LiteralPath $savedInterpreter) {
 }
 $uvInterpreter = Join-Path $env:APPDATA 'uv/tools/graphifyy/Scripts/python.exe'
 $candidates += $uvInterpreter
+$pipxRoot = if ($env:PIPX_HOME) { $env:PIPX_HOME } else { Join-Path $env:USERPROFILE '.local/pipx' }
+$candidates += (Join-Path $pipxRoot 'venvs/graphifyy/Scripts/python.exe')
 $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
 if ($pythonCommand) { $candidates += $pythonCommand.Source }
+$pyCommand = Get-Command py -ErrorAction SilentlyContinue
+if ($pyCommand) { $candidates += $pyCommand.Source }
 
 foreach ($candidate in ($candidates | Select-Object -Unique)) {
   if (-not (Test-Path -LiteralPath $candidate)) { continue }
@@ -45,5 +49,18 @@ foreach ($candidate in ($candidates | Select-Object -Unique)) {
   }
 }
 
-Write-Error 'Graphify Python package not found. Install graphifyy with uv tool install graphifyy and try again.'
+$graphifyCommand = Get-Command graphify -ErrorAction SilentlyContinue
+if ($graphifyCommand) {
+  Push-Location $repoRoot
+  try {
+    & $graphifyCommand.Source @argumentsToPass
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    if ($newSnapshot) { & $graphifyCommand.Source cluster-only $repoRoot }
+    exit $LASTEXITCODE
+  } finally {
+    Pop-Location
+  }
+}
+
+Write-Error 'Graphify not found. Install graphifyy with uv or pipx and try again.'
 exit 1
