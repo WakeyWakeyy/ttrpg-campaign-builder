@@ -103,6 +103,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <a href="#continuity">Continuity</a>
         <a href="#suggestions">Suggestions</a>
         <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
+        <a href="#export">Export</a>
         <a href="#clues">Clues</a>
         <a href="#secrets">Secrets</a>
         <a href="#npcs">NPCs</a>
@@ -487,6 +488,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             </label>)}</fieldset>
             <button type="submit">Record event</button>
           </ActionForm>
+        </section>
+        <section id="export" aria-labelledby="export-heading" className="workspace-section">
+          <h2 id="export-heading">Export campaign</h2>
+          <p>Download a readable GM reference or a full JSON snapshot. The JSON includes archived and trashed records, connections, and hidden information. Keep these files private.</p>
+          <p><a href={`/campaigns/${campaignId}/export/md`}>Download Markdown</a> · <a href={`/campaigns/${campaignId}/export/json`}>Download JSON</a></p>
         </section>
       </div>
     </div>

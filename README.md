@@ -26,6 +26,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Consider discovery paths:** see an optional preparation suggestion when an available Secret has no available linked Clue.
 - **Choose preparation prompts:** turn each continuity or discovery prompt on or off for a Campaign without changing its records.
 - **Recall what happened:** read recorded Session and Scene outcomes together, with links back to each source record.
+- **Take campaign material with you:** download a readable Markdown reference or a versioned JSON snapshot of campaign records, including hidden and recoverable material.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
 
