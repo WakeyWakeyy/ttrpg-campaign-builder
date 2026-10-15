@@ -29,3 +29,17 @@ test("session sheet distinguishes unrecorded and empty attendance", () => {
   expect(renderSessionSheet({ ...base, attendance: [] })).toContain("## Attendance\n\nNone recorded.");
   expect(renderSessionSheet(base)).toContain("No scenes planned.");
 });
+
+test("single-line labels cannot create extra Markdown sections", () => {
+  const sheet: SessionSheet = { campaignName: "The coast\n## Secret", title: "The gate\n## False section",
+    plannedFor: null, preparation: "First note\n## A real note in the body", attendance: ["Mira\n## Hidden"],
+    previous: { title: "Arrival\n## Hidden", outcome: null, scenes: [] },
+    scenes: [{ id: "scene", title: "Watch\n## Hidden", preparation: null }],
+    encounters: [{ title: "Guards\n## Hidden", sceneId: "scene" }] };
+  const output = renderSessionSheet(sheet);
+  expect(output).toContain("# The gate ## False section");
+  expect(output).toContain("### 1. Watch ## Hidden");
+  expect(output).toContain("- Guards ## Hidden");
+  expect(output).toContain("First note\n## A real note in the body");
+  expect(output).not.toContain("\n## Hidden\n");
+});

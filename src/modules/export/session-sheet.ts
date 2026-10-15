@@ -42,28 +42,29 @@ export async function buildSessionSheet(db: NodePgDatabase, actor: Actor, sessio
 }
 
 export function renderSessionSheet(sheet: SessionSheet): string {
-  const out = [`# ${sheet.title}`, "", `Campaign: ${sheet.campaignName}`, `Planned date: ${sheet.plannedFor ?? "Not set"}`, ""];
+  const label = (value: string) => value.replace(/\s*\r?\n\s*/g, " ").trim();
+  const out = [`# ${label(sheet.title)}`, "", `Campaign: ${label(sheet.campaignName)}`, `Planned date: ${sheet.plannedFor ?? "Not set"}`, ""];
   const addText = (value: string | null) => out.push(value?.trim() || "No notes yet.", "");
   out.push("## Previous session", "");
   if (sheet.previous) {
-    out.push(`**${sheet.previous.title}**`, "");
+    out.push(`**${label(sheet.previous.title)}**`, "");
     addText(sheet.previous.outcome);
-    for (const scene of sheet.previous.scenes) out.push(`- ${scene.title}: ${scene.outcome?.trim() ?? ""}`);
+    for (const scene of sheet.previous.scenes) out.push(`- ${label(scene.title)}: ${scene.outcome?.trim() ?? ""}`);
     if (sheet.previous.scenes.length) out.push("");
   } else out.push("No previous session recorded.", "");
   out.push("## Attendance", "", sheet.attendance === null ? "Not recorded."
-    : sheet.attendance.length ? sheet.attendance.join(", ") : "None recorded.", "");
+    : sheet.attendance.length ? sheet.attendance.map(label).join(", ") : "None recorded.", "");
   out.push("## Session preparation", "");
   addText(sheet.preparation);
   const sessionEncounters = sheet.encounters.filter(encounter => !encounter.sceneId);
-  if (sessionEncounters.length) out.push("### Session encounters", "", ...sessionEncounters.map(encounter => `- ${encounter.title}`), "");
+  if (sessionEncounters.length) out.push("### Session encounters", "", ...sessionEncounters.map(encounter => `- ${label(encounter.title)}`), "");
   out.push("## Scenes", "");
   if (!sheet.scenes.length) out.push("No scenes planned.", "");
   for (const [index, scene] of sheet.scenes.entries()) {
-    out.push(`### ${index + 1}. ${scene.title}`, "");
+    out.push(`### ${index + 1}. ${label(scene.title)}`, "");
     addText(scene.preparation);
     const encounters = sheet.encounters.filter(encounter => encounter.sceneId === scene.id);
-    if (encounters.length) out.push("Encounters:", ...encounters.map(encounter => `- ${encounter.title}`), "");
+    if (encounters.length) out.push("Encounters:", ...encounters.map(encounter => `- ${label(encounter.title)}`), "");
   }
   return out.join("\n").trimEnd() + "\n";
 }
