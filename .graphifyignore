@@ -1,0 +1,7 @@
+# Agent tooling is not application architecture.
+/.agents/
+/.codex/
+/.impeccable/
+/graphify-out/
+/.next/
+/test-results/

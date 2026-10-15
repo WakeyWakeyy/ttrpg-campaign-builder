@@ -95,17 +95,17 @@ Do not implement later Campaign Wizard, Blueprint, AI, export, encounter, or map
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a local knowledge graph at `graphify-out/` for source discovery. The indexed corpus is limited by `.graphifyignore`; agent skills are excluded so they do not dominate application relationships.
 The shared operating guide is `docs/graphify-workflow.md`.
 
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
 Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- For codebase questions, first check graph freshness and coverage, then run a focused query when `graphify-out/graph.json` exists. On Windows use `./scripts/graphify.ps1 query "<question>"`; the installed `graphify.exe` may fail while `python -m graphify` works. Use `path` for relationships and `explain` for focused concepts. Verify important edges in source.
 - Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- After modifying code, run `./scripts/graphify.ps1 snapshot` on Windows (or `graphify update <absolute-repo-path>` where the CLI works). The wrapper also creates a code-only graph when no snapshot exists. A direct relative `.` has produced an incorrect doubled path on Windows. Check that the resulting graph records current files; a successful exit alone is insufficient.
 - Before relying on a result, check snapshot coverage and freshness, then verify the cited relationship in its source file. If the graph is missing, stale, or incomplete for the question, inspect the source directly and state the limitation.
 - For new entities or cross-module changes, use the relevant subgraph to inspect dependencies against the accepted architecture. Review whether new node and relationship patterns are represented after updating the snapshot; `graphify update .` alone does not change Graphify's extraction model. See `docs/graphify-workflow.md`.
 
