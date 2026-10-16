@@ -27,6 +27,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Choose preparation prompts:** turn each continuity or discovery prompt on or off for a Campaign without changing its records.
 - **Recall what happened:** read recorded Session and Scene outcomes together, with links back to each source record.
 - **Take campaign material with you:** download a readable Markdown reference or a versioned JSON snapshot of campaign records, including hidden and recoverable material.
+- **Read the campaign as a module:** download a detailed GM document with a chapter index, connected world material, hidden information, preparation, and recorded history.
 - **Scan the campaign at a glance:** download a short Markdown overview of the current compass, story threads, people, places, and sessions, with links to the source records.
 - **Take a session to the table:** download a focused Markdown sheet with preparation, attendance, previous outcomes, scenes, and planned encounters.
 

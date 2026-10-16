@@ -88,7 +88,11 @@ const available = (record: Record<string, unknown>, entities: Map<unknown, Recor
 };
 
 /** Human-readable GM reference. JSON carries the full portable snapshot. */
-export function renderCampaignMarkdown(snapshot: CampaignExport): string {
+export function renderCampaignMarkdown(snapshot: CampaignExport, options: {
+  sectionTables?: readonly string[];
+  includeIntroduction?: boolean;
+  headingOffset?: number;
+} = {}): string {
   const rows = snapshot.records;
   const entities = new Map((rows.campaign_entity ?? []).map(row => [row.id, row]));
   const entityNames = new Map<unknown, string>();
@@ -104,11 +108,13 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
       if (compass[key]) out.push(`**${label}:** ${line(compass[key])}`, "");
     }
   }
+  if (options.includeIntroduction === false) out.length = 0;
   const visibleName = (id: unknown) => {
     const entity = entities.get(id);
     return entity && !entity.deleted_at && !entity.archived_at ? entityNames.get(id) : undefined;
   };
   for (const [heading, table] of sections) {
+    if (options.sectionTables && !options.sectionTables.includes(table)) continue;
     const entries = (rows[table] ?? []).filter(row => table === "reward_grant" || available(row, entities));
     if (!entries.length) continue;
     if (table === "timeline_event" || table === "session") {
@@ -116,14 +122,14 @@ export function renderCampaignMarkdown(snapshot: CampaignExport): string {
       entries.sort((a, b) => compareTime(a[dateField], b[dateField])
         || compareTime(entities.get(a.id)?.created_at, entities.get(b.id)?.created_at));
     }
-    out.push(`## ${heading}`, "");
+    out.push(`${"#".repeat(2 + (options.headingOffset ?? 0))} ${heading}`, "");
     for (const entry of entries) {
       const title = table === "semantic_relationship"
         ? `${entityNames.get(entry.source_entity_id) ?? "Unknown"} — ${line(entry.kind)} → ${entityNames.get(entry.target_entity_id) ?? "Unknown"}`
         : table === "travel_route"
           ? `${line(entry.name)}: ${entityNames.get(entry.from_location_id) ?? "Unknown"} → ${entityNames.get(entry.to_location_id) ?? "Unknown"}`
         : line(entry.name ?? entry.title ?? entry.reward_title ?? entry.kind);
-      out.push(`### ${title}`, "");
+      out.push(`${"#".repeat(3 + (options.headingOffset ?? 0))} ${title}`, "");
       for (const key of detailFields) {
         const value = entry[key];
         if (value === null || value === undefined || value === "") continue;

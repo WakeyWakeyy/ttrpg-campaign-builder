@@ -101,7 +101,7 @@ Turn structured data into practical GM outputs:
 - Markdown / JSON portability: a GM can download a readable Markdown reference of available campaign material and a versioned JSON snapshot with campaign-owned records, relationships, history, and recoverable material. Import remains a later step;
 - session sheets: each Session offers a private Markdown download with its current preparation, attendance, previous outcomes, ordered available Scenes, and available Encounter placements;
 - campaign overview (complete): a short Markdown reading sheet draws on accepted, available campaign records and links back to their sources;
-- detailed module-style output;
+- detailed module-style output (complete): a private Markdown module groups the full available reference into indexed chapters for story, people, places, hidden information, sessions/history, and encounters/rewards. Preparation and recorded outcomes remain distinct; see [module scope](campaign-module.md);
 - quick-reference sheets;
 - PDF once the editorial/export model is stable.
 
