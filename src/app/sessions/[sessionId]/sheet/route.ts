@@ -4,15 +4,18 @@ import { buildSessionSheet, renderSessionSheet } from "@/modules/export/session-
 import { UnauthenticatedError } from "@/modules/identity";
 import { SessionNotFoundError } from "@/modules/sessions";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ sessionId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
+  const format = new URL(request.url).searchParams.get("format") ?? "md";
+  if (format !== "md" && format !== "pdf") return new Response("Not found", { status: 404 });
   try {
     const db = getDatabase();
     const actor = await requireActor(db);
     const sheet = await buildSessionSheet(db, actor, sessionId);
-    return new Response(renderSessionSheet(sheet), { headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-      "Content-Disposition": `attachment; filename="session-${sessionId}.md"`,
+    const content = format === "pdf" ? await (await import("@/modules/export/session-sheet-pdf")).renderSessionSheetPdf(sheet) : renderSessionSheet(sheet);
+    return new Response(content, { headers: {
+      "Content-Type": format === "pdf" ? "application/pdf" : "text/markdown; charset=utf-8",
+      "Content-Disposition": `attachment; filename="session-${sessionId}.${format}"`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     } });

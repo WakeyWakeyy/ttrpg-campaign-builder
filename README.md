@@ -31,7 +31,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Print the campaign module:** download a private PDF with the same available material, a linked chapter index, embedded fonts, and page numbers.
 - **Scan the campaign at a glance:** download a short Markdown overview of the current compass, story threads, people, places, and sessions, with links to the source records.
 - **Keep a quick reference at hand:** download Markdown sheets of available people, groups, places, travel routes, and important items, with current states, travel details, holders, and links back to their records.
-- **Take a session to the table:** download a focused Markdown sheet with preparation, attendance, previous outcomes, scenes, and planned encounters.
+- **Take a session to the table:** download a focused Markdown or printable PDF sheet with preparation, attendance, previous outcomes, scenes, and planned encounters.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
 

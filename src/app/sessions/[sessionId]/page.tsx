@@ -29,6 +29,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
     <p><Link href={`/sessions/${item.id}/run`}>Open Run View</Link></p>
     <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
     <p><a href={`/sessions/${item.id}/sheet`}>Download session sheet (Markdown)</a></p>
+    <p><a href={`/sessions/${item.id}/sheet?format=pdf`}>Download session sheet (PDF)</a></p>
     <p>The sheet may contain GM-only plans. Keep it private.</p>
     {!item.deletedAt && <ActionForm action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
       <input type="hidden" name="expectedRevision" value={item.revision} />
