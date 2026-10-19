@@ -1,5 +1,7 @@
 # Campaign PDF module
 
+The current deterministic PDF renderer is a temporary delivery solution. A future version may produce the editorial output through an AI API. That direction is not implemented or a provider commitment: authorized source collection, GM review of generated content, and the separation between preparation and recorded outcomes must remain explicit. The current downloads require no AI service.
+
 The Campaign workspace offers a private PDF download at `export/pdf`. It uses the same owner-authorized, repeatable-read snapshot and chapter model as the [Markdown module](campaign-module.md). Snapshot collection finishes before rendering begins. The export performs no writes and adds no persistence or dependencies to Campaign Core.
 
 The A4 document contains the compass, an index with page links, chapter bookmarks, page numbers, and the detailed available reference. Preparation and outcomes keep separate labels. Archived and trashed entities are omitted; recorded Encounter Runs and Reward Grants retain their historical snapshots. This is a GM document containing Secrets and outcomes, with a warning on the first page and a GM-only footer on every page. Authentication and missing/foreign Campaign responses match the other downloads. Responses are attachments with `private, no-store` and `nosniff` headers.
@@ -8,4 +10,4 @@ The renderer uses server-side pdfmake with its packaged Roboto fonts. Next.js ke
 
 Validation covers the shared filtering and chapter model, separate preparation and outcomes, literal resource-looking text and Markdown-looking notes kept out of navigation, empty Campaigns, embedded fonts, real multipage generation, private response headers, and authentication/owner isolation. Local visual review includes accented names, Greek and Cyrillic, the index, long records, continuation pages, and final chapters. The shared PostgreSQL export integration tests cover authorized, consistent snapshot collection.
 
-This first PDF layout is the full campaign module. Focused Session/quick-reference PDF layouts, custom typography, player-safe publishing, and import are later work.
+The full campaign module and focused [Session sheets](session-sheet-pdf.md) are available as PDF layouts. Quick-reference PDF layouts, custom typography, player-safe publishing, and import are later work.

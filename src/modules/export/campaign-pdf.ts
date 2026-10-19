@@ -1,17 +1,7 @@
-import pdfmake from "pdfmake";
-import type { Content, TDocumentDefinitions, TFontDictionary } from "pdfmake/interfaces";
-import { createRequire } from "node:module";
+import type { Content, TDocumentDefinitions } from "pdfmake/interfaces";
 import type { CampaignExport, CampaignReferenceBlock } from "./index";
 import { buildCampaignModule } from "./campaign-module";
-
-// The package supplies and licenses its fonts. Resolve them in Node so production
-// uses the same files as tests, without a browser, network access or host fonts.
-const require = createRequire(import.meta.url);
-const fonts = require("pdfmake/fonts/Roboto") as TFontDictionary;
-const fontPaths = new Set(Object.values(fonts.Roboto));
-pdfmake.addFonts(fonts);
-pdfmake.setUrlAccessPolicy(() => false);
-pdfmake.setLocalAccessPolicy(path => fontPaths.has(path));
+import { renderPdfDocument } from "./pdf";
 
 /** Only typed editorial headings become navigation; authored text stays literal. */
 function referenceContent(blocks: CampaignReferenceBlock[]): Content[] {
@@ -57,6 +47,5 @@ export function buildCampaignPdfDocument(snapshot: CampaignExport): TDocumentDef
 
 /** The caller must supply the owner-authorized, consistent export snapshot. */
 export async function renderCampaignPdf(snapshot: CampaignExport): Promise<Uint8Array<ArrayBuffer>> {
-  const buffer = await pdfmake.createPdf(buildCampaignPdfDocument(snapshot)).getBuffer();
-  return new Uint8Array(buffer);
+  return renderPdfDocument(buildCampaignPdfDocument(snapshot));
 }

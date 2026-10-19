@@ -98,16 +98,20 @@ Add contextual assistance after enough structured campaign state exists:
 
 Turn structured data into practical GM outputs:
 
-**Completed stage:** Markdown and JSON portability, session sheets, a campaign overview, a detailed module, quick-reference sheets, and a printable PDF campaign module are available. PDF starts with the full GM module; other PDF layouts and player-safe publishing remain possible later work.
+**Completed stage:** Markdown and JSON portability, session sheets, a campaign overview, a detailed module, quick-reference sheets, and printable PDF campaign modules and session sheets are available. Quick-reference PDF layouts and player-safe publishing remain possible later work.
+
+The current PDF rendering is temporary. A future iteration will likely source editorial output through an AI API; provider selection and that workflow remain unimplemented. Any replacement must keep authorized source collection and GM control over generated content.
 
 - Markdown / JSON portability: a GM can download a readable Markdown reference of available campaign material and a versioned JSON snapshot with campaign-owned records, relationships, history, and recoverable material. Import remains a later step;
-- session sheets: each Session offers a private Markdown download with its current preparation, attendance, previous outcomes, ordered available Scenes, and available Encounter placements;
+- session sheets (complete): each Session offers private Markdown and printable PDF downloads with its current preparation, attendance, previous outcomes, ordered available Scenes, and available Encounter placements. The PDF uses embedded fonts and page numbers, preserves GM notes as literal text, and shares the authorized snapshot with Markdown; see [session PDF scope](session-sheet-pdf.md);
 - campaign overview (complete): a short Markdown reading sheet draws on accepted, available campaign records and links back to their sources;
 - detailed module-style output (complete): a private Markdown module groups the full available reference into indexed chapters for story, people, places, hidden information, sessions/history, and encounters/rewards. Preparation and recorded outcomes remain distinct; see [module scope](campaign-module.md);
 - quick-reference sheets (complete): a private Markdown download provides compact people, groups, places, travel routes, and item references with current states, party members, travel details, and holders. Only available records and available linked names appear; see [quick-reference scope](campaign-quick-reference.md);
 - PDF campaign module (complete): a private A4 download reuses the detailed module's editorial model and authorized snapshot, with a linked chapter index, bookmarks, embedded fonts, and page numbers. It keeps preparation and outcomes separate and includes only available material plus recorded history; see [PDF scope](campaign-pdf.md).
 
 ## Later, only after the core workflow proves useful
+
+The seven core stages above are complete. The latest follow-up adds printable Session sheets within Export. There is no automatically selected next stage: further work should validate a concrete GM need from the options below or another focused improvement to the existing workflow.
 
 Potential later work includes:
 
