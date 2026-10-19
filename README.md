@@ -29,6 +29,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Take campaign material with you:** download a readable Markdown reference or a versioned JSON snapshot of campaign records, including hidden and recoverable material.
 - **Read the campaign as a module:** download a detailed GM document with a chapter index, connected world material, hidden information, preparation, and recorded history.
 - **Scan the campaign at a glance:** download a short Markdown overview of the current compass, story threads, people, places, and sessions, with links to the source records.
+- **Keep a quick reference at hand:** download Markdown sheets of available people, groups, places, travel routes, and important items, with current states, travel details, holders, and links back to their records.
 - **Take a session to the table:** download a focused Markdown sheet with preparation, attendance, previous outcomes, scenes, and planned encounters.
 
 These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
@@ -45,7 +46,7 @@ The detailed implementation history is in the [roadmap](docs/roadmap.md).
 
 ## Estimated project status
 
-**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, configurable continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets with recorded knowledge states are implemented.** Clues can link to Secrets without assigning knowledge automatically. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and export remain on the roadmap.
+**Active development — campaign creation, the connected campaign core, session preparation, rules reference, Encounters, Reward Grants, configurable continuity prompts, a thread review, a source-linked outcome summary, and GM-authored Secrets with recorded knowledge states are implemented.** Clues can link to Secrets without assigning knowledge automatically. This is an estimate of product maturity, not a release percentage or delivery date. Broader contextual assistance and PDF output remain on the roadmap.
 
 The project is not yet a complete tool for running a campaign end to end. It is also not intended to become a virtual tabletop, full character builder, marketplace, or multiplayer platform in its initial scope.
 
