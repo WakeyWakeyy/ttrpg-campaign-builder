@@ -492,7 +492,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <section id="export" aria-labelledby="export-heading" className="workspace-section">
           <h2 id="export-heading">Export campaign</h2>
           <p>Download a readable GM reference or a full JSON snapshot. The JSON includes archived and trashed records, connections, and hidden information. Keep these files private.</p>
-          <p><a href={`/campaigns/${campaignId}/export/quick-reference`}>Download quick-reference sheets</a> · <a href={`/campaigns/${campaignId}/export/module`}>Download campaign module</a> · <a href={`/campaigns/${campaignId}/export/overview`}>Download campaign overview</a> · <a href={`/campaigns/${campaignId}/export/md`}>Download Markdown</a> · <a href={`/campaigns/${campaignId}/export/json`}>Download JSON</a></p>
+          <p><a href={`/campaigns/${campaignId}/export/pdf`}>Download campaign PDF</a> · <a href={`/campaigns/${campaignId}/export/quick-reference`}>Download quick-reference sheets</a> · <a href={`/campaigns/${campaignId}/export/module`}>Download campaign module</a> · <a href={`/campaigns/${campaignId}/export/overview`}>Download campaign overview</a> · <a href={`/campaigns/${campaignId}/export/md`}>Download Markdown</a> · <a href={`/campaigns/${campaignId}/export/json`}>Download JSON</a></p>
         </section>
       </div>
     </div>

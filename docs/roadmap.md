@@ -98,12 +98,14 @@ Add contextual assistance after enough structured campaign state exists:
 
 Turn structured data into practical GM outputs:
 
+**Completed stage:** Markdown and JSON portability, session sheets, a campaign overview, a detailed module, quick-reference sheets, and a printable PDF campaign module are available. PDF starts with the full GM module; other PDF layouts and player-safe publishing remain possible later work.
+
 - Markdown / JSON portability: a GM can download a readable Markdown reference of available campaign material and a versioned JSON snapshot with campaign-owned records, relationships, history, and recoverable material. Import remains a later step;
 - session sheets: each Session offers a private Markdown download with its current preparation, attendance, previous outcomes, ordered available Scenes, and available Encounter placements;
 - campaign overview (complete): a short Markdown reading sheet draws on accepted, available campaign records and links back to their sources;
 - detailed module-style output (complete): a private Markdown module groups the full available reference into indexed chapters for story, people, places, hidden information, sessions/history, and encounters/rewards. Preparation and recorded outcomes remain distinct; see [module scope](campaign-module.md);
 - quick-reference sheets (complete): a private Markdown download provides compact people, groups, places, travel routes, and item references with current states, party members, travel details, and holders. Only available records and available linked names appear; see [quick-reference scope](campaign-quick-reference.md);
-- PDF once the editorial/export model is stable.
+- PDF campaign module (complete): a private A4 download reuses the detailed module's editorial model and authorized snapshot, with a linked chapter index, bookmarks, embedded fonts, and page numbers. It keeps preparation and outcomes separate and includes only available material plus recorded history; see [PDF scope](campaign-pdf.md).
 
 ## Later, only after the core workflow proves useful
 

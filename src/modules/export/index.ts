@@ -87,12 +87,17 @@ const available = (record: Record<string, unknown>, entities: Map<unknown, Recor
   return entity && !entity.deleted_at && !entity.archived_at;
 };
 
-/** Human-readable GM reference. JSON carries the full portable snapshot. */
-export function renderCampaignMarkdown(snapshot: CampaignExport, options: {
+export type CampaignReferenceBlock =
+  | { kind: "heading"; level: number; text: string }
+  | { kind: "field"; label: string; text: string }
+  | { kind: "text"; text: string };
+
+/** Preserve the distinction between generated structure and GM-authored text. */
+export function buildCampaignReference(snapshot: CampaignExport, options: {
   sectionTables?: readonly string[];
   includeIntroduction?: boolean;
   headingOffset?: number;
-} = {}): string {
+} = {}) {
   const rows = snapshot.records;
   const entities = new Map((rows.campaign_entity ?? []).map(row => [row.id, row]));
   const entityNames = new Map<unknown, string>();
@@ -100,20 +105,37 @@ export function renderCampaignMarkdown(snapshot: CampaignExport, options: {
     for (const row of rows[table] ?? []) entityNames.set(row.id, line(row.name ?? row.title ?? row.kind));
   }
   const compass = rows.campaign_compass?.[0];
-  const out = [`# ${line(snapshot.campaign.name)}`, "", line(snapshot.campaign.description), "",
-    `**Ruleset:** ${snapshot.ruleset.name} (${snapshot.ruleset.key} ${snapshot.ruleset.version})`, "", "## Campaign compass", ""];
+  const out: string[] = [];
+  const blocks: CampaignReferenceBlock[] = [];
+  const text = (...lines: string[]) => {
+    out.push(...lines);
+    for (const value of lines) if (value) blocks.push({ kind: "text", text: value });
+  };
+  const heading = (level: number, value: string) => {
+    out.push(`${"#".repeat(level)} ${value}`, "");
+    blocks.push({ kind: "heading", level, text: value });
+  };
+  const field = (name: string, value: string, markdown = `**${name}:** ${value}`, paragraphBreak = true) => {
+    out.push(markdown);
+    if (paragraphBreak) out.push("");
+    blocks.push({ kind: "field", label: name, text: value });
+  };
+  heading(1, line(snapshot.campaign.name));
+  text(line(snapshot.campaign.description), "");
+  field("Ruleset", `${snapshot.ruleset.name} (${snapshot.ruleset.key} ${snapshot.ruleset.version})`);
+  heading(2, "Campaign compass");
   if (compass) {
     for (const [label, key] of [["Original premise", "original_premise"], ["Current premise", "current_premise"],
       ["Setting", "setting"], ["Tone", "tone"], ["Original notes", "original_notes"]] as const) {
-      if (compass[key]) out.push(`**${label}:** ${line(compass[key])}`, "");
+      if (compass[key]) field(label, line(compass[key]));
     }
   }
-  if (options.includeIntroduction === false) out.length = 0;
+  if (options.includeIntroduction === false) { out.length = 0; blocks.length = 0; }
   const visibleName = (id: unknown) => {
     const entity = entities.get(id);
     return entity && !entity.deleted_at && !entity.archived_at ? entityNames.get(id) : undefined;
   };
-  for (const [heading, table] of sections) {
+  for (const [sectionHeading, table] of sections) {
     if (options.sectionTables && !options.sectionTables.includes(table)) continue;
     const entries = (rows[table] ?? []).filter(row => table === "reward_grant" || available(row, entities));
     if (!entries.length) continue;
@@ -122,100 +144,109 @@ export function renderCampaignMarkdown(snapshot: CampaignExport, options: {
       entries.sort((a, b) => compareTime(a[dateField], b[dateField])
         || compareTime(entities.get(a.id)?.created_at, entities.get(b.id)?.created_at));
     }
-    out.push(`${"#".repeat(2 + (options.headingOffset ?? 0))} ${heading}`, "");
+    heading(2 + (options.headingOffset ?? 0), sectionHeading);
     for (const entry of entries) {
       const title = table === "semantic_relationship"
         ? `${entityNames.get(entry.source_entity_id) ?? "Unknown"} — ${line(entry.kind)} → ${entityNames.get(entry.target_entity_id) ?? "Unknown"}`
         : table === "travel_route"
           ? `${line(entry.name)}: ${entityNames.get(entry.from_location_id) ?? "Unknown"} → ${entityNames.get(entry.to_location_id) ?? "Unknown"}`
         : line(entry.name ?? entry.title ?? entry.reward_title ?? entry.kind);
-      out.push(`${"#".repeat(3 + (options.headingOffset ?? 0))} ${title}`, "");
+      heading(3 + (options.headingOffset ?? 0), title);
       for (const key of detailFields) {
         const value = entry[key];
         if (value === null || value === undefined || value === "") continue;
         const display = key.endsWith("_id") ? entityNames.get(value) ?? String(value) : line(value) || String(value).trim();
-        out.push(`**${label(key)}:** ${display}`, "");
+        field(label(key), display);
       }
       if (table === "arc") {
         for (const link of (rows.arc_quest ?? []).filter(row => row.arc_id === entry.id)) {
           const name = visibleName(link.quest_id);
-          if (name) out.push(`- Quest: ${name}`);
+          if (name) text(`- Quest: ${name}`);
         }
-        out.push("");
+        text("");
       }
       if (table === "party") {
         for (const member of (rows.party_member ?? []).filter(row => row.party_id === entry.id)) {
           const name = visibleName(member.player_character_id);
-          if (name) out.push(`- Member: ${name}`);
+          if (name) text(`- Member: ${name}`);
         }
-        out.push("");
+        text("");
       }
       if (table === "faction") {
         for (const member of (rows.faction_membership ?? []).filter(row => row.faction_id === entry.id)) {
           const name = visibleName(member.npc_id ?? member.player_character_id);
-          if (name) out.push(`- Member: ${name}${member.role ? ` — ${line(member.role)}` : ""}${member.rank ? ` (${line(member.rank)})` : ""} [${line(member.status)}]`);
+          if (name) text(`- Member: ${name}${member.role ? ` — ${line(member.role)}` : ""}${member.rank ? ` (${line(member.rank)})` : ""} [${line(member.status)}]`);
         }
-        out.push("");
+        text("");
       }
       if (table === "session") {
         if (entry.attendance_set) {
           const attendees = (rows.session_attendance ?? []).filter(row => row.session_id === entry.id)
             .map(row => visibleName(row.player_character_id)).filter((name): name is string => Boolean(name));
-          out.push(`**Attendance:** ${attendees.length ? attendees.join(", ") : "None recorded"}`, "");
+          field("Attendance", attendees.length ? attendees.join(", ") : "None recorded");
         }
         for (const scene of (rows.scene ?? []).filter(row => row.session_id === entry.id && !row.deleted_at)
           .sort((a, b) => Number(a.position) - Number(b.position))) {
-          out.push(`- **Scene: ${line(scene.title)}**`, "");
-          if (scene.preparation) out.push(String(scene.preparation).trim(), "");
-          if (scene.outcome) out.push(`Outcome: ${String(scene.outcome).trim()}`, "");
+          field("Scene", line(scene.title), `- **Scene: ${line(scene.title)}**`);
+          if (scene.preparation) text(String(scene.preparation).trim(), "");
+          if (scene.outcome) text(`Outcome: ${String(scene.outcome).trim()}`, "");
         }
         for (const placement of (rows.encounter_placement ?? []).filter(row => row.session_id === entry.id
           && entities.get(row.encounter_id) && !entities.get(row.encounter_id)?.deleted_at
           && !entities.get(row.encounter_id)?.archived_at
           && (!row.scene_id || (rows.scene ?? []).some(scene => scene.id === row.scene_id && !scene.deleted_at)))) {
           const scene = (rows.scene ?? []).find(row => row.id === placement.scene_id && !row.deleted_at);
-          out.push(`- Planned encounter: ${entityNames.get(placement.encounter_id) ?? "Unknown"}${scene ? ` in ${line(scene.title)}` : ""}`);
+          text(`- Planned encounter: ${entityNames.get(placement.encounter_id) ?? "Unknown"}${scene ? ` in ${line(scene.title)}` : ""}`);
         }
         for (const run of (rows.encounter_run ?? []).filter(row => row.session_id === entry.id)
           .sort((a, b) => compareTime(a.occurred_at, b.occurred_at))) {
-          out.push(`- Encounter run: ${line(run.title)} (${line(run.occurred_at)})`, "");
-          out.push(`  Outcome: ${line(run.outcome)}`);
+          text(`- Encounter run: ${line(run.title)} (${line(run.occurred_at)})`, "");
+          text(`  Outcome: ${line(run.outcome)}`);
           for (const creature of (rows.encounter_run_creature ?? []).filter(row => row.run_id === run.id)) {
-            out.push(`  - ${creature.quantity} × ${line(creature.name)} (${creature.xp} XP each)`);
+            text(`  - ${creature.quantity} × ${line(creature.name)} (${creature.xp} XP each)`);
           }
-          out.push("");
+          text("");
         }
       }
       if (table === "reward") {
         for (const component of (rows.reward_component ?? []).filter(row => row.reward_id === entry.id && !row.deleted_at)) {
-          out.push(`- **${line(component.kind)}:** ${line(component.description)}`);
+          field(line(component.kind), line(component.description), `- **${line(component.kind)}:** ${line(component.description)}`, false);
         }
-        if ((rows.reward_component ?? []).some(row => row.reward_id === entry.id && !row.deleted_at)) out.push("");
+        if ((rows.reward_component ?? []).some(row => row.reward_id === entry.id && !row.deleted_at)) text("");
       }
       if (table === "reward_grant") {
         for (const component of (rows.reward_grant_component ?? []).filter(row => row.grant_id === entry.id)) {
-          out.push(`- **${line(component.kind)}:** ${line(component.description)}`);
+          field(line(component.kind), line(component.description), `- **${line(component.kind)}:** ${line(component.description)}`, false);
         }
-        out.push("");
+        text("");
       }
       if (table === "encounter") {
-        out.push(...renderRulesetEncounterMarkdown(rows, entry.id));
+        for (const value of renderRulesetEncounterMarkdown(rows, entry.id)) {
+          if (value.startsWith("**Party:** ")) {
+            field("Party", value.slice("**Party:** ".length), value, false);
+          } else text(value);
+        }
       }
       if (table === "timeline_event") {
         for (const link of (rows.timeline_event_link ?? []).filter(row => row.event_id === entry.id)) {
-          out.push(`- Related: ${line(link.target_type_snapshot)} — ${line(link.target_name_snapshot)}`);
+          text(`- Related: ${line(link.target_type_snapshot)} — ${line(link.target_name_snapshot)}`);
         }
-        out.push("");
+        text("");
       }
       if (table === "secret") {
         for (const knowledge of (rows.secret_knowledge ?? []).filter(row => row.secret_id === entry.id
           && entities.get(row.holder_id) && !entities.get(row.holder_id)?.deleted_at
           && !entities.get(row.holder_id)?.archived_at)) {
-          out.push(`- ${entityNames.get(knowledge.holder_id) ?? "Unknown"}: ${line(knowledge.state)}${knowledge.notes ? ` — ${line(knowledge.notes)}` : ""}`);
+          text(`- ${entityNames.get(knowledge.holder_id) ?? "Unknown"}: ${line(knowledge.state)}${knowledge.notes ? ` — ${line(knowledge.notes)}` : ""}`);
         }
-        out.push("");
+        text("");
       }
     }
   }
-  return out.join("\n").trimEnd() + "\n";
+  return { markdown: out.join("\n").trimEnd() + "\n", blocks };
+}
+
+/** Human-readable GM reference. JSON carries the full portable snapshot. */
+export function renderCampaignMarkdown(snapshot: CampaignExport, options: Parameters<typeof buildCampaignReference>[1] = {}): string {
+  return buildCampaignReference(snapshot, options).markdown;
 }
