@@ -4,6 +4,7 @@ const nextConfig = {
   serverExternalPackages: ["pdfmake"],
   outputFileTracingIncludes: {
     "/campaigns/*/export/*": ["./node_modules/pdfmake/fonts/Roboto/*.ttf"],
+    "/sessions/*/sheet": ["./node_modules/pdfmake/fonts/Roboto/*.ttf"],
   },
 };
 
