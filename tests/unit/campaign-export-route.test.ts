@@ -10,14 +10,14 @@ vi.mock("@/modules/export", async importOriginal => ({
 }));
 import { GET } from "../../src/app/campaigns/[campaignId]/export/[format]/route";
 
-const request = () => GET(new Request("https://campaign.example/campaigns/coast/export/quick-reference"), {
-  params: Promise.resolve({ campaignId: "coast", format: "quick-reference" }),
+const request = (format = "quick-reference") => GET(new Request(`https://campaign.example/campaigns/coast/export/${format}`), {
+  params: Promise.resolve({ campaignId: "coast", format }),
 });
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.actor.mockResolvedValue({ userId: "owner" });
-  mocks.snapshot.mockResolvedValue({ campaign: { id: "coast", name: "Coast" }, records: {} });
+  mocks.snapshot.mockResolvedValue({ campaign: { id: "coast", name: "Coast" }, ruleset: { name: "Rules", key: "srd", version: "1" }, records: {} });
 });
 
 test("quick-reference download uses the authorized snapshot and private attachment headers", async () => {
@@ -31,15 +31,32 @@ test("quick-reference download uses the authorized snapshot and private attachme
   expect(await response.text()).toContain("# Coast — Quick reference");
 });
 
-test("unauthenticated downloads cannot collect campaign records", async () => {
+test.each(["quick-reference", "pdf"])("unauthenticated %s downloads cannot collect campaign records", async format => {
   mocks.actor.mockRejectedValue(new UnauthenticatedError());
-  expect((await request()).status).toBe(401);
+  expect((await request(format)).status).toBe(401);
   expect(mocks.snapshot).not.toHaveBeenCalled();
 });
 
-test("downloads do not reveal another owner's campaign", async () => {
+test.each(["quick-reference", "pdf"])("%s downloads do not reveal another owner's campaign", async format => {
   mocks.snapshot.mockRejectedValue(new CampaignNotFoundError());
-  const response = await request();
+  const response = await request(format);
   expect(response.status).toBe(404);
   expect(await response.text()).toBe("Not found");
+});
+
+test("PDF download returns a real private attachment from the authorized snapshot", async () => {
+  const response = await request("pdf");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type")).toBe("application/pdf");
+  expect(response.headers.get("content-disposition")).toBe('attachment; filename="campaign-coast.pdf"');
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+  expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(mocks.snapshot).toHaveBeenCalledWith({}, { userId: "owner" }, "coast");
+  expect(Buffer.from(await response.arrayBuffer()).subarray(0, 5).toString()).toBe("%PDF-");
+});
+
+test("unknown formats do not authenticate or collect records", async () => {
+  expect((await request("html")).status).toBe(404);
+  expect(mocks.actor).not.toHaveBeenCalled();
+  expect(mocks.snapshot).not.toHaveBeenCalled();
 });

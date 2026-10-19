@@ -27,7 +27,7 @@ The default question is not “what architecture could this eventually need?” 
 - **Database integration:** real PostgreSQL
 - **Browser E2E:** Playwright
 
-Hosting, object storage, background-job infrastructure, observability vendor, LLM provider mix, and PDF renderer remain implementation choices to make when their requirements become concrete.
+Hosting, object storage, background-job infrastructure, observability vendor, and LLM provider mix remain implementation choices to make when their requirements become concrete. The Export module renders its first PDF layout with server-side pdfmake and its bundled Roboto fonts, over the same authorized snapshot and editorial model as the Markdown module. Rendering runs after snapshot collection and introduces no dependency from Campaign Core to Export. It needs no browser process, external assets, storage service, or background job; see [PDF scope](campaign-pdf.md).
 
 ## Deployment shape
 

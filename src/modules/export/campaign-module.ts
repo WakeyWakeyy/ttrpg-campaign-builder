@@ -9,12 +9,18 @@ const chapters = [
   { title: "Encounters and rewards", anchor: "encounters-and-rewards", tables: ["encounter", "reward", "reward_grant"] },
 ] as const;
 
-/** An editorial GM document; the shared reference renderer owns record detail and lifecycle filtering. */
-export function renderCampaignModule(snapshot: CampaignExport): string {
+/** Shared editorial model for Markdown and PDF; reference rendering owns filtering and detail. */
+export function buildCampaignModule(snapshot: CampaignExport) {
   const contents = chapters.map(chapter => ({ ...chapter, content: renderCampaignMarkdown(snapshot, {
     sectionTables: chapter.tables, includeIntroduction: false, headingOffset: 1,
   }).trim() })).filter(chapter => chapter.content);
   const introduction = renderCampaignMarkdown(snapshot, { sectionTables: [] }).trim();
+  return { introduction, chapters: contents };
+}
+
+/** An editorial GM document; the shared reference renderer owns record detail and lifecycle filtering. */
+export function renderCampaignModule(snapshot: CampaignExport): string {
+  const { introduction, chapters: contents } = buildCampaignModule(snapshot);
   const out = [introduction, "", "**GM only:** This module includes hidden information and recorded outcomes. Keep it private.", "",
     "## Contents", "", "- [Campaign compass](#campaign-compass)",
     ...contents.map(chapter => `- [${chapter.title}](#${chapter.anchor})`), ""];
