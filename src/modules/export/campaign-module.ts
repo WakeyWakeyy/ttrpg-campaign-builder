@@ -1,4 +1,4 @@
-import { renderCampaignMarkdown, type CampaignExport } from "./index";
+import { buildCampaignReference, type CampaignExport } from "./index";
 
 const chapters = [
   { title: "Story and threads", anchor: "story-and-threads", tables: ["arc", "quest"] },
@@ -11,20 +11,20 @@ const chapters = [
 
 /** Shared editorial model for Markdown and PDF; reference rendering owns filtering and detail. */
 export function buildCampaignModule(snapshot: CampaignExport) {
-  const contents = chapters.map(chapter => ({ ...chapter, content: renderCampaignMarkdown(snapshot, {
+  const contents = chapters.map(chapter => ({ ...chapter, reference: buildCampaignReference(snapshot, {
     sectionTables: chapter.tables, includeIntroduction: false, headingOffset: 1,
-  }).trim() })).filter(chapter => chapter.content);
-  const introduction = renderCampaignMarkdown(snapshot, { sectionTables: [] }).trim();
+  }) })).filter(chapter => chapter.reference.blocks.length);
+  const introduction = buildCampaignReference(snapshot, { sectionTables: [] });
   return { introduction, chapters: contents };
 }
 
 /** An editorial GM document; the shared reference renderer owns record detail and lifecycle filtering. */
 export function renderCampaignModule(snapshot: CampaignExport): string {
   const { introduction, chapters: contents } = buildCampaignModule(snapshot);
-  const out = [introduction, "", "**GM only:** This module includes hidden information and recorded outcomes. Keep it private.", "",
+  const out = [introduction.markdown.trim(), "", "**GM only:** This module includes hidden information and recorded outcomes. Keep it private.", "",
     "## Contents", "", "- [Campaign compass](#campaign-compass)",
     ...contents.map(chapter => `- [${chapter.title}](#${chapter.anchor})`), ""];
-  for (const chapter of contents) out.push(`## ${chapter.title}`, "", chapter.content, "");
+  for (const chapter of contents) out.push(`## ${chapter.title}`, "", chapter.reference.markdown.trim(), "");
   if (!contents.length) out.push("No available campaign material has been recorded yet.", "");
   return out.join("\n");
 }

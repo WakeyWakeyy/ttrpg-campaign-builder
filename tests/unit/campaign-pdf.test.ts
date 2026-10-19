@@ -49,6 +49,20 @@ test("an empty campaign remains a readable document", async () => {
   expect(pdf).toContain("/FontFile2"); // Embedded fonts, independent of the reader's machine.
 });
 
+test("GM Markdown-looking paragraphs remain literal and never become PDF navigation", async () => {
+  const authored = structuredClone(snapshot);
+  authored.campaign.description = "## Ambush";
+  authored.records.scene[0].preparation = "## Secret entrance\n\n**Outcome:** This is still preparation.\n\n- **Scene: a literal note**";
+  const definition = buildCampaignPdfDocument(authored);
+  const content = definition.content as Array<{ text?: unknown; headlineLevel?: number; tocItem?: boolean; outline?: boolean }>;
+  expect(content).toContainEqual({ text: "## Ambush", margin: [0, 0, 0, 7] });
+  expect(content).toContainEqual({ text: authored.records.scene[0].preparation, margin: [0, 0, 0, 7] });
+  const navigation = content.filter(node => node.tocItem || node.outline);
+  expect(navigation.map(node => node.text)).toEqual(["Campaign compass", "Secrets and discovery", "Sessions and history", "Encounters and rewards"]);
+  expect(content.filter(node => node.headlineLevel).some(node => String(node.text).includes("Ambush"))).toBe(false);
+  expect(Buffer.from(await renderCampaignPdf(authored)).subarray(0, 5).toString()).toBe("%PDF-");
+});
+
 test("long records paginate in a real PDF and preserve a final complete document", async () => {
   const long = structuredClone(snapshot);
   long.records.secret[0].content = "El dragón conserva la memoria del puerto. ".repeat(1500);

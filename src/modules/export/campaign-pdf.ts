@@ -1,7 +1,7 @@
 import pdfmake from "pdfmake";
 import type { Content, TDocumentDefinitions, TFontDictionary } from "pdfmake/interfaces";
 import { createRequire } from "node:module";
-import type { CampaignExport } from "./index";
+import type { CampaignExport, CampaignReferenceBlock } from "./index";
 import { buildCampaignModule } from "./campaign-module";
 
 // The package supplies and licenses its fonts. Resolve them in Node so production
@@ -13,29 +13,17 @@ pdfmake.addFonts(fonts);
 pdfmake.setUrlAccessPolicy(() => false);
 pdfmake.setLocalAccessPolicy(path => fontPaths.has(path));
 
-/** Render only the reference's text conventions. GM text is never HTML or a resource URL. */
-function referenceContent(markdown: string): Content[] {
-  return markdown.split(/\n\s*\n/).filter(Boolean).map(paragraph => {
-    const heading = /^(#{1,4}) (.*)$/.exec(paragraph);
-    if (heading) return {
-      text: heading[2], style: `heading${heading[1].length}`, headlineLevel: heading[1].length,
-      ...(heading[1].length === 2 ? { tocItem: true, outline: true } : {}),
+/** Only typed editorial headings become navigation; authored text stays literal. */
+function referenceContent(blocks: CampaignReferenceBlock[]): Content[] {
+  return blocks.map(block => {
+    if (block.kind === "heading") return {
+      text: block.text, style: `heading${block.level}`, headlineLevel: block.level,
+      ...(block.level === 2 ? { tocItem: true, outline: true } : {}),
     };
-    const label = /^\*\*([^*]+:)\*\* ([\s\S]*)$/.exec(paragraph);
-    if (label) return { text: [{ text: `${label[1]} `, bold: true }, { text: label[2] }], margin: [0, 0, 0, 7] };
-    const scene = /^- \*\*(Scene: .*?)\*\*$/.exec(paragraph);
-    if (scene) return { text: scene[1], bold: true, margin: [0, 6, 0, 7] };
-    if (paragraph.startsWith("- ")) return {
-      text: paragraph.split("\n").flatMap((line, index) => {
-        const field = /^- \*\*([^*]+:)\*\* (.*)$/.exec(line);
-        return [
-          ...(index ? [{ text: "\n" }] : []),
-          ...(field ? [{ text: `- ${field[1]} `, bold: true }, { text: field[2] }] : [{ text: line }]),
-        ];
-      }), margin: [0, 0, 0, 7],
+    if (block.kind === "field") return {
+      text: [{ text: `${block.label}: `, bold: true }, { text: block.text }], margin: [0, 0, 0, 7],
     };
-    // Preserve literal user-authored Markdown, links, and special characters.
-    return { text: paragraph, margin: [0, 0, 0, 7] };
+    return { text: block.text, margin: [0, 0, 0, 7] };
   });
 }
 
@@ -56,11 +44,11 @@ export function buildCampaignPdfDocument(snapshot: CampaignExport): TDocumentDef
     content: [
       { text: "GM ONLY - PRIVATE CAMPAIGN MODULE", fontSize: 9, bold: true, color: "#52616b", margin: [0, 0, 0, 14] },
       { text: "Includes hidden information and recorded outcomes. Keep this document private.", margin: [0, 0, 0, 18] },
-      ...referenceContent(document.introduction),
+      ...referenceContent(document.introduction.blocks),
       { toc: { title: { text: "Contents", style: "heading2" }, textMargin: [0, 4, 0, 4] } },
       ...document.chapters.flatMap(chapter => [
         { text: chapter.title, style: "heading2", headlineLevel: 2, pageBreak: "before", tocItem: true, outline: true } as Content,
-        ...referenceContent(chapter.content),
+        ...referenceContent(chapter.reference.blocks),
       ]),
       ...(!document.chapters.length ? [{ text: "No available campaign material has been recorded yet.", margin: [0, 16, 0, 0] } as Content] : []),
     ],
