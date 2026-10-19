@@ -102,7 +102,7 @@ Turn structured data into practical GM outputs:
 - session sheets: each Session offers a private Markdown download with its current preparation, attendance, previous outcomes, ordered available Scenes, and available Encounter placements;
 - campaign overview (complete): a short Markdown reading sheet draws on accepted, available campaign records and links back to their sources;
 - detailed module-style output (complete): a private Markdown module groups the full available reference into indexed chapters for story, people, places, hidden information, sessions/history, and encounters/rewards. Preparation and recorded outcomes remain distinct; see [module scope](campaign-module.md);
-- quick-reference sheets;
+- quick-reference sheets (complete): a private Markdown download provides compact people, groups, places, travel routes, and item references with current states, party members, travel details, and holders. Only available records and available linked names appear; see [quick-reference scope](campaign-quick-reference.md);
 - PDF once the editorial/export model is stable.
 
 ## Later, only after the core workflow proves useful
