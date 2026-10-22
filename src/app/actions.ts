@@ -6,7 +6,7 @@ import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modules/campaigns";
 import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
-import { archiveLocation, createLocation, editLocation, restoreLocation, trashLocation } from "@/modules/locations";
+import { createLocation } from "@/modules/locations";
 import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
@@ -908,27 +908,4 @@ export async function editCompassAction(campaignId: string, _state: ActionState,
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   redirect(`/campaigns/${campaignId}`);
-}
-
-export async function updateLocationAction(locationId: string, _state: ActionState, form: FormData): Promise<ActionState> {
-  let campaignId: string;
-  try {
-    const db = getDatabase();
-    const actor = await requireActor(db);
-    const revision = Number(text(form, "expectedRevision"));
-    const intent = text(form, "intent");
-    const updated = intent === "save"
-      ? await editLocation(db, actor, locationId, {
-        expectedRevision: revision, name: text(form, "name"), description: text(form, "description") || null,
-      })
-      : intent === "archive" ? await archiveLocation(db, actor, locationId, revision)
-      : intent === "trash" ? await trashLocation(db, actor, locationId, revision)
-      : intent === "restore" ? await restoreLocation(db, actor, locationId, revision)
-      : null;
-    if (!updated) return { message: "Choose a location action." };
-    campaignId = updated.campaignId;
-  } catch (error) { return actionError(error); }
-  revalidatePath(`/campaigns/${campaignId}`);
-  revalidatePath(`/locations/${locationId}`);
-  redirect(`/locations/${locationId}`);
 }
