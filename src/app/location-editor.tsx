@@ -24,7 +24,8 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
     try {
       const result = await updateLocationAction(location.id, form);
       if (result.ok) dispatch({ type: "saved", location: result.location,
-        message: form.get("intent") === "save" ? "Location saved." : "Location status updated." });
+        message: form.get("intent") === "save" ? "Location saved."
+          : "Location status updated. Name and description were not saved; local text remains only in this page." });
       else dispatch({ type: "failed", ...result });
     } catch {
       dispatch({ type: "failed", message: "Unable to confirm this request. Your draft is still here. Check the persisted version before retrying." });
@@ -84,6 +85,9 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
     {state.latest && <section aria-labelledby="persisted-location-heading">
       <h2 id="persisted-location-heading">Persisted location · revision {state.latest.revision}</h2>
       <p>This is a snapshot. Consulting it does not save or replace your draft.</p>
+      <p>Preparing your draft with this revision does not merge persisted changes into it.
+        Compare both fields and incorporate any changes you want to keep manually.
+        Save submits your draft&apos;s name and description and may replace newer content.</p>
       <dl>
         <dt>Name</dt><dd>{state.latest.name}</dd>
         <dt>Description</dt><dd className="preserve-lines">{state.latest.description ?? "(empty)"}</dd>

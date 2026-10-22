@@ -43,7 +43,7 @@ export function locationEditorReducer(state: LocationEditorState, event: Event):
     case "prepare":
       if (!state.latest || state.latest.deletedAt) return state;
       return { ...initialLocationState(state.latest),
-        message: "Draft retained. Review your changes, then save against the displayed revision." };
+        message: "Draft retained without merging persisted changes. Review both fields before saving; Save submits your draft's name and description and may replace newer content." };
     case "discard":
       if (!state.latest) return state;
       return { ...initialLocationState(state.latest), message: "Persisted version loaded. Local draft discarded." };

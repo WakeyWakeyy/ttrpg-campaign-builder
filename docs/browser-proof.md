@@ -24,9 +24,14 @@ editable and copyable while blocking mutations. View persisted version performs
 an authenticated, owner-scoped read and displays a snapshot separately; it does
 not change the draft or its expectedRevision. Keep draft and use this revision
 explicitly prepares another edit, which still requires Save and can conflict
-again. Use persisted version (discard draft) explicitly replaces the fields.
+again. Preparation does not merge persisted changes into the draft. The GM must
+compare both fields and incorporate wanted changes manually: Save submits the
+draft's name and description and may replace newer content. Use persisted
+version (discard draft) explicitly replaces the fields.
 Trashed snapshots cannot be prepared for editing; load the persisted version
 before using Restore. Restore continues to preserve the prior archive state.
+Archive and Trash do not save pending name/description edits. Their success
+message states that only status changed; local text is retained in this page.
 
 Success feedback follows a confirmed command/transaction result. Failed or
 unconfirmed requests retain the draft and never show success. There are no
@@ -37,7 +42,8 @@ and preservation across sections remain separate work.
 
 Run `pnpm test:e2e -- tests/e2e/location-draft.spec.ts` for the focused journeys:
 server validation and correction, two-tab conflict/recovery with an intervening
-write, explicit discard with Archive/Trash/Restore, and transport failure. These
+write, explicit discard with Archive/Trash/Restore, Archive/Trash with pending
+text, and transport failure. These
 assert field values and persisted rows/revisions, not only error messages.
 Unit tests cover recovery transitions and action completion/error handling;
 the Location PostgreSQL integration suite covers read-only consultation,

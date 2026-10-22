@@ -29,7 +29,8 @@ test("explicit preparation adopts only the consulted revision and never reports 
   expect(prepared.conflict).toBe(false);
   expect(prepared.saved).toBe(false);
   expect(prepared.latest).toBeNull();
-  expect(prepared.message).toContain("then save");
+  expect(prepared.message).toContain("without merging persisted changes");
+  expect(prepared.message).toContain("before saving");
   const raced = locationEditorReducer(prepared, { type: "failed", message: "Changed again", conflict: true });
   expect(raced.current.revision).toBe(2);
   expect(raced.conflict).toBe(true);

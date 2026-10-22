@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { revalidatePath } from "next/cache";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
-import { editLocation, getOwnedLocation, InvalidLocationInputError, LocationNotFoundError, LocationRevisionConflictError } from "@/modules/locations";
+import { archiveLocation, trashLocation, editLocation, getOwnedLocation, InvalidLocationInputError, LocationNotFoundError, LocationRevisionConflictError } from "@/modules/locations";
 import { readLocationAction, updateLocationAction } from "../../src/app/location-actions";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -9,7 +9,7 @@ vi.mock("@/infrastructure/db/server", () => ({ getDatabase: () => ({}) }));
 vi.mock("@/infrastructure/auth/clerk/require-actor", () => ({ requireActor: vi.fn() }));
 vi.mock("@/modules/locations", async importOriginal => ({
   ...await importOriginal<typeof import("@/modules/locations")>(),
-  editLocation: vi.fn(), getOwnedLocation: vi.fn(),
+  editLocation: vi.fn(), getOwnedLocation: vi.fn(), archiveLocation: vi.fn(), trashLocation: vi.fn(),
 }));
 
 const location = { id: "location", campaignId: "campaign", name: "Harbor", description: "New text",
@@ -64,4 +64,18 @@ test("consultation resolves the Actor and uses the owner-scoped read without wri
 test("consultation does not expose unavailable or unowned records", async () => {
   vi.mocked(getOwnedLocation).mockRejectedValue(new LocationNotFoundError());
   expect(await readLocationAction(location.id)).toEqual({ ok: false, message: "Location not found or unavailable." });
+});
+
+test.each([
+  { intent: "archive", command: archiveLocation },
+  { intent: "trash", command: trashLocation },
+])("$intent ignores pending content and only calls the revision-safe lifecycle command", async ({ intent, command }) => {
+  vi.mocked(command).mockResolvedValue(location as Awaited<ReturnType<typeof archiveLocation>>);
+  const pending = form();
+  pending.set("intent", intent);
+  pending.set("name", "   ");
+  pending.set("description", "Unsaved local idea");
+  expect(await updateLocationAction(location.id, pending)).toMatchObject({ ok: true, location: { revision: 2 } });
+  expect(command).toHaveBeenCalledWith({}, actor, location.id, 1);
+  expect(editLocation).not.toHaveBeenCalled();
 });

@@ -59,6 +59,7 @@ test("conflict recovery preserves the draft, only adopts a revision explicitly, 
     await stale.goto(page.url());
     await stale.getByLabel("Name", { exact: true }).fill("My draft harbor");
     await stale.getByLabel("Description", { exact: true }).fill("  LOCAL IDEA\nStill editable.\n");
+    await page.getByLabel("Name", { exact: true }).fill("Accepted harbor");
     await page.getByLabel("Description", { exact: true }).fill("Accepted idea");
     await page.getByRole("button", { name: "Save location", exact: true }).click();
     await expect(page.locator('input[name="expectedRevision"]')).toHaveValue("2");
@@ -70,10 +71,15 @@ test("conflict recovery preserves the draft, only adopts a revision explicitly, 
     await expect(stale.getByRole("button", { name: "Save location", exact: true })).toBeDisabled();
     await stale.getByRole("button", { name: "View persisted version" }).click();
     await expect(stale.getByRole("region", { name: /Persisted location/ })).toContainText("Accepted idea");
+    await expect(stale.getByRole("region", { name: /Persisted location/ })).toContainText("Accepted harbor");
+    await expect(stale.getByRole("region", { name: /Persisted location/ })).toContainText("does not merge persisted changes");
     await expect(stale.locator('input[name="expectedRevision"]')).toHaveValue("1");
     await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("  LOCAL IDEA\nStill editable.\n");
     await stale.getByRole("button", { name: "Keep draft and use this revision" }).click();
     await expect(stale.locator('input[name="expectedRevision"]')).toHaveValue("2");
+    await expect(stale.getByLabel("Name", { exact: true })).toHaveValue("My draft harbor");
+    await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("  LOCAL IDEA\nStill editable.\n");
+    await expect(stale.getByRole("main").getByRole("alert")).toContainText("without merging persisted changes");
     await expect(stale.getByText("Location saved.", { exact: true })).toHaveCount(0);
     expect((await pool.query("SELECT description, revision FROM location JOIN campaign_entity USING (id, campaign_id) WHERE id = $1", [id])).rows[0])
       .toEqual({ description: "Accepted idea", revision: 2 });
@@ -94,6 +100,32 @@ test("conflict recovery preserves the draft, only adopts a revision explicitly, 
     await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("  LOCAL IDEA\nStill editable.\n");
   } finally { await stale.close(); await pool.end(); }
 });
+
+for (const intent of ["Archive", "Trash"]) {
+  test(`${intent} preserves pending text locally without saving it or reporting a content save`, async ({ page }) => {
+    const pool = testPool();
+    try {
+      const id = await openLocation(page);
+      // Lifecycle commands must also work with an invalid pending name.
+      await page.getByLabel("Name", { exact: true }).fill("   ");
+      await page.getByLabel("Description", { exact: true }).fill("Unsaved local idea");
+      await page.getByRole("button", { name: intent, exact: true }).click();
+      await expect(page.getByRole("main").getByRole("status")).toHaveText(
+        "Location status updated. Name and description were not saved; local text remains only in this page.");
+      await expect(page.getByText("Location saved.", { exact: true })).toHaveCount(0);
+      await expect(page.getByLabel("Name", { exact: true })).toHaveValue("   ");
+      await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Unsaved local idea");
+      await expect(page.locator('input[name="expectedRevision"]')).toHaveValue("2");
+      const row = (await pool.query("SELECT name, description, revision, archived_at, deleted_at FROM location JOIN campaign_entity USING (id, campaign_id) WHERE id = $1", [id])).rows[0];
+      expect(row).toMatchObject({ name: "Harbor", description: "Original description", revision: 2 });
+      expect(row.archived_at !== null).toBe(intent === "Archive");
+      expect(row.deleted_at !== null).toBe(intent === "Trash");
+      await page.reload();
+      await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Harbor");
+      await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Original description");
+    } finally { await pool.end(); }
+  });
+}
 
 test("discard is explicit and Archive, Trash, Restore retain their existing semantics", async ({ page, context }) => {
   const pool = testPool();
