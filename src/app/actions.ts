@@ -11,7 +11,7 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant } from "@/modules/rewards/grants";
@@ -312,39 +312,44 @@ export async function updateEncounterCreatureAction(id: string, creatureId: stri
 }
 
 export async function recordSessionOutcomeAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await recordSessionOutcome(db, await requireActor(db), id, {
+    revision = (await recordSessionOutcome(db, await requireActor(db), id, {
       expectedRevision: Number(text(form, "expectedRevision")), outcome: text(form, "outcome") || null,
-    });
+    })).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${id}`);
   revalidatePath(`/sessions/${id}/recap`);
-  redirect(`/sessions/${id}/recap`);
+  return { message: "Session outcome saved. Other sections were not saved.", success: { revision } };
 }
 
 export async function recordSceneOutcomeAction(id: string, sceneId: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await recordSceneOutcome(db, await requireActor(db), id, sceneId, {
+    revision = (await recordSceneOutcome(db, await requireActor(db), id, sceneId, {
       expectedRevision: Number(text(form, "expectedRevision")), outcome: text(form, "outcome") || null,
-    });
+    })).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${id}`);
   revalidatePath(`/sessions/${id}/recap`);
-  redirect(`/sessions/${id}/recap`);
+  return { message: "Scene outcome saved. Other sections were not saved.", success: { revision } };
 }
 
 export async function createSceneAction(sessionId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await createScene(db, await requireActor(db), sessionId,
+    const actor = await requireActor(db);
+    await createScene(db, actor, sessionId,
       { expectedRevision: Number(text(form, "expectedRevision")), title: text(form, "title"),
         preparation: text(form, "preparation") || null, outcome: text(form, "outcome") || null });
+    revision = (await getOwnedSession(db, actor, sessionId)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${sessionId}`);
-  redirect(`/sessions/${sessionId}`);
+  return { message: "Scene created. Other sections were not saved.", success: { revision } };
 }
 
 export async function placeEncounterAction(sessionId: string, _state: ActionState, form: FormData): Promise<ActionState> {
@@ -388,15 +393,20 @@ export async function recordEncounterRunAction(sessionId: string, _state: Action
 
 export async function updateSceneAction(sessionId: string, sceneId: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
     const intent = text(form, "intent");
     if (intent !== "save" && intent !== "trash" && intent !== "restore") return { message: "Choose a scene action." };
-    await editScene(db, await requireActor(db), sessionId, sceneId,
+    const actor = await requireActor(db);
+    await editScene(db, actor, sessionId, sceneId,
       { expectedRevision: Number(text(form, "expectedRevision")), intent, ...sceneInput(form) });
+    revision = (await getOwnedSession(db, actor, sessionId)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/sessions/${sessionId}`);
-  redirect(`/sessions/${sessionId}`);
+  revalidatePath(`/sessions/${sessionId}/recap`);
+  return { message: text(form, "intent") === "save" ? "Scene saved. Other sections were not saved."
+    : "Scene status updated. Draft text was not saved.", success: { revision, preserveDraft: text(form, "intent") !== "save" } };
 }
 
 export async function createSessionAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
@@ -423,6 +433,7 @@ export async function reuseSessionPreparationAction(sourceId: string, _state: Ac
 
 export async function updateSessionAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
   let campaignId: string;
+  let acceptedRevision: number;
   try {
     const db = getDatabase();
     const actor = await requireActor(db);
@@ -434,10 +445,13 @@ export async function updateSessionAction(id: string, _state: ActionState, form:
       : intent === "restore" ? await restoreSession(db, actor, id, revision) : null;
     if (!updated) return { message: "Choose a session action." };
     campaignId = updated.campaignId;
+    acceptedRevision = updated.revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/sessions/${id}`);
-  redirect(`/sessions/${id}`);
+  revalidatePath(`/sessions/${id}/recap`);
+  return { message: text(form, "intent") === "save" ? "Session saved. Other sections were not saved."
+    : "Session status updated. Draft text was not saved.", success: { revision: acceptedRevision, preserveDraft: text(form, "intent") !== "save" } };
 }
 
 export async function setSessionAttendanceAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {

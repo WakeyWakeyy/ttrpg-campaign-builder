@@ -49,6 +49,50 @@ Unit tests cover recovery transitions and action completion/error handling;
 the Location PostgreSQL integration suite covers read-only consultation,
 authorization, invalid edits, and stale writes during explicit recovery.
 
+## Session and Recap independent drafts (D07)
+
+Session details, existing scenes, Add scene, Session outcome and Scene outcome
+use a Session-specific native form wrapper with stable entity/section identity.
+Each section keeps its own field values and base revision in mounted client
+memory. There is no universal draft provider and Location remains unchanged.
+
+Saving a section returns explicit success only after its command completes,
+then revalidates the affected pages without a same-page redirect. Pristine
+sections adopt fresh server values/revisions. Pending sections retain every
+field (including untouched fields) and their original expectedRevision. A new
+shared Session revision makes these drafts stale; it never silently rebases
+them or changes to per-Scene concurrency. PostgreSQL commands, locks, transaction
+boundaries and authorization are unchanged.
+
+View persisted values for this section is an owner/session-scoped read. It does
+not save, replace values, or adopt the revision. The GM can explicitly retain
+the draft against that snapshot or discard only that section's draft. Retaining
+does not merge: wanted changes must be incorporated manually before Save, which
+can still conflict with an intervening writer. Recap submits outcome only;
+preparation remains separate. Scene creation resets only its own fields after
+confirmation. Lifecycle success does not clear pending text or claim to save it.
+
+Trashed scenes stay rendered read-only in Recap so a pending outcome remains
+copyable after revalidation. Unavailable snapshots cannot be prepared for a new
+write. Add scene likewise stays read-only when its Session is trashed. Restore
+is still performed through the existing edit-page controls.
+
+Recovery is limited to mounted Session/Recap editors: leaving the page, closing
+the tab or a full reload can lose drafts. Reuse preparation intentionally opens
+a different Session. Attendance and encounter-selection forms retain their
+existing behavior; their same-page saves still preserve the text drafts covered
+here. No autosave, browser storage, navigation guard, migrations, dependencies,
+Run View redesign or D09 fix is included.
+
+`tests/e2e/session-drafts.spec.ts` covers both cross-form journeys in both
+directions, stale recovery with a second writer, server validation, untouched
+fields during remote refresh, scene creation drafts and unavailable scene
+outcomes. Assertions wait for the successful response and fresh revision before
+checking retained values; PostgreSQL assertions distinguish local drafts from
+accepted content. Unit tests cover section transitions and recovery reads;
+integration tests exercise stale parent/scene writes and explicit recovery
+against real PostgreSQL. The existing Session journey remains a regression check.
+
 ## Local setup
 
 Use Node 24, the repository's pnpm version, and PostgreSQL 18. Create a dedicated
