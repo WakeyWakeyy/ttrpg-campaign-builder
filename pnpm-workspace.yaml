@@ -2,6 +2,8 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 overrides:
+  # Minimal fixed Vite patch for Vitest's transitive dependency (six advisories).
+  vite: '8.3.3'
   # Next's lint plugin uses fast-glob only to find root directories; the patch uses Node's native glob.
   '@next/eslint-plugin-next@16.3.8>fast-glob': '-'
   # Drizzle Kit's legacy loader works with this patched esbuild release.
