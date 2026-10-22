@@ -21,7 +21,7 @@ import { InvalidSecretInputError, SecretNotFoundError, SecretRevisionConflictErr
 import { InvalidSecretKnowledgeInputError } from "@/modules/knowledge/secret-knowledge";
 import { IntelligencePreferencesConflictError, InvalidIntelligencePreferencesError } from "@/modules/intelligence/preferences";
 
-export type ActionState = { message: string; conflict?: boolean };
+export type ActionState = { message: string; conflict?: boolean; success?: { revision: number; preserveDraft?: boolean } };
 export function actionError(error: unknown): ActionState {
   if (error instanceof IntelligencePreferencesConflictError) return { message: "These preferences changed since you opened them. Reload before saving again.", conflict: true };
   if (error instanceof InvalidIntelligencePreferencesError) return { message: "Check the intelligence preferences and try again." };

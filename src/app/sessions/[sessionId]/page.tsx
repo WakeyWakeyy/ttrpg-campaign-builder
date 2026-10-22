@@ -6,6 +6,8 @@ import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, list
 import { listOwnedEncounters, listSessionEncounterPlacements } from "@/modules/encounters";
 import { listOwnedPlayerCharacters } from "@/modules/player-characters";
 import { ActionForm } from "../../action-form";
+import { SessionDraftForm, SessionDraftSubmit } from "../../session-draft-form";
+import { sessionDraftSnapshot } from "../../session-draft-state";
 import { createSceneAction, placeEncounterAction, removeEncounterPlacementAction, reuseSessionPreparationAction, setSessionAttendanceAction, updateSceneAction, updateSessionAction } from "../../actions";
 import { readError } from "../../read-error";
 
@@ -71,8 +73,8 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           </div>}
       </ActionForm>
     </section>
-    <ActionForm key={item.revision} action={updateSessionAction.bind(null, item.id)} reloadLabel="Reload session">
-      <input type="hidden" name="expectedRevision" value={item.revision} />
+    <SessionDraftForm key={item.id} sessionId={item.id} target={{ kind: "session" }}
+      snapshot={sessionDraftSnapshot(item.revision, "session", item)} action={updateSessionAction.bind(null, item.id)}>
       <label htmlFor="session-title">Title</label>
       <input id="session-title" name="title" defaultValue={item.title} required readOnly={!!item.deletedAt} />
       <label htmlFor="session-date">Planned date (optional)</label>
@@ -82,12 +84,12 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <label htmlFor="session-outcome">What actually happened (optional)</label>
       <textarea id="session-outcome" name="outcome" defaultValue={item.outcome ?? ""} rows={8} readOnly={!!item.deletedAt} />
       <div className="actions">
-        {!item.deletedAt && <button name="intent" value="save">Save session</button>}
-        {!item.deletedAt && !item.archivedAt && <button name="intent" value="archive" formNoValidate>Archive</button>}
-        {!item.deletedAt && <button name="intent" value="trash" formNoValidate>Trash</button>}
-        {item.deletedAt && <button name="intent" value="restore" formNoValidate>Restore</button>}
+        {!item.deletedAt && <SessionDraftSubmit name="intent" value="save">Save session</SessionDraftSubmit>}
+        {!item.deletedAt && !item.archivedAt && <SessionDraftSubmit name="intent" value="archive" formNoValidate>Archive</SessionDraftSubmit>}
+        {!item.deletedAt && <SessionDraftSubmit name="intent" value="trash" formNoValidate>Trash</SessionDraftSubmit>}
+        {item.deletedAt && <SessionDraftSubmit name="intent" value="restore" formNoValidate>Restore</SessionDraftSubmit>}
       </div>
-    </ActionForm>
+    </SessionDraftForm>
     <section aria-labelledby="session-encounters-heading">
       <h2 id="session-encounters-heading">Planned encounters</h2>
       <p>Use the same encounter more than once. Removing a placement keeps its reusable definition.</p>
@@ -134,8 +136,8 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           </select>
           <button type="submit">Place in scene</button>
         </ActionForm>}
-        <ActionForm key={`${scene.id}-${item.revision}`} action={updateSceneAction.bind(null, item.id, scene.id)} reloadLabel="Reload session">
-          <input type="hidden" name="expectedRevision" value={item.revision} />
+        <SessionDraftForm key={scene.id} sessionId={item.id} target={{ kind: "scene", sceneId: scene.id }}
+          snapshot={sessionDraftSnapshot(item.revision, "scene", scene, !!item.deletedAt)} action={updateSceneAction.bind(null, item.id, scene.id)}>
           <label htmlFor={`scene-position-${scene.id}`}>Order</label>
           <input id={`scene-position-${scene.id}`} name="position" type="number" min="1" required
             defaultValue={scene.position} readOnly={!!scene.deletedAt || !!item.deletedAt} />
@@ -149,23 +151,23 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           <textarea id={`scene-outcome-${scene.id}`} name="outcome" defaultValue={scene.outcome ?? ""}
             readOnly={!!scene.deletedAt || !!item.deletedAt} />
           {!item.deletedAt && <div className="actions">
-            {!scene.deletedAt && <button name="intent" value="save">Save scene</button>}
-            {!scene.deletedAt && <button name="intent" value="trash" formNoValidate>Trash scene</button>}
-            {scene.deletedAt && <button name="intent" value="restore" formNoValidate>Restore scene</button>}
+            {!scene.deletedAt && <SessionDraftSubmit name="intent" value="save">Save scene</SessionDraftSubmit>}
+            {!scene.deletedAt && <SessionDraftSubmit name="intent" value="trash" formNoValidate>Trash scene</SessionDraftSubmit>}
+            {scene.deletedAt && <SessionDraftSubmit name="intent" value="restore" formNoValidate>Restore scene</SessionDraftSubmit>}
           </div>}
-        </ActionForm>
+        </SessionDraftForm>
       </li>)}</ol> : <p>No scenes yet.</p>}
-      {!item.deletedAt && <>
+      <>
         <h3>Add scene</h3>
-        <ActionForm key={item.revision} action={createSceneAction.bind(null, item.id)} reloadLabel="Reload session">
-          <input type="hidden" name="expectedRevision" value={item.revision} />
+        <SessionDraftForm sessionId={item.id} target={{ kind: "new-scene" }}
+          snapshot={sessionDraftSnapshot(item.revision, "new-scene", item)} action={createSceneAction.bind(null, item.id)}>
           <label htmlFor="new-scene-title">Title</label>
-          <input id="new-scene-title" name="title" required />
+          <input id="new-scene-title" name="title" required readOnly={!!item.deletedAt} />
           <label htmlFor="new-scene-plan">Preparation</label>
-          <textarea id="new-scene-plan" name="preparation" />
-          <button type="submit">Add scene</button>
-        </ActionForm>
-      </>}
+          <textarea id="new-scene-plan" name="preparation" readOnly={!!item.deletedAt} />
+          <SessionDraftSubmit type="submit" disabled={!!item.deletedAt}>Add scene</SessionDraftSubmit>
+        </SessionDraftForm>
+      </>
     </section>
   </main>;
 }
