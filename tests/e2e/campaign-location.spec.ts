@@ -52,11 +52,15 @@ test("internal Actor, Campaign, Location, Arc, stale edits and lifecycle", async
     await expect(page.locator('input[name="expectedRevision"]')).toHaveValue(String(Number(revision) + 1));
     await stale.getByLabel("Description", { exact: true }).fill("Stale overwrite");
     await stale.getByRole("button", { name: "Save location", exact: true }).click();
-    await expect(stale.getByRole("main").getByRole("alert")).toHaveText("This location changed since you opened it. Reload before saving again.");
+    await expect(stale.getByRole("main").getByRole("alert")).toContainText("Your draft is preserved.");
+    await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("Stale overwrite");
     await expect(stale.getByRole("button", { name: "Save location", exact: true })).toBeDisabled();
     const saved = await pool.query("SELECT description, revision FROM location JOIN campaign_entity USING (id, campaign_id) WHERE id = $1", [locationId]);
     expect(saved.rows[0]).toEqual({ description: "Accepted newer description", revision: Number(revision) + 1 });
-    await stale.getByRole("button", { name: "Reload location" }).click();
+    await stale.getByRole("button", { name: "View persisted version" }).click();
+    await expect(stale.getByRole("region", { name: /Persisted location/ })).toContainText("Accepted newer description");
+    await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("Stale overwrite");
+    await stale.getByRole("button", { name: "Use persisted version (discard draft)" }).click();
     await expect(stale.getByLabel("Description", { exact: true })).toHaveValue("Accepted newer description");
     await expect(stale.getByRole("button", { name: "Save location", exact: true })).toBeEnabled();
     await stale.close();

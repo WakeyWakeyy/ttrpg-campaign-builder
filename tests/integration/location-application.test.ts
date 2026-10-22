@@ -165,6 +165,30 @@ test("no-op edits skip typed writes and preserve revision/timestamp, but stale n
   expect(await getOwnedLocation(db, actor, child.id)).toEqual(updated);
 });
 
+test("explicit recovery is read-only until resubmitted and rejects intervening writes", async () => {
+  const original = await create();
+  const accepted = await editLocation(db, actor, original.id, { expectedRevision: 1, description: "Accepted newer idea" });
+  await expect(editLocation(db, actor, original.id, { expectedRevision: 1, name: "My draft", description: "Local idea" }))
+    .rejects.toBeInstanceOf(LocationRevisionConflictError);
+  const consulted = await getOwnedLocation(db, actor, original.id);
+  expect(consulted).toEqual(accepted);
+  await expect(getOwnedLocation(db, otherActor, original.id)).rejects.toBeInstanceOf(LocationNotFoundError);
+  const raced = await editLocation(db, actor, original.id, { expectedRevision: consulted.revision, description: "Changed again" });
+  await expect(editLocation(db, actor, original.id, { expectedRevision: consulted.revision, name: "My draft", description: "Local idea" }))
+    .rejects.toBeInstanceOf(LocationRevisionConflictError);
+  expect(await getOwnedLocation(db, actor, original.id)).toEqual(raced);
+  const latest = await getOwnedLocation(db, actor, original.id);
+  await expect(editLocation(db, actor, original.id, { expectedRevision: latest.revision, name: "   ", description: "Local idea" }))
+    .rejects.toBeInstanceOf(InvalidLocationInputError);
+  expect(await getOwnedLocation(db, actor, original.id)).toEqual(latest);
+  const recovered = await editLocation(db, actor, original.id, {
+    expectedRevision: latest.revision, name: "My draft", description: "Local idea",
+  });
+  expect(recovered).toMatchObject({ name: "My draft", description: "Local idea", revision: latest.revision + 1 });
+  expect(recovered.archivedAt).toEqual(original.archivedAt);
+  expect(recovered.deletedAt).toEqual(original.deletedAt);
+});
+
 test("typed edit failure rolls back revision and updated_at", async () => {
   const child = await create();
   await pool.query("ALTER TABLE location ADD CONSTRAINT a8_reject_edit CHECK (name <> 'Rejected')");

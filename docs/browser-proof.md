@@ -12,6 +12,37 @@ and A14 Blueprint Draft creation, internal owner persistence, proposed Location
 names, accepted editing, and rejection of a stale draft edit. See the
 [roadmap](roadmap.md) for later completed journeys.
 
+## Location draft preservation and conflict recovery
+
+The Location editor submits native, uncontrolled fields through an explicit
+client submit handler. It does not use a React form action, so a resolved
+validation/conflict result does not reset the inputs. Only Location uses this
+path; the shared ActionForm and other editors are unchanged.
+
+Validation errors keep all entered values. A stale revision keeps the draft
+editable and copyable while blocking mutations. View persisted version performs
+an authenticated, owner-scoped read and displays a snapshot separately; it does
+not change the draft or its expectedRevision. Keep draft and use this revision
+explicitly prepares another edit, which still requires Save and can conflict
+again. Use persisted version (discard draft) explicitly replaces the fields.
+Trashed snapshots cannot be prepared for editing; load the persisted version
+before using Restore. Restore continues to preserve the prior archive state.
+
+Success feedback follows a confirmed command/transaction result. Failed or
+unconfirmed requests retain the draft and never show success. There are no
+automatic retries, autosave, browser-storage drafts, schema changes, or new
+dependencies. This editor requires client hydration; a full reload, closing the
+tab, or leaving the page can still discard local input. Navigation protection
+and preservation across sections remain separate work.
+
+Run `pnpm test:e2e -- tests/e2e/location-draft.spec.ts` for the focused journeys:
+server validation and correction, two-tab conflict/recovery with an intervening
+write, explicit discard with Archive/Trash/Restore, and transport failure. These
+assert field values and persisted rows/revisions, not only error messages.
+Unit tests cover recovery transitions and action completion/error handling;
+the Location PostgreSQL integration suite covers read-only consultation,
+authorization, invalid edits, and stale writes during explicit recovery.
+
 ## Local setup
 
 Use Node 24, the repository's pnpm version, and PostgreSQL 18. Create a dedicated
