@@ -80,6 +80,29 @@ test("outcome capture preserves preparation and rejects stale, foreign, or trash
     .rejects.toBeInstanceOf(InvalidSessionInputError);
 });
 
+test.each(["preparation", "outcome"] as const)("independent %s drafts use one Session revision and require explicit stale recovery", async field => {
+  const parent = await createSession(db, actor, { campaignId, title: "Crossing", preparation: "Session plan" });
+  const beat = await createScene(db, actor, parent.id, { expectedRevision: 1, title: "Gate", preparation: "Scene plan" });
+  if (field === "preparation") await editScene(db, actor, parent.id, beat.id,
+    { expectedRevision: 2, intent: "save", title: "Gate", preparation: "Accepted scene plan" });
+  else await recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 2, outcome: "Accepted scene result" });
+  const saveParent = (expectedRevision: number) => field === "preparation"
+    ? editSession(db, actor, parent.id, { expectedRevision, title: "Crossing", preparation: "Local session plan" })
+    : recordSessionOutcome(db, actor, parent.id, { expectedRevision, outcome: "Local session result" });
+  await expect(saveParent(2)).rejects.toBeInstanceOf(SessionRevisionConflictError);
+  const consulted = await getOwnedSession(db, actor, parent.id);
+  expect(consulted).toMatchObject({ revision: 3, preparation: "Session plan", outcome: null });
+  // Explicit recovery may use this revision, but must reject another intervening writer.
+  await recordSceneOutcome(db, actor, parent.id, beat.id, { expectedRevision: 3, outcome: "Newer scene result" });
+  await expect(saveParent(consulted.revision)).rejects.toBeInstanceOf(SessionRevisionConflictError);
+  await saveParent((await getOwnedSession(db, actor, parent.id)).revision);
+  expect(await getOwnedSession(db, actor, parent.id)).toMatchObject({ revision: 5,
+    preparation: field === "preparation" ? "Local session plan" : "Session plan",
+    outcome: field === "outcome" ? "Local session result" : null });
+  expect((await listSessionScenes(db, actor, parent.id))[0]).toMatchObject({
+    preparation: field === "preparation" ? "Accepted scene plan" : "Scene plan", outcome: "Newer scene result" });
+});
+
 test("reuses available preparation in a new session without copying play history", async () => {
   const source = await createSession(db, actor, { campaignId, title: "Crossing", plannedFor: "2026-10-08",
     preparation: "Meet the guard", outcome: "The bridge fell" });
