@@ -15,6 +15,8 @@ import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter,
   InvalidEncounterRunInputError, listSessionEncounterRuns, recordEncounterRun } from "../../src/modules/encounters";
 import type { Actor } from "../../src/modules/identity";
 import { calculateEncounterBudgetForGroups } from "../../src/modules/rulesets/encounter-budget";
+import { encounterDraftSnapshot } from "../../src/app/encounter-draft";
+import { initialPlanningDraft, planningDraftReducer } from "../../src/app/planning-draft-state";
 import { getSupportedRulesetVersion } from "../../src/modules/rulesets";
 import { relationshipOptions } from "../../src/app/relationship-options";
 import { createTimelineEvent, listTimelineEventLinks } from "../../src/modules/timeline";
@@ -264,4 +266,24 @@ test("concurrent writes conflict; archive, trash and restore preserve the plan",
   expect(restored).toMatchObject({ archivedAt: archived.archivedAt, deletedAt: null,
     partyLevel: 1, partySize: 4 });
   expect(await db.select().from(campaignEntity)).toHaveLength(1);
+});
+
+test("draft recovery never writes during consultation and still rejects a second race", async () => {
+  const parent = await createEncounter(db, actor, { campaignId, title: "Bridge", partyLevel: 1, partySize: 4 });
+  let draft = initialPlanningDraft(encounterDraftSnapshot(1, "encounter", parent));
+  draft = planningDraftReducer(draft, { type: "edit", values: { ...draft.values, title: "Local bridge", notes: "Pending idea" } });
+  const creature = await addEncounterCreature(db, actor, parent.id, { expectedRevision: 1, name: "Guard", xp: 100, quantity: 1 });
+  await expect(editEncounter(db, actor, parent.id, { expectedRevision: draft.base.revision,
+    title: "Local bridge", notes: "Pending idea", partyLevel: 1, partySize: 4 })).rejects.toBeInstanceOf(EncounterRevisionConflictError);
+  await expect(editEncounter(db, actor, parent.id, { expectedRevision: 2,
+    title: "   ", notes: "Pending idea", partyLevel: 1, partySize: 4 })).rejects.toBeInstanceOf(InvalidEncounterInputError);
+  const consulted = await getOwnedEncounter(db, actor, parent.id);
+  draft = planningDraftReducer(draft, { type: "consulted", snapshot: encounterDraftSnapshot(consulted.revision, "encounter", consulted) });
+  draft = planningDraftReducer(draft, { type: "prepare" });
+  expect(draft.values.notes).toBe("Pending idea"); expect(consulted).toMatchObject({ title: "Bridge", notes: null, revision: 2 });
+  await editEncounterCreature(db, actor, parent.id, creature.id, { expectedRevision: 2, intent: "save", name: "Remote guard", xp: 200, quantity: 2 });
+  await expect(editEncounter(db, actor, parent.id, { expectedRevision: draft.base.revision,
+    title: "Local bridge", notes: "Pending idea", partyLevel: 1, partySize: 4 })).rejects.toBeInstanceOf(EncounterRevisionConflictError);
+  expect(await getOwnedEncounter(db, actor, parent.id)).toMatchObject({ title: "Bridge", notes: null, revision: 3 });
+  expect((await listEncounterCreatures(db, actor, parent.id))[0]).toMatchObject({ name: "Remote guard", xp: 200, quantity: 2 });
 });

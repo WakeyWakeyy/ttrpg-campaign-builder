@@ -4,7 +4,9 @@ import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedEncounter, listEncounterCreatures } from "@/modules/encounters";
 import { getCampaignRulesetVersion } from "@/modules/rulesets";
 import { calculateEncounterBudgetForGroups } from "@/modules/rulesets/encounter-budget";
-import { ActionForm } from "../../action-form";
+import { PlanningDraftForm, PlanningSubmit } from "../../planning-draft-form";
+import { encounterDraftSnapshot } from "../../encounter-draft";
+import { readEncounterDraftAction } from "../../encounter-draft-actions";
 import { addEncounterCreatureAction, updateEncounterAction, updateEncounterCreatureAction } from "../../actions";
 import { readError } from "../../read-error";
 
@@ -28,8 +30,9 @@ export default async function EncounterPage({ params }: { params: Promise<{ enco
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this encounter to {item.archivedAt ? "Archived" : "Active"}.</p>}
     <p>This definition is reusable. Place it in a Session or Scene from that Session&apos;s page.</p>
-    <ActionForm key={item.revision} action={updateEncounterAction.bind(null, item.id)} reloadLabel="Reload encounter">
-      <input type="hidden" name="expectedRevision" value={item.revision} />
+    <PlanningDraftForm key="encounter" action={updateEncounterAction.bind(null, item.id)}
+      snapshot={encounterDraftSnapshot(item.revision, "encounter", item)}
+      read={readEncounterDraftAction.bind(null, item.id, { kind: "encounter" })}>
       <label htmlFor="encounter-title">Title</label>
       <input id="encounter-title" name="title" defaultValue={item.title} required maxLength={200} readOnly={!!item.deletedAt} />
       <label htmlFor="encounter-notes">Preparation notes</label>
@@ -41,12 +44,12 @@ export default async function EncounterPage({ params }: { params: Promise<{ enco
       <input id="encounter-size" name="partySize" type="number" min="1" max="20" defaultValue={item.partySize}
         required readOnly={!!item.deletedAt} />
       <div className="actions">
-        {!item.deletedAt && <button name="intent" value="save">Save encounter</button>}
-        {!item.deletedAt && !item.archivedAt && <button name="intent" value="archive" formNoValidate>Archive</button>}
-        {!item.deletedAt && <button name="intent" value="trash" formNoValidate>Trash</button>}
-        {item.deletedAt && <button name="intent" value="restore" formNoValidate>Restore</button>}
+        {!item.deletedAt && <PlanningSubmit name="intent" value="save">Save encounter</PlanningSubmit>}
+        {!item.deletedAt && !item.archivedAt && <PlanningSubmit name="intent" value="archive" formNoValidate>Archive</PlanningSubmit>}
+        {!item.deletedAt && <PlanningSubmit name="intent" value="trash" formNoValidate>Trash</PlanningSubmit>}
+        {item.deletedAt && <PlanningSubmit name="intent" value="restore" formNoValidate>Restore</PlanningSubmit>}
       </div>
-    </ActionForm>
+    </PlanningDraftForm>
     {budget && <section aria-labelledby="encounter-budget-heading">
       <h2 id="encounter-budget-heading">XP budget</h2>
       <p>{item.partySize} level {item.partyLevel} character{item.partySize === 1 ? "" : "s"} · {pin?.name}</p>
@@ -62,9 +65,9 @@ export default async function EncounterPage({ params }: { params: Promise<{ enco
       <h2 id="encounter-creatures-heading">Creatures</h2>
       {creatures.length ? <ul>{creatures.map(creature => <li key={creature.id}>
         <h3>{creature.name}{creature.deletedAt ? " · Removed" : ""}</h3>
-        <ActionForm key={`${creature.id}-${item.revision}`} action={updateEncounterCreatureAction.bind(null, item.id, creature.id)}
-          reloadLabel="Reload encounter">
-          <input type="hidden" name="expectedRevision" value={item.revision} />
+        <PlanningDraftForm key={creature.id} action={updateEncounterCreatureAction.bind(null, item.id, creature.id)}
+          snapshot={encounterDraftSnapshot(item.revision, "creature", creature, !!item.deletedAt)}
+          read={readEncounterDraftAction.bind(null, item.id, { kind: "creature", creatureId: creature.id })}>
           <label htmlFor={`creature-name-${creature.id}`}>Name</label>
           <input id={`creature-name-${creature.id}`} name="name" defaultValue={creature.name} required maxLength={200}
             readOnly={!!item.deletedAt || !!creature.deletedAt} />
@@ -75,24 +78,27 @@ export default async function EncounterPage({ params }: { params: Promise<{ enco
           <input id={`creature-quantity-${creature.id}`} name="quantity" type="number" min="1" max="100"
             defaultValue={creature.quantity} required readOnly={!!item.deletedAt || !!creature.deletedAt} />
           {!item.deletedAt && <div className="actions">
-            {!creature.deletedAt && <button name="intent" value="save">Save creature</button>}
-            {!creature.deletedAt && <button name="intent" value="trash" formNoValidate>Remove creature</button>}
-            {creature.deletedAt && <button name="intent" value="restore" formNoValidate>Restore creature</button>}
+            {!creature.deletedAt && <PlanningSubmit name="intent" value="save">Save creature</PlanningSubmit>}
+            {!creature.deletedAt && <PlanningSubmit name="intent" value="trash" formNoValidate>Remove creature</PlanningSubmit>}
+            {creature.deletedAt && <PlanningSubmit name="intent" value="restore" formNoValidate>Restore creature</PlanningSubmit>}
           </div>}
-        </ActionForm>
+        </PlanningDraftForm>
       </li>)}</ul> : <p>No creatures yet.</p>}
-      {!item.deletedAt && <>
+      <>
         <h3>Add creature</h3>
-        <ActionForm key={item.revision} action={addEncounterCreatureAction.bind(null, item.id)} reloadLabel="Reload encounter">
-          <input type="hidden" name="expectedRevision" value={item.revision} />
+        <PlanningDraftForm key="new-creature" action={addEncounterCreatureAction.bind(null, item.id)}
+          snapshot={encounterDraftSnapshot(item.revision, "new-creature", item)}
+          read={readEncounterDraftAction.bind(null, item.id, { kind: "new-creature" })}>
+          <fieldset disabled={!!item.deletedAt}>
           <label htmlFor="new-creature-name">Name</label><input id="new-creature-name" name="name" required maxLength={200} />
           <label htmlFor="new-creature-xp">XP per creature</label>
           <input id="new-creature-xp" name="xp" type="number" min="0" max="2147483647" required />
           <label htmlFor="new-creature-quantity">Quantity</label>
           <input id="new-creature-quantity" name="quantity" type="number" min="1" max="100" defaultValue="1" required />
-          <button type="submit">Add creature</button>
-        </ActionForm>
-      </>}
+          <PlanningSubmit type="submit">Add creature</PlanningSubmit>
+          </fieldset>
+        </PlanningDraftForm>
+      </>
     </section>
   </main>;
 }
