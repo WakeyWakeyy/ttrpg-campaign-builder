@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { createCampaign, editCompass, RulesetVersionNotFoundError } from "@/modules/campaigns";
-import { createBlueprint, decideBlueprintProposal, editBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
+import { createBlueprint, decideBlueprintProposal, editBlueprint, getOwnedBlueprint, materializeBlueprint, startBlueprintReview } from "@/modules/blueprints";
 import { createLocation } from "@/modules/locations";
 import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRoute, trashTravelRoute } from "@/modules/travel-routes";
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
@@ -654,13 +654,15 @@ export async function startBlueprintReviewAction(id: string, _state: ActionState
 }
 
 export async function decideBlueprintProposalAction(blueprintId: string, proposalId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
     const actor = await requireActor(db);
     await decideBlueprintProposal(db, actor, blueprintId, proposalId, Number(text(form, "expectedRevision")), text(form, "name"), text(form, "decision") as "PENDING" | "ACCEPTED" | "REJECTED");
+    revision = (await getOwnedBlueprint(db, actor, blueprintId)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/blueprints/${blueprintId}/review`);
-  redirect(`/blueprints/${blueprintId}/review`);
+  return { message: "Proposal saved. Other proposals were not saved.", success: { revision } };
 }
 
 export async function materializeBlueprintAction(blueprintId: string, _state: ActionState, form: FormData): Promise<ActionState> {
