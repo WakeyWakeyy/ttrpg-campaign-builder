@@ -12,7 +12,7 @@ import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/mod
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
-import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
+import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, getOwnedEncounter, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
 import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant } from "@/modules/rewards/grants";
 import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
@@ -268,47 +268,57 @@ export async function createEncounterAction(campaignId: string, _state: ActionSt
 
 export async function updateEncounterAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
   let campaignId: string;
+  let revision: number;
+  const intent = text(form, "intent");
   try {
     const db = getDatabase();
     const actor = await requireActor(db);
-    const revision = Number(text(form, "expectedRevision"));
-    const intent = text(form, "intent");
+    const expectedRevision = Number(text(form, "expectedRevision"));
     const updated = intent === "save" ? await editEncounter(db, actor, id,
-      { expectedRevision: revision, ...encounterInput(form) })
-      : intent === "archive" ? await archiveEncounter(db, actor, id, revision)
-      : intent === "trash" ? await trashEncounter(db, actor, id, revision)
-      : intent === "restore" ? await restoreEncounter(db, actor, id, revision) : null;
+      { expectedRevision, ...encounterInput(form) })
+      : intent === "archive" ? await archiveEncounter(db, actor, id, expectedRevision)
+      : intent === "trash" ? await trashEncounter(db, actor, id, expectedRevision)
+      : intent === "restore" ? await restoreEncounter(db, actor, id, expectedRevision) : null;
     if (!updated) return { message: "Choose an encounter action." };
     campaignId = updated.campaignId;
+    revision = updated.revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/encounters/${id}`);
-  redirect(`/encounters/${id}`);
+  return { message: intent === "save" ? "Encounter saved. Other sections were not saved." : "Encounter status updated. Draft text was not saved.",
+    success: { revision, preserveDraft: intent !== "save" } };
 }
 
 export async function addEncounterCreatureAction(id: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await addEncounterCreature(db, await requireActor(db), id,
+    const actor = await requireActor(db);
+    await addEncounterCreature(db, actor, id,
       { expectedRevision: Number(text(form, "expectedRevision")), ...encounterCreatureInput(form) });
+    revision = (await getOwnedEncounter(db, actor, id)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/encounters/${id}`);
-  redirect(`/encounters/${id}`);
+  return { message: "Creature created. Other sections were not saved.", success: { revision } };
 }
 
 export async function updateEncounterCreatureAction(id: string, creatureId: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
+  const intent = text(form, "intent");
   try {
     const db = getDatabase();
-    const intent = text(form, "intent");
+    const actor = await requireActor(db);
     if (intent !== "save" && intent !== "trash" && intent !== "restore")
       return { message: "Choose a creature action." };
-    await editEncounterCreature(db, await requireActor(db), id, creatureId,
+    await editEncounterCreature(db, actor, id, creatureId,
       { expectedRevision: Number(text(form, "expectedRevision")), intent, ...encounterCreatureInput(form) });
+    revision = (await getOwnedEncounter(db, actor, id)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/encounters/${id}`);
-  redirect(`/encounters/${id}`);
+  return { message: intent === "save" ? "Creature saved. Other sections were not saved." : "Creature status updated. Draft values were not saved.",
+    success: { revision, preserveDraft: intent !== "save" } };
 }
 
 export async function recordSessionOutcomeAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
