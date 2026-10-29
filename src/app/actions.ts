@@ -13,8 +13,8 @@ import { archiveRelationship, createRelationship, editRelationship, restoreRelat
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
 import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
 import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, getOwnedEncounter, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
-import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
-import { recordRewardGrant } from "@/modules/rewards/grants";
+import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, getOwnedReward, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
+import { recordRewardGrant, RewardGrantIdempotencyConflictError } from "@/modules/rewards/grants";
 import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
 import { archiveSecret, createSecret, editSecret, restoreSecret, trashSecret, unarchiveSecret } from "@/modules/knowledge/secrets";
 import { setSecretKnowledge, type KnowledgeState } from "@/modules/knowledge/secret-knowledge";
@@ -27,6 +27,7 @@ import { archiveFaction, createFaction, editFaction, restoreFaction, setFactionM
 import { getSupportedRulesetVersion } from "@/modules/rulesets";
 import { setIntelligencePreferences } from "@/modules/intelligence/preferences";
 import { actionError, type ActionState } from "./action-state";
+import type { PlanningActionState } from "./planning-draft-state";
 
 function text(form: FormData, name: string) {
   const value = form.get(name);
@@ -187,18 +188,25 @@ function rewardComponentInput(form: FormData) {
 }
 
 export async function recordRewardGrantAction(rewardId: string, _state: ActionState,
-  form: FormData): Promise<ActionState> {
+  form: FormData): Promise<PlanningActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await recordRewardGrant(db, await requireActor(db), rewardId, {
+    const actor = await requireActor(db);
+    await recordRewardGrant(db, actor, rewardId, {
       requestKey: text(form, "requestKey"), expectedRevision: Number(text(form, "expectedRevision")),
       componentIds: form.getAll("componentIds").filter((id): id is string => typeof id === "string"),
       recipient: text(form, "recipient"), notes: text(form, "notes"),
       sessionId: text(form, "sessionId") || null,
     });
-  } catch (error) { return actionError(error); }
+    revision = (await getOwnedReward(db, actor, rewardId)).revision;
+  } catch (error) {
+    if (error instanceof RewardGrantIdempotencyConflictError) return { requestConflict: true,
+      message: "This grant request key was already used with different details. Values are retained. Check the grant ledger; this request cannot be prepared as a new grant." };
+    return actionError(error);
+  }
   revalidatePath(`/rewards/${rewardId}`);
-  redirect(`/rewards/${rewardId}#grant-history`);
+  return { message: "Grant recorded. Planning drafts were not saved.", success: { revision } };
 }
 
 export async function createRewardAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {
@@ -213,47 +221,57 @@ export async function createRewardAction(campaignId: string, _state: ActionState
 
 export async function updateRewardAction(id: string, _state: ActionState, form: FormData): Promise<ActionState> {
   let campaignId: string;
+  let revision: number;
+  const intent = text(form, "intent");
   try {
     const db = getDatabase();
     const actor = await requireActor(db);
-    const revision = Number(text(form, "expectedRevision"));
-    const intent = text(form, "intent");
+    const expectedRevision = Number(text(form, "expectedRevision"));
     const updated = intent === "save" ? await editReward(db, actor, id,
-      { expectedRevision: revision, ...rewardInput(form) })
-      : intent === "archive" ? await archiveReward(db, actor, id, revision)
-      : intent === "trash" ? await trashReward(db, actor, id, revision)
-      : intent === "restore" ? await restoreReward(db, actor, id, revision) : null;
+      { expectedRevision, ...rewardInput(form) })
+      : intent === "archive" ? await archiveReward(db, actor, id, expectedRevision)
+      : intent === "trash" ? await trashReward(db, actor, id, expectedRevision)
+      : intent === "restore" ? await restoreReward(db, actor, id, expectedRevision) : null;
     if (!updated) return { message: "Choose a reward action." };
     campaignId = updated.campaignId;
+    revision = updated.revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/rewards/${id}`);
-  redirect(`/rewards/${id}`);
+  return { message: intent === "save" ? "Reward saved. Other sections were not saved." : "Reward status updated. Draft text was not saved.",
+    success: { revision, preserveDraft: intent !== "save" } };
 }
 
 export async function addRewardComponentAction(id: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
   try {
     const db = getDatabase();
-    await addRewardComponent(db, await requireActor(db), id,
+    const actor = await requireActor(db);
+    await addRewardComponent(db, actor, id,
       { expectedRevision: Number(text(form, "expectedRevision")), ...rewardComponentInput(form) });
+    revision = (await getOwnedReward(db, actor, id)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/rewards/${id}`);
-  redirect(`/rewards/${id}`);
+  return { message: "Component created. Other sections were not saved.", success: { revision } };
 }
 
 export async function updateRewardComponentAction(id: string, componentId: string, _state: ActionState,
   form: FormData): Promise<ActionState> {
+  let revision: number;
+  const intent = text(form, "intent");
   try {
-    const intent = text(form, "intent");
     if (intent !== "save" && intent !== "trash" && intent !== "restore")
       return { message: "Choose a component action." };
     const db = getDatabase();
-    await editRewardComponent(db, await requireActor(db), id, componentId,
+    const actor = await requireActor(db);
+    await editRewardComponent(db, actor, id, componentId,
       { expectedRevision: Number(text(form, "expectedRevision")), intent, ...rewardComponentInput(form) });
+    revision = (await getOwnedReward(db, actor, id)).revision;
   } catch (error) { return actionError(error); }
   revalidatePath(`/rewards/${id}`);
-  redirect(`/rewards/${id}`);
+  return { message: intent === "save" ? "Component saved. Other sections were not saved." : "Component status updated. Draft values were not saved.",
+    success: { revision, preserveDraft: intent !== "save" } };
 }
 
 export async function createEncounterAction(campaignId: string, _state: ActionState, form: FormData): Promise<ActionState> {

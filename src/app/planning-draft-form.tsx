@@ -114,6 +114,7 @@ export function PlanningDraftForm({ snapshot, action, read, requestKey, children
     {state.latest && <section aria-label="Persisted section values">
       <h3>Persisted section · revision {state.latest.revision}</h3>
       <p>Preparing a revision does not merge changes. Compare every field and incorporate wanted changes manually before Save.</p>
+      {state.latest.context && <p className="preserve-lines">{state.latest.context}</p>}
       <dl>{Object.entries(state.latest.values).map(([key, value]) => <div key={key}>
         <dt>{labels[key] ?? key}</dt><dd className="preserve-lines">{(Array.isArray(value) ? value.join(", ") : value) || "(empty)"}</dd>
       </div>)}</dl>

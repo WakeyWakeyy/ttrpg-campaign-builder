@@ -3,7 +3,7 @@
 import type { ActionState } from "./action-state";
 
 export type PlanningValues = Record<string, string | string[]>;
-export type PlanningSnapshot = { revision: number; values: PlanningValues; unavailable: boolean };
+export type PlanningSnapshot = { revision: number; values: PlanningValues; unavailable: boolean; context?: string };
 export type PlanningActionState = ActionState & { requestConflict?: boolean };
 export type PlanningRead = { ok: true; snapshot: PlanningSnapshot } | { ok: false; message: string };
 
