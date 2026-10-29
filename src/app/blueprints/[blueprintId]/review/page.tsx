@@ -5,6 +5,9 @@ import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { BlueprintNotFoundError, getBlueprintReview } from "@/modules/blueprints";
 import { ActionForm } from "../../../action-form";
+import { PlanningDraftForm, PlanningSubmit } from "../../../planning-draft-form";
+import { blueprintProposalSnapshot } from "../../../blueprint-proposal-draft";
+import { readBlueprintProposalDraftAction } from "../../../blueprint-proposal-draft-actions";
 import { decideBlueprintProposalAction, materializeBlueprintAction } from "../../../actions";
 
 export default async function BlueprintReviewPage({ params }: { params: Promise<{ blueprintId: string }> }) {
@@ -21,18 +24,19 @@ export default async function BlueprintReviewPage({ params }: { params: Promise<
     <Link href={`/blueprints/${draft.id}`}>Back to draft</Link>
     <h1>Review {draft.title}</h1>
     <p>Choose each Location separately. Rejected and pending proposals stay in this review and will not become Campaign Locations.</p>
+    <p>The preview and Campaign creation use saved accepted proposals. Local edits and decisions remain drafts until you save that proposal.</p>
     {proposals.length ? <ol>{proposals.map(proposal => <li key={proposal.id}>
-      {materialization ? <p>{proposal.name} — {proposal.decision.toLowerCase()}</p> :
-        <ActionForm action={decideBlueprintProposalAction.bind(null, draft.id, proposal.id)} reloadLabel="Reload review">
-          <input type="hidden" name="expectedRevision" value={draft.revision} />
+      <PlanningDraftForm action={decideBlueprintProposalAction.bind(null, draft.id, proposal.id)}
+        snapshot={blueprintProposalSnapshot(draft.revision, proposal, !!materialization)}
+        read={readBlueprintProposalDraftAction.bind(null, draft.id, proposal.id)}>
           <label htmlFor={`name-${proposal.id}`}>Location name</label>
-          <input id={`name-${proposal.id}`} name="name" defaultValue={proposal.name} required maxLength={200} />
+          <input id={`name-${proposal.id}`} name="name" defaultValue={proposal.name} required maxLength={200} readOnly={!!materialization} />
           <label htmlFor={`decision-${proposal.id}`}>Decision</label>
-          <select id={`decision-${proposal.id}`} name="decision" defaultValue={proposal.decision}>
+          <select id={`decision-${proposal.id}`} name="decision" defaultValue={proposal.decision} disabled={!!materialization}>
             <option value="PENDING">Pending</option><option value="ACCEPTED">Accept</option><option value="REJECTED">Reject</option>
           </select>
-          <button type="submit">Save proposal</button>
-        </ActionForm>}
+          {!materialization && <PlanningSubmit type="submit">Save proposal</PlanningSubmit>}
+        </PlanningDraftForm>
     </li>)}</ol> : <p>This draft has no proposed Locations. You can still create its Campaign.</p>}
     <h2>Campaign preview</h2>
     <p>{draft.title}: {draft.premise}</p>

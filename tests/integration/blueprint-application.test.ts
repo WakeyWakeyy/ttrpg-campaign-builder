@@ -4,7 +4,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { blueprintDraft, blueprintMaterialization, blueprintProposal, campaign, campaignEntity, commandExecution, location, ruleset, rulesetVersion, userAccount } from "../../src/infrastructure/db/schema";
-import { BlueprintAlreadyMaterializedError, BlueprintIdempotencyConflictError, BlueprintNotFoundError, BlueprintRevisionConflictError, createBlueprint, decideBlueprintProposal, editBlueprint, getBlueprintReview, getOwnedBlueprint, listOwnedBlueprints, materializeBlueprint, startBlueprintReview } from "../../src/modules/blueprints";
+import { BlueprintAlreadyMaterializedError, BlueprintIdempotencyConflictError, BlueprintNotFoundError, BlueprintRevisionConflictError, InvalidBlueprintInputError, createBlueprint, decideBlueprintProposal, editBlueprint, getBlueprintReview, getOwnedBlueprint, listOwnedBlueprints, materializeBlueprint, startBlueprintReview } from "../../src/modules/blueprints";
+import { blueprintProposalSnapshot } from "../../src/app/blueprint-proposal-draft";
+import { initialPlanningDraft, planningDraftReducer } from "../../src/app/planning-draft-state";
 
 const schema = `blueprint_${randomUUID().replaceAll("-", "")}`;
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema},public` });
@@ -99,4 +101,36 @@ test("concurrent materialization keys cannot create two Campaigns", async () => 
   expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
   expect(results.filter(result => result.status === "rejected" && result.reason instanceof BlueprintAlreadyMaterializedError)).toHaveLength(1);
   expect((await db.select().from(blueprintMaterialization)).filter(row => row.blueprintId === draft.id)).toHaveLength(1);
+});
+
+test("proposal recovery retains local decisions without accepting them or bypassing a second race", async () => {
+  const draft = await createBlueprint(db, owner, idea);
+  await startBlueprintReview(db, owner, draft.id, 1);
+  const review = await getBlueprintReview(db, owner, draft.id);
+  const [first, second] = review.proposals;
+  let local = initialPlanningDraft(blueprintProposalSnapshot(2, second));
+  local = planningDraftReducer(local, { type: "edit", values: { name: "Local vault", decision: "ACCEPTED" } });
+  await decideBlueprintProposal(db, owner, draft.id, first.id, 2, "Accepted harbor", "ACCEPTED");
+  await expect(decideBlueprintProposal(db, owner, draft.id, second.id, local.base.revision, "Local vault", "ACCEPTED"))
+    .rejects.toBeInstanceOf(BlueprintRevisionConflictError);
+  await expect(decideBlueprintProposal(db, owner, draft.id, second.id, 3, "   ", "ACCEPTED"))
+    .rejects.toBeInstanceOf(InvalidBlueprintInputError);
+  const current = await getBlueprintReview(db, owner, draft.id);
+  local = planningDraftReducer(local, { type: "consulted", snapshot: blueprintProposalSnapshot(current.draft.revision, current.proposals[1]) });
+  local = planningDraftReducer(local, { type: "prepare" });
+  expect(local.values).toEqual({ name: "Local vault", decision: "ACCEPTED" });
+  expect(current.proposals[1]).toMatchObject({ name: "Vault", decision: "PENDING" });
+  await decideBlueprintProposal(db, owner, draft.id, first.id, 3, "Remote harbor", "ACCEPTED");
+  await expect(decideBlueprintProposal(db, owner, draft.id, second.id, local.base.revision, "Local vault", "ACCEPTED"))
+    .rejects.toBeInstanceOf(BlueprintRevisionConflictError);
+  const [family] = await db.insert(ruleset).values({ key: randomUUID(), name: "Recovery ruleset" }).returning();
+  const [version] = await db.insert(rulesetVersion).values({ rulesetId: family.id, version: "1", name: "First" }).returning();
+  const request = { blueprintId: draft.id, expectedRevision: 4, rulesetVersionId: version.id, idempotencyKey: randomUUID() };
+  const result = await materializeBlueprint(db, owner, request);
+  expect((await materializeBlueprint(db, owner, request)).campaignId).toBe(result.campaignId);
+  expect((await db.select().from(location)).filter(row => row.campaignId === result.campaignId).map(row => row.name)).toEqual(["Remote harbor"]);
+  const persisted = await getBlueprintReview(db, owner, draft.id);
+  expect(persisted.proposals[1]).toMatchObject({ name: "Vault", decision: "PENDING" });
+  expect(persisted.draft.revision).toBe(4);
+  expect(blueprintProposalSnapshot(4, persisted.proposals[1], !!persisted.materialization).unavailable).toBe(true);
 });
