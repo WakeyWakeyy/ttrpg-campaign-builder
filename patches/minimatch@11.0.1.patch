@@ -1,0 +1,12 @@
+diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
+index ec1981d9a738ecf28d63190e27506ff0e600bf79..e62c64993f8ac52eebe87ed87e1b4116a1bf93ab 100644
+--- a/dist/commonjs/index.js
++++ b/dist/commonjs/index.js
+@@ -1509,4 +1509,7 @@ Object.defineProperty(exports, "unescape", { enumerable: true, get: function ()
+ exports.minimatch.Minimatch = Minimatch;
+ exports.minimatch.escape = escape_js_1.escape;
+ exports.minimatch.unescape = unescape_js_1.unescape;
++// Keep the callable CommonJS API required by legacy ESLint plugins while
++// retaining all named exports and the patched v11 matching implementation.
++module.exports = Object.assign(exports.minimatch, exports);
+ //# sourceMappingURL=index.js.map
