@@ -32,3 +32,6 @@ and the existing materialization/idempotency contract. Playwright waits for the
 real response and revision before checking independent drafts, validation,
 consult/prepare/discard, another race, and materialization with an unsaved local
 acceptance. Only the persisted proposal becomes a Campaign Location.
+The materialization browser test replays the identical Server Action payload and
+idempotency key after the first transaction commits. Both responses identify the
+same Campaign, with one persisted materialization and one command execution.
