@@ -158,13 +158,31 @@ test("a lost grant response retries the identical key and payload without duplic
     await grant.getByRole("checkbox").check(); await grant.getByLabel("Given to").fill("Party");
     await grant.getByLabel("What happened (optional)").fill("Ambiguous grant outcome");
     const key = await grant.locator('input[name="requestKey"]').inputValue();
+    const revision = await grant.locator('input[name="expectedRevision"]').inputValue();
+    const componentIds = await grant.locator('input[name="componentIds"]:checked')
+      .evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
+    const commands: Record<string, string[]>[] = [];
     let dropped = false;
     await page.route(`**/rewards/${id}`, async route => {
-      if (!dropped && route.request().method() === "POST" && route.request().postData()?.includes("Ambiguous grant outcome")) {
-        dropped = true;
-        await route.fetch(); // The transaction commits, but the browser never receives its response.
-        await route.abort("failed");
-      } else await route.continue();
+      const request = route.request();
+      if (request.method() === "POST" && request.postData()?.includes("Ambiguous grant outcome")) {
+        const body = request.postDataBuffer();
+        if (!body) throw new Error("Expected a multipart grant command.");
+        const data = await new Request(request.url(), { method: "POST",
+          headers: { "content-type": request.headers()["content-type"] }, body: new Uint8Array(body) }).formData();
+        // Next prefixes multipart fields with a serialization slot. Compare the
+        // complete application command, excluding only framework transport data.
+        commands.push(Object.fromEntries(["expectedRevision", "requestKey", "componentIds", "recipient", "notes", "sessionId"]
+          .map(name => [name, Array.from(data.entries())
+            .filter(([field]) => field === name || field.endsWith(`_${name}`)).map(([, value]) => String(value))])));
+        if (!dropped) {
+          dropped = true;
+          await route.fetch(); // The transaction commits, but the browser never receives its response.
+          await route.abort("failed");
+          return;
+        }
+      }
+      await route.continue();
     });
     await grant.getByRole("button", { name: "Record grant", exact: true }).click();
     await expect(grant.getByRole("alert")).toContainText("Unable to confirm");
@@ -178,6 +196,10 @@ test("a lost grant response retries the identical key and payload without duplic
     await expect(grant.getByRole("status").filter({ hasText: /^Grant recorded\./ })).toBeVisible();
     await expect(grant.locator('input[name="expectedRevision"]')).toHaveValue("3");
     await expect(grant.locator('input[name="requestKey"]')).not.toHaveValue(key);
+    expect(commands).toHaveLength(2);
+    expect(commands[0]).toEqual({ expectedRevision: [revision], requestKey: [key], componentIds,
+      recipient: ["Party"], notes: ["Ambiguous grant outcome"], sessionId: [""] });
+    expect(commands[1]).toEqual(commands[0]);
     const persisted = (await pool.query("SELECT recipient, notes FROM reward_grant WHERE reward_id=$1", [id])).rows;
     expect(persisted).toEqual([{ recipient: "Party", notes: "Ambiguous grant outcome" }]);
   } finally { await pool.end(); }
