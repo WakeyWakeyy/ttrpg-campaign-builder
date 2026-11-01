@@ -2,6 +2,11 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 overrides:
+  # Minimal patched release for the Zod 4 dependency used by lint tooling.
+  'zod@4.6.5': '4.6.6'
+  # Both installed minimatch lines are affected by GHSA-g3hv-75wg-m249.
+  'minimatch@3.1.5': '11.0.1'
+  'minimatch@10.2.6': '11.0.1'
   # Minimal fixed Vite patch for Vitest's transitive dependency (six advisories).
   vite: '8.3.3'
   # Next's lint plugin uses fast-glob only to find root directories; the patch uses Node's native glob.
@@ -10,3 +15,4 @@ overrides:
   '@esbuild-kit/core-utils@3.3.2>esbuild': '0.25.12'
 patchedDependencies:
   '@next/eslint-plugin-next@16.3.8': patches/@next__eslint-plugin-next@16.3.8.patch
+  minimatch@11.0.1: patches/minimatch@11.0.1.patch
