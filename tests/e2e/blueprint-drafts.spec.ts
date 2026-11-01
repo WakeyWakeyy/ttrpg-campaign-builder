@@ -79,13 +79,40 @@ test("pending local acceptance and renaming never materialize without saving tha
     await expect(first.locator('input[name="expectedRevision"]')).toHaveValue("3");
     await expect(second.getByLabel("Location name")).toHaveValue("UNSAVED ACCEPTED IDEA"); await expect(second.getByLabel("Decision")).toHaveValue("ACCEPTED");
     await expect(page.getByText("1 accepted Location:", { exact: true })).toBeVisible();
+    expect((await pool.query("SELECT count(*)::int AS count FROM blueprint_materialization WHERE blueprint_id=$1", [id])).rows[0].count).toBe(0);
+    const key = await page.locator('input[name="idempotencyKey"]').inputValue();
+    let replayed = false;
+    let firstCampaignId = "";
+    await page.route(`**/blueprints/${id}/review`, async route => {
+      const request = route.request();
+      if (!replayed && request.method() === "POST" && request.postData()?.includes(key)) {
+        const body = request.postDataBuffer();
+        if (!body) throw new Error("Expected a materialization command.");
+        replayed = true;
+        const firstResponse = await route.fetch({ postData: body });
+        const rows = (await pool.query("SELECT campaign_id FROM blueprint_materialization WHERE blueprint_id=$1", [id])).rows;
+        expect(rows).toHaveLength(1);
+        firstCampaignId = rows[0].campaign_id;
+        expect(firstResponse.headers()["x-action-redirect"]).toContain(`/campaigns/${firstCampaignId}`);
+        // Replay the identical body/key through the real Server Action after
+        // its first transaction committed, before delivering a response to UI.
+        const retryResponse = await route.fetch({ postData: body });
+        expect(retryResponse.headers()["x-action-redirect"]).toBe(firstResponse.headers()["x-action-redirect"]);
+        await route.fulfill({ response: retryResponse });
+        return;
+      }
+      await route.continue();
+    });
     // This is an explicit navigation-producing command; general navigation protection is out of scope.
     await page.getByRole("button", { name: "Create Campaign from accepted proposals", exact: true }).click();
     await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]+$/);
     const campaignId = page.url().split("/").pop()!;
+    expect(replayed).toBe(true);
+    expect(campaignId).toBe(firstCampaignId);
     expect((await pool.query("SELECT name FROM location WHERE campaign_id=$1", [campaignId])).rows).toEqual([{ name: "Harbor" }]);
     expect((await pool.query("SELECT name, decision FROM blueprint_proposal WHERE blueprint_id=$1 ORDER BY sort_order", [id])).rows)
       .toEqual([{ name: "Harbor", decision: "ACCEPTED" }, { name: "Vault", decision: "PENDING" }]);
     expect((await pool.query("SELECT count(*)::int AS count FROM blueprint_materialization WHERE blueprint_id=$1", [id])).rows[0].count).toBe(1);
+    expect((await pool.query("SELECT count(*)::int AS count FROM command_execution WHERE command_kind='BLUEPRINT_MATERIALIZE' AND idempotency_key=$1", [key])).rows[0].count).toBe(1);
   } finally { await pool.end(); }
 });
