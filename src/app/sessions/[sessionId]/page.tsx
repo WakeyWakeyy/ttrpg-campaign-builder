@@ -86,6 +86,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <div className="actions">
         {!item.deletedAt && <SessionDraftSubmit name="intent" value="save">Save session</SessionDraftSubmit>}
         {!item.deletedAt && !item.archivedAt && <SessionDraftSubmit name="intent" value="archive" formNoValidate>Archive</SessionDraftSubmit>}
+        {!item.deletedAt && item.archivedAt && <SessionDraftSubmit name="intent" value="unarchive" formNoValidate>Return to active</SessionDraftSubmit>}
         {!item.deletedAt && <SessionDraftSubmit name="intent" value="trash" formNoValidate>Trash</SessionDraftSubmit>}
         {item.deletedAt && <SessionDraftSubmit name="intent" value="restore" formNoValidate>Restore</SessionDraftSubmit>}
       </div>

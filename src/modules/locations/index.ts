@@ -142,15 +142,17 @@ export async function editLocation(db: NodePgDatabase, actor: Actor, id: string,
   }, { isolationLevel: "read committed" });
 }
 
-async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number, action: "archive" | "trash" | "restore") {
+async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number, action: "archive" | "unarchive" | "trash" | "restore") {
   return db.transaction(async tx => {
     const current = await lockLocation(tx, actor, id, expectedRevision);
     if ((action === "archive" && current.archivedAt !== null)
+      || (action === "unarchive" && (!current.archivedAt || current.deletedAt))
       || (action === "trash" && current.deletedAt !== null)
       || (action === "restore" && current.deletedAt === null)) return current;
     // statement_timestamp is stable within the statement; UTC arithmetic matches
     // the retention constraint even on sessions using a DST-observing time zone.
     const change = action === "archive" ? { archivedAt: sql`statement_timestamp()` }
+      : action === "unarchive" ? { archivedAt: null }
       : action === "trash" ? {
         deletedAt: sql`statement_timestamp()`,
         purgeAfter: sql`((statement_timestamp() AT TIME ZONE 'UTC') + interval '30 days') AT TIME ZONE 'UTC'`,
@@ -161,5 +163,6 @@ async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, expectedR
 }
 
 export const archiveLocation = (db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number) => lifecycle(db, actor, id, expectedRevision, "archive");
+export const unarchiveLocation = (db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number) => lifecycle(db, actor, id, expectedRevision, "unarchive");
 export const trashLocation = (db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number) => lifecycle(db, actor, id, expectedRevision, "trash");
 export const restoreLocation = (db: NodePgDatabase, actor: Actor, id: string, expectedRevision: number) => lifecycle(db, actor, id, expectedRevision, "restore");

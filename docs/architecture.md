@@ -252,7 +252,9 @@ without globally serializing ordinary content edits.
 Archive preserves deletion state, Trash preserves archive state and uses exact
 30-day UTC retention, and Restore clears deletion fields while preserving archive
 state. Repeated lifecycle requests are no-ops when the revision still matches;
-repeated Trash never resets retention. No Unarchive or purge execution is exposed.
+repeated Trash never resets retention. Purge execution is not exposed. Explicit
+Unarchive for Location, Session, Encounter and Reward is described in
+[D02 Phase 1](ux-reliability-return-to-active.md).
 The next proof step is minimal UI and Playwright coverage of the full journey.
 
 ### Same-Campaign integrity

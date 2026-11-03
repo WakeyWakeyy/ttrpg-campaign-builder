@@ -11,9 +11,9 @@ import { archiveTravelRoute, createTravelRoute, editTravelRoute, restoreTravelRo
 import { archiveItem, createItem, editItem, restoreItem, trashItem } from "@/modules/items";
 import { archiveRelationship, createRelationship, editRelationship, restoreRelationship, trashRelationship } from "@/modules/relationships";
 import { archiveTimelineEvent, createTimelineEvent, editTimelineEvent, restoreTimelineEvent, trashTimelineEvent } from "@/modules/timeline";
-import { archiveSession, createScene, createSession, editScene, editSession, getOwnedSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
-import { addEncounterCreature, archiveEncounter, createEncounter, editEncounter, editEncounterCreature, getOwnedEncounter, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
-import { addRewardComponent, archiveReward, createReward, editReward, editRewardComponent, getOwnedReward, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
+import { archiveSession, unarchiveSession, createScene, createSession, editScene, editSession, getOwnedSession, recordSceneOutcome, recordSessionOutcome, restoreSession, reuseSessionPreparation, setSessionAttendance, trashSession } from "@/modules/sessions";
+import { addEncounterCreature, archiveEncounter, unarchiveEncounter, createEncounter, editEncounter, editEncounterCreature, getOwnedEncounter, placeEncounter, recordEncounterRun, removeEncounterPlacement, restoreEncounter, trashEncounter } from "@/modules/encounters";
+import { addRewardComponent, archiveReward, unarchiveReward, createReward, editReward, editRewardComponent, getOwnedReward, restoreReward, trashReward, type RewardKind } from "@/modules/rewards";
 import { recordRewardGrant, RewardGrantIdempotencyConflictError } from "@/modules/rewards/grants";
 import { archiveClue, createClue, editClue, restoreClue, trashClue, unarchiveClue } from "@/modules/knowledge";
 import { archiveSecret, createSecret, editSecret, restoreSecret, trashSecret, unarchiveSecret } from "@/modules/knowledge/secrets";
@@ -230,6 +230,7 @@ export async function updateRewardAction(id: string, _state: ActionState, form: 
     const updated = intent === "save" ? await editReward(db, actor, id,
       { expectedRevision, ...rewardInput(form) })
       : intent === "archive" ? await archiveReward(db, actor, id, expectedRevision)
+      : intent === "unarchive" ? await unarchiveReward(db, actor, id, expectedRevision)
       : intent === "trash" ? await trashReward(db, actor, id, expectedRevision)
       : intent === "restore" ? await restoreReward(db, actor, id, expectedRevision) : null;
     if (!updated) return { message: "Choose a reward action." };
@@ -295,6 +296,7 @@ export async function updateEncounterAction(id: string, _state: ActionState, for
     const updated = intent === "save" ? await editEncounter(db, actor, id,
       { expectedRevision, ...encounterInput(form) })
       : intent === "archive" ? await archiveEncounter(db, actor, id, expectedRevision)
+      : intent === "unarchive" ? await unarchiveEncounter(db, actor, id, expectedRevision)
       : intent === "trash" ? await trashEncounter(db, actor, id, expectedRevision)
       : intent === "restore" ? await restoreEncounter(db, actor, id, expectedRevision) : null;
     if (!updated) return { message: "Choose an encounter action." };
@@ -469,6 +471,7 @@ export async function updateSessionAction(id: string, _state: ActionState, form:
     const intent = text(form, "intent");
     const updated = intent === "save" ? await editSession(db, actor, id, { expectedRevision: revision, ...sessionInput(form) })
       : intent === "archive" ? await archiveSession(db, actor, id, revision)
+      : intent === "unarchive" ? await unarchiveSession(db, actor, id, revision)
       : intent === "trash" ? await trashSession(db, actor, id, revision)
       : intent === "restore" ? await restoreSession(db, actor, id, revision) : null;
     if (!updated) return { message: "Choose a session action." };

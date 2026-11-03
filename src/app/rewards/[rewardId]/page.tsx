@@ -37,6 +37,7 @@ export default async function RewardPage({ params }: { params: Promise<{ rewardI
       <div className="actions">
         {!item.deletedAt && <PlanningSubmit name="intent" value="save">Save reward</PlanningSubmit>}
         {!item.deletedAt && !item.archivedAt && <PlanningSubmit name="intent" value="archive" formNoValidate>Archive</PlanningSubmit>}
+        {!item.deletedAt && item.archivedAt && <PlanningSubmit name="intent" value="unarchive" formNoValidate>Return to active</PlanningSubmit>}
         {!item.deletedAt && <PlanningSubmit name="intent" value="trash" formNoValidate>Trash</PlanningSubmit>}
         {item.deletedAt && <PlanningSubmit name="intent" value="restore" formNoValidate>Restore</PlanningSubmit>}
       </div>

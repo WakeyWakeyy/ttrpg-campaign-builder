@@ -156,12 +156,14 @@ export async function recordSessionOutcome(db: NodePgDatabase, actor: Actor, id:
   }, { isolationLevel: "read committed" });
 }
 async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, revision: number,
-  action: "archive" | "trash" | "restore") {
+  action: "archive" | "unarchive" | "trash" | "restore") {
   return db.transaction(async tx => {
     const current = await lockSession(tx, actor, id, revision);
     if ((action === "archive" && current.archivedAt) || (action === "trash" && current.deletedAt)
+      || (action === "unarchive" && (!current.archivedAt || current.deletedAt))
       || (action === "restore" && !current.deletedAt)) return current;
     const change = action === "archive" ? { archivedAt: sql`statement_timestamp()` }
+      : action === "unarchive" ? { archivedAt: null }
       : action === "trash" ? { deletedAt: sql`statement_timestamp()`,
         purgeAfter: sql`((statement_timestamp() AT TIME ZONE 'UTC') + interval '30 days') AT TIME ZONE 'UTC'` }
       : { deletedAt: null, purgeAfter: null };
@@ -171,6 +173,8 @@ async function lifecycle(db: NodePgDatabase, actor: Actor, id: string, revision:
 }
 export const archiveSession = (db: NodePgDatabase, actor: Actor, id: string, revision: number) =>
   lifecycle(db, actor, id, revision, "archive");
+export const unarchiveSession = (db: NodePgDatabase, actor: Actor, id: string, revision: number) =>
+  lifecycle(db, actor, id, revision, "unarchive");
 export const trashSession = (db: NodePgDatabase, actor: Actor, id: string, revision: number) =>
   lifecycle(db, actor, id, revision, "trash");
 export const restoreSession = (db: NodePgDatabase, actor: Actor, id: string, revision: number) =>

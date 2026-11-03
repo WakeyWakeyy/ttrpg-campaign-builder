@@ -89,6 +89,7 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
         <div className="actions">
           {!state.current.deletedAt && <button name="intent" value="save" disabled={state.conflict}>Save location</button>}
           {!state.current.deletedAt && !state.current.archivedAt && <button name="intent" value="archive" formNoValidate disabled={state.conflict}>Archive</button>}
+          {!state.current.deletedAt && state.current.archivedAt && <button name="intent" value="unarchive" formNoValidate disabled={state.conflict}>Return to active</button>}
           {!state.current.deletedAt && <button name="intent" value="trash" formNoValidate disabled={state.conflict}>Trash</button>}
           {state.current.deletedAt && <button name="intent" value="restore" formNoValidate disabled={state.conflict}>Restore</button>}
         </div>
