@@ -151,8 +151,8 @@ test("removing a selected component never silently turns a pending grant into a 
   } finally { await pool.end(); }
 });
 
-test("a lost grant response retries the identical key and payload without duplicating the ledger", async ({ page }) => {
-  const pool = testPool();
+test("a lost grant response retries the identical key and payload without duplicating the ledger", async ({ page, context }) => {
+  const pool = testPool(), remote = await context.newPage();
   try {
     const { id } = await openReward(page), grant = editor(page, "#grant-recipient");
     await grant.getByRole("checkbox").check(); await grant.getByLabel("Given to").fill("Party");
@@ -200,11 +200,21 @@ test("a lost grant response retries the identical key and payload without duplic
     await expect(page).toHaveURL(beforeNavigation);
     await expect(grant.locator('input[name="requestKey"]')).toHaveValue(key);
     await expect(grant.getByLabel("Given to")).toBeDisabled();
+    // Status changes elsewhere must not unlock or rewrite the uncertain command.
+    await remote.goto(page.url());
+    const plan = editor(remote, "#reward-title");
+    await plan.getByRole("button", { name: "Archive", exact: true }).click();
+    await expect(plan.locator('input[name="expectedRevision"]')).toHaveValue("4");
+    await plan.getByRole("button", { name: "Return to active", exact: true }).click();
+    await expect(plan.locator('input[name="expectedRevision"]')).toHaveValue("5");
+    await expect(grant.locator('input[name="expectedRevision"]')).toHaveValue(revision);
+    await expect(grant.locator('input[name="requestKey"]')).toHaveValue(key);
+    await expect(grant.getByLabel("Given to")).toBeDisabled();
     await grant.getByRole("button", { name: "View persisted values for this section", exact: true }).click();
     await expect(grant.getByRole("button", { name: "Keep this draft and use this revision", exact: true })).toBeDisabled();
     await grant.getByRole("button", { name: "Retry the same grant request", exact: true }).click();
     await expect(grant.getByRole("status").filter({ hasText: /^Grant recorded\./ })).toBeVisible();
-    await expect(grant.locator('input[name="expectedRevision"]')).toHaveValue("3");
+    await expect(grant.locator('input[name="expectedRevision"]')).toHaveValue("5");
     await expect(grant.locator('input[name="requestKey"]')).not.toHaveValue(key);
     expect(commands).toHaveLength(2);
     expect(commands[0]).toEqual({ expectedRevision: [revision], requestKey: [key], componentIds,
@@ -212,5 +222,5 @@ test("a lost grant response retries the identical key and payload without duplic
     expect(commands[1]).toEqual(commands[0]);
     const persisted = (await pool.query("SELECT recipient, notes FROM reward_grant WHERE reward_id=$1", [id])).rows;
     expect(persisted).toEqual([{ recipient: "Party", notes: "Ambiguous grant outcome" }]);
-  } finally { await pool.end(); }
+  } finally { await remote.close(); await pool.end(); }
 });
