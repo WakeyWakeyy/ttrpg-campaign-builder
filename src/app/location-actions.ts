@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { archiveLocation, editLocation, getOwnedLocation, LocationRevisionConflictError, restoreLocation, trashLocation } from "@/modules/locations";
+import { archiveLocation, unarchiveLocation, editLocation, getOwnedLocation, LocationRevisionConflictError, restoreLocation, trashLocation } from "@/modules/locations";
 import { actionError } from "./action-state";
 import type { LocationResult, LocationSnapshot } from "./location-editor-state";
 
@@ -35,6 +35,7 @@ export async function updateLocationAction(id: string, form: FormData): Promise<
     const result = intent === "save" ? await editLocation(db, actor, id, {
       expectedRevision: revision, name: text("name"), description: text("description") || null,
     }) : intent === "archive" ? await archiveLocation(db, actor, id, revision)
+      : intent === "unarchive" ? await unarchiveLocation(db, actor, id, revision)
       : intent === "trash" ? await trashLocation(db, actor, id, revision)
       : intent === "restore" ? await restoreLocation(db, actor, id, revision) : null;
     if (!result) return { ok: false, message: "Choose a location action." };
