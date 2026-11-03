@@ -24,11 +24,18 @@ export function SessionDraftForm({ sessionId, target, snapshot, action, children
   const router = useRouter();
   const [state, dispatch] = useReducer(sessionDraftReducer, snapshot, initialSessionDraft);
   const [pending, setPending] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const form = useRef<HTMLFormElement>(null);
   const draftValues = useRef(snapshot.values);
   const busy = useRef(false);
   const stale = state.conflict || state.dirty && snapshot.revision > state.base.revision;
   const waiting = state.confirmedRevision !== null && snapshot.revision < state.confirmedRevision;
+
+  // Disabled in SSR and the first client render; independent of draft/revision sync.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- One mount-only commit enables SSR controls after hydration, not derived draft state.
+    setMounted(true);
+  }, []);
 
   function applyValues(values: Record<string, string>) {
     for (const [key, value] of Object.entries(values)) {
@@ -84,20 +91,21 @@ export function SessionDraftForm({ sessionId, target, snapshot, action, children
     {state.message && <p role={state.error ? "alert" : "status"}>{state.message}</p>}
     {stale && <p role="status">Session changed. This section&apos;s draft is retained at revision {state.base.revision}.
       Consult persisted values before saving again.</p>}
-    <form ref={form} method="post" onSubmit={submit} onChange={event => {
+    <noscript><p>Editing this form requires JavaScript. Enable it to edit and save.</p></noscript>
+    <form ref={form} method="post" aria-busy={!mounted} onSubmit={submit} onChange={event => {
       const data = new FormData(event.currentTarget);
       const values = Object.fromEntries(Object.keys(state.base.values).map(key => [key, String(data.get(key) ?? "")]));
       draftValues.current = values;
       dispatch({ type: "edit", values });
     }}>
       <input type="hidden" name="expectedRevision" value={state.base.revision} />
-      <SubmitDisabled.Provider value={pending || stale || waiting}>
-        <fieldset disabled={pending || waiting}>{children}</fieldset>
+      <SubmitDisabled.Provider value={!mounted || pending || stale || waiting}>
+        <fieldset disabled={!mounted || pending || waiting}>{children}</fieldset>
       </SubmitDisabled.Provider>
     </form>
     {state.dirty && <p>Unsaved changes in this section.</p>}
     {(pending || waiting) && <p role="status">Request in progress…</p>}
-    <button type="button" disabled={pending || waiting} onClick={consult}>View persisted values for this section</button>
+    <button type="button" disabled={!mounted || pending || waiting} onClick={consult}>View persisted values for this section</button>
     {state.latest && <section aria-label="Persisted section values">
       <h3>Persisted section · revision {state.latest.revision}</h3>
       <p>Preparing a revision does not merge changes. Compare every field and incorporate wanted changes manually before Save.</p>
@@ -105,9 +113,9 @@ export function SessionDraftForm({ sessionId, target, snapshot, action, children
         <dt>{fieldLabels[key]}</dt><dd className="preserve-lines">{value || "(empty)"}</dd>
       </div>)}</dl>
       {state.latest.unavailable && <p>This section is in trash. The draft remains available to copy; restore it before editing.</p>}
-      <button type="button" disabled={pending || state.latest.unavailable}
+      <button type="button" disabled={!mounted || pending || state.latest.unavailable}
         onClick={() => dispatch({ type: "prepare" })}>Keep this draft and use this revision</button>
-      <button type="button" disabled={pending} onClick={() => {
+      <button type="button" disabled={!mounted || pending} onClick={() => {
         draftValues.current = state.latest!.values;
         applyValues(state.latest!.values);
         dispatch({ type: "discard" });

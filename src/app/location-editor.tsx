@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useRef, useState, type FormEvent } from "react";
+import { useLayoutEffect, useReducer, useRef, useState, type FormEvent } from "react";
 import { readLocationAction, updateLocationAction } from "./location-actions";
 import { initialLocationState, locationEditorReducer, type LocationSnapshot } from "./location-editor-state";
 import { LocationStatus } from "./location-status";
@@ -8,9 +8,16 @@ import { LocationStatus } from "./location-status";
 export function LocationEditor({ location }: { location: LocationSnapshot }) {
   const [state, dispatch] = useReducer(locationEditorReducer, location, initialLocationState);
   const [pending, setPending] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const busy = useRef(false);
   const name = useRef<HTMLInputElement>(null);
   const description = useRef<HTMLTextAreaElement>(null);
+
+  // Disabled in SSR and the first client render; never reset on revision changes.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- One mount-only commit enables SSR controls after hydration, not derived draft state.
+    setMounted(true);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,9 +71,10 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
     {state.current.deletedAt && <p>Restore returns this location to {state.current.archivedAt ? "Archived" : "Active"}.</p>}
     {state.message && <p role={state.saved ? "status" : "alert"}>{state.message}</p>}
     {state.conflict && <p role="status">This location changed since you opened it. Your draft is preserved. Consult the persisted version before saving again.</p>}
-    <form method="post" onSubmit={submit} onChange={() => dispatch({ type: "edit" })}>
+    <noscript><p>Editing this form requires JavaScript. Enable it to edit and save.</p></noscript>
+    <form method="post" aria-busy={!mounted} onSubmit={submit} onChange={() => dispatch({ type: "edit" })}>
       <input type="hidden" name="expectedRevision" value={state.current.revision} />
-      <fieldset disabled={pending}>
+      <fieldset disabled={!mounted || pending}>
         <legend>Location draft</legend>
         <label htmlFor="name">Name</label>
         <input ref={name} id="name" name="name" defaultValue={location.name} required readOnly={!!state.current.deletedAt} />
@@ -80,7 +88,7 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
         </div>
       </fieldset>
     </form>
-    <button type="button" disabled={pending} onClick={consult}>View persisted version</button>
+    <button type="button" disabled={!mounted || pending} onClick={consult}>View persisted version</button>
     {pending && <p role="status">Request in progress…</p>}
     {state.latest && <section aria-labelledby="persisted-location-heading">
       <h2 id="persisted-location-heading">Persisted location · revision {state.latest.revision}</h2>
@@ -95,9 +103,9 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
       </dl>
       {state.latest.deletedAt && <p>This location is in trash. You can copy your draft before loading the persisted version to restore it.</p>}
       <div className="actions">
-        <button type="button" disabled={pending || !!state.latest.deletedAt}
+        <button type="button" disabled={!mounted || pending || !!state.latest.deletedAt}
           onClick={() => dispatch({ type: "prepare" })}>Keep draft and use this revision</button>
-        <button type="button" disabled={pending} onClick={discard}>Use persisted version (discard draft)</button>
+        <button type="button" disabled={!mounted || pending} onClick={discard}>Use persisted version (discard draft)</button>
       </div>
     </section>}
   </>;
