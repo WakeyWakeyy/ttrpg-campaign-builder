@@ -81,7 +81,7 @@ test("beforeunload protects reload only while dirty and cancellation never write
     await field.fill("KEEP THROUGH DOCUMENT EXIT");
     accept = false;
     const current = page.url();
-    await page.evaluate(() => window.location.assign("/"));
+    await page.evaluate(() => window.location.assign(new URL("/", window.location.href).href));
     await expect(page).toHaveURL(current);
     await expect(field).toHaveValue("KEEP THROUGH DOCUMENT EXIT");
     expect(dialogs).toEqual(["beforeunload", "beforeunload", "beforeunload"]);
