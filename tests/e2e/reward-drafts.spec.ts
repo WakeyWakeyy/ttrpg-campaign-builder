@@ -190,6 +190,16 @@ test("a lost grant response retries the identical key and payload without duplic
     await expect(grant.getByLabel("Given to")).toBeDisabled();
     await expect(grant.locator('input[name="requestKey"]')).toHaveValue(key);
     expect((await pool.query("SELECT count(*)::int AS count FROM reward_grant WHERE reward_id=$1 AND request_key=$2", [id, key])).rows[0].count).toBe(1);
+    const beforeNavigation = page.url();
+    page.once("dialog", async dialog => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("unconfirmed");
+      await dialog.dismiss();
+    });
+    await page.getByRole("link", { name: "Back to campaign", exact: true }).click();
+    await expect(page).toHaveURL(beforeNavigation);
+    await expect(grant.locator('input[name="requestKey"]')).toHaveValue(key);
+    await expect(grant.getByLabel("Given to")).toBeDisabled();
     await grant.getByRole("button", { name: "View persisted values for this section", exact: true }).click();
     await expect(grant.getByRole("button", { name: "Keep this draft and use this revision", exact: true })).toBeDisabled();
     await grant.getByRole("button", { name: "Retry the same grant request", exact: true }).click();
