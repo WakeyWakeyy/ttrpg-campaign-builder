@@ -103,7 +103,12 @@ test("pending local acceptance and renaming never materialize without saving tha
       }
       await route.continue();
     });
-    // This is an explicit navigation-producing command; general navigation protection is out of scope.
+    // Explicit creation leaves the editor; confirm discarding the unsaved sibling.
+    page.once("dialog", async dialog => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("unsaved changes");
+      await dialog.accept();
+    });
     await page.getByRole("button", { name: "Create Campaign from accepted proposals", exact: true }).click();
     await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]+$/);
     const campaignId = page.url().split("/").pop()!;

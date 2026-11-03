@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "../../unsaved-navigation";
 import { randomUUID } from "node:crypto";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";

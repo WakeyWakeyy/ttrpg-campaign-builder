@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "../../unsaved-navigation";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
@@ -17,7 +17,7 @@ export default async function BlueprintPage({ params }: { params: Promise<{ blue
     <Link href="/">All campaigns and drafts</Link>
     <h1>{draft.title}</h1>
     <p>This is a private proposal. Saving it does not change a campaign.</p>
-    <ActionForm action={editBlueprintAction.bind(null, draft.id)} reloadLabel="Reload draft">
+    <ActionForm protectUnsaved action={editBlueprintAction.bind(null, draft.id)} reloadLabel="Reload draft">
       <input type="hidden" name="expectedRevision" value={draft.revision} />
       <label htmlFor="title">Title</label><input id="title" name="title" defaultValue={draft.title} required />
       <label htmlFor="premise">Premise</label><textarea id="premise" name="premise" rows={5} defaultValue={draft.premise} required />
@@ -32,7 +32,7 @@ export default async function BlueprintPage({ params }: { params: Promise<{ blue
       </>}
       <button type="submit">Save draft changes</button>
     </ActionForm>
-    {!draft.reviewStartedAt && <ActionForm action={startBlueprintReviewAction.bind(null, draft.id)} reloadLabel="Reload draft">
+    {!draft.reviewStartedAt && <ActionForm protectUnsaved leavesEditor action={startBlueprintReviewAction.bind(null, draft.id)} reloadLabel="Reload draft">
       <input type="hidden" name="expectedRevision" value={draft.revision} />
       <button type="submit">Start Blueprint Review</button>
     </ActionForm>}

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { GuardedLink as Link } from "../../../unsaved-navigation";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
@@ -43,7 +43,7 @@ export default async function BlueprintReviewPage({ params }: { params: Promise<
     <p>{accepted.length} accepted Location{accepted.length === 1 ? "" : "s"}:</p>
     <ul>{accepted.map(proposal => <li key={proposal.id}>{proposal.name}</li>)}</ul>
     {materialization ? <p>Campaign created. <Link href={`/campaigns/${materialization.campaignId}`}>Open Campaign</Link></p> :
-      <ActionForm action={materializeBlueprintAction.bind(null, draft.id)} reloadLabel="Reload review">
+      <ActionForm protectUnsaved leavesEditor action={materializeBlueprintAction.bind(null, draft.id)} reloadLabel="Reload review">
         <input type="hidden" name="expectedRevision" value={draft.revision} />
         <input type="hidden" name="idempotencyKey" value={randomUUID()} />
         <button type="submit">Create Campaign from accepted proposals</button>

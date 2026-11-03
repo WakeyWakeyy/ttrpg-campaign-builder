@@ -4,6 +4,7 @@ import { useLayoutEffect, useReducer, useRef, useState, type FormEvent } from "r
 import { readLocationAction, updateLocationAction } from "./location-actions";
 import { initialLocationState, locationEditorReducer, type LocationSnapshot } from "./location-editor-state";
 import { LocationStatus } from "./location-status";
+import { usePendingForm } from "./unsaved-navigation";
 
 export function LocationEditor({ location }: { location: LocationSnapshot }) {
   const [state, dispatch] = useReducer(locationEditorReducer, location, initialLocationState);
@@ -12,6 +13,11 @@ export function LocationEditor({ location }: { location: LocationSnapshot }) {
   const busy = useRef(false);
   const name = useRef<HTMLInputElement>(null);
   const description = useRef<HTMLTextAreaElement>(null);
+  const { report } = usePendingForm();
+  useLayoutEffect(() => {
+    report(!!name.current && (name.current.value !== state.current.name
+      || description.current?.value.replaceAll("\r\n", "\n") !== (state.current.description ?? "").replaceAll("\r\n", "\n")));
+  });
 
   // Disabled in SSR and the first client render; never reset on revision changes.
   useLayoutEffect(() => {

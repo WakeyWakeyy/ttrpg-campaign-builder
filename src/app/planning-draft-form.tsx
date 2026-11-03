@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useLayoutEffect, useReducer, useRef, useState,
   type ButtonHTMLAttributes, type FormEvent, type ReactNode } from "react";
-import { capturePlanningValues, initialPlanningDraft, planningDraftReducer, putPlanningValues,
+import { capturePlanningValues, initialPlanningDraft, planningDraftReducer, putPlanningValues, samePlanningValues,
   type PlanningActionState, type PlanningRead, type PlanningSnapshot } from "./planning-draft-state";
+import { usePendingForm } from "./unsaved-navigation";
 
 const SubmitDisabled = createContext(false);
 export function PlanningSubmit(props: ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -30,6 +31,11 @@ export function PlanningDraftForm({ snapshot, action, read, requestKey, children
   const stale = state.conflict || state.dirty && snapshot.revision > state.base.revision;
   const waiting = state.confirmedRevision !== null && snapshot.revision < state.confirmedRevision;
   const locked = state.uncertain || state.requestConflict;
+  const { report } = usePendingForm();
+
+  useLayoutEffect(() => {
+    report(state.dirty && !samePlanningValues(state.base.values, state.values), locked);
+  }, [report, state.dirty, state.base.values, state.values, locked]);
 
   useLayoutEffect(() => {
     if (!pending && !state.dirty && !state.conflict && !locked && !waiting

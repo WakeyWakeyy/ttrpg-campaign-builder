@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "../../unsaved-navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedEncounter, listEncounterCreatures } from "@/modules/encounters";

@@ -5,7 +5,8 @@ import { createContext, useContext, useLayoutEffect, useReducer, useRef, useStat
 import { useRouter } from "next/navigation";
 import type { ActionState } from "./action-state";
 import { readSessionDraftAction } from "./session-draft-actions";
-import { initialSessionDraft, sessionDraftReducer, type SessionDraftSnapshot, type SessionDraftTarget } from "./session-draft-state";
+import { initialSessionDraft, sameSessionDraft, sessionDraftReducer, type SessionDraftSnapshot, type SessionDraftTarget } from "./session-draft-state";
+import { usePendingForm } from "./unsaved-navigation";
 
 const SubmitDisabled = createContext(false);
 const fieldLabels: Record<string, string> = { title: "Title", plannedFor: "Planned date", preparation: "Preparation", outcome: "Outcome", position: "Order" };
@@ -30,6 +31,7 @@ export function SessionDraftForm({ sessionId, target, snapshot, action, children
   const busy = useRef(false);
   const stale = state.conflict || state.dirty && snapshot.revision > state.base.revision;
   const waiting = state.confirmedRevision !== null && snapshot.revision < state.confirmedRevision;
+  const { report } = usePendingForm();
 
   // Disabled in SSR and the first client render; independent of draft/revision sync.
   useLayoutEffect(() => {
@@ -57,6 +59,10 @@ export function SessionDraftForm({ sessionId, target, snapshot, action, children
       dispatch({ type: "sync", snapshot });
     }
   }, [snapshot, state.base.revision, state.dirty, state.conflict, state.confirmedRevision, pending, waiting]);
+
+  useLayoutEffect(() => {
+    report(state.dirty && !sameSessionDraft(state.base.values, draftValues.current));
+  });
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
