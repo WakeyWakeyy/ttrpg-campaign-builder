@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { GuardedLink as Link, UnsavedNavigationProvider } from "./unsaved-navigation";
 import "./globals.css";
 import { ClerkProvider, Show, SignInButton, UserButton } from "@clerk/nextjs";
 
@@ -14,12 +14,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <ClerkProvider>
       <html lang="en">
         <body>
-          <header>
-            <Link href="/">TTRPG Campaign Builder</Link>
-            <Show when="signed-out"><SignInButton mode="modal"><button>Sign in</button></SignInButton></Show>
-            <Show when="signed-in"><UserButton showName /></Show>
-          </header>
-          {children}
+          <UnsavedNavigationProvider>
+            <header>
+              <Link href="/">TTRPG Campaign Builder</Link>
+              <Show when="signed-out"><SignInButton mode="modal"><button>Sign in</button></SignInButton></Show>
+              <Show when="signed-in"><UserButton showName /></Show>
+            </header>
+            {children}
+          </UnsavedNavigationProvider>
         </body>
       </html>
     </ClerkProvider>

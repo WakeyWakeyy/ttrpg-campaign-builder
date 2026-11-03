@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "../../unsaved-navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedCampaign, getOwnedCompass } from "@/modules/campaigns";
@@ -145,7 +145,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {item.deletedAt ? " · In trash" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No encounters yet.</p>}
           {data.rulesetVersion?.rulesetKey === "dnd-5e-2024" && data.rulesetVersion.version === "5.2.1"
-            && !data.campaign.deletedAt && <ActionForm action={createEncounterAction.bind(null, campaignId)}>
+            && !data.campaign.deletedAt && <ActionForm protectUnsaved leavesEditor action={createEncounterAction.bind(null, campaignId)}>
               <label htmlFor="new-encounter-title">Title</label>
               <input id="new-encounter-title" name="title" required maxLength={200} />
               <label htmlFor="new-encounter-level">Party level</label>
@@ -162,7 +162,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/rewards/${item.id}`}>{item.title}</Link>
             {item.deletedAt ? " · In trash" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No rewards planned yet.</p>}
-          {!data.campaign.deletedAt && <ActionForm action={createRewardAction.bind(null, campaignId)}>
+          {!data.campaign.deletedAt && <ActionForm protectUnsaved leavesEditor action={createRewardAction.bind(null, campaignId)}>
             <label htmlFor="new-reward-title">Title</label>
             <input id="new-reward-title" name="title" required maxLength={200} />
             <button type="submit">Plan reward</button>
@@ -189,7 +189,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No sessions yet.</p>}
           <h3>Prepare session</h3>
-          <ActionForm action={createSessionAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createSessionAction.bind(null, campaignId)}>
             <label htmlFor="new-session-title">Title</label><input id="new-session-title" name="title" required />
             <label htmlFor="new-session-date">Planned date (optional)</label><input id="new-session-date" name="plannedFor" type="date" />
             <label htmlFor="new-session-preparation">Preparation</label><textarea id="new-session-preparation" name="preparation" rows={5} />
@@ -213,7 +213,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           <h2 id="compass-heading">Campaign Compass</h2>
           <h3>Original premise</h3><p className="preserve-lines">{data.compass.originalPremise}</p>
           {data.compass.originalNotes && <><h3>Original notes</h3><p className="preserve-lines">{data.compass.originalNotes}</p></>}
-          <ActionForm action={editCompassAction.bind(null, campaignId)} reloadLabel="Reload compass">
+          <ActionForm protectUnsaved action={editCompassAction.bind(null, campaignId)} reloadLabel="Reload compass">
             <input type="hidden" name="expectedRevision" value={data.compass.revision} />
             <label htmlFor="currentPremise">Current premise</label><textarea id="currentPremise" name="currentPremise" defaultValue={data.compass.currentPremise} rows={5} required />
             <label htmlFor="setting">Setting (optional)</label><input id="setting" name="setting" defaultValue={data.compass.setting ?? ""} />
@@ -228,7 +228,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/arcs/${arc.id}`}>{arc.name}</Link>{" "}<ArcStatus arc={arc} />
           </li>)}</ul> : <p>No arcs yet.</p>}
           <h3>Create arc</h3>
-          <ActionForm action={createArcAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createArcAction.bind(null, campaignId)}>
             <label htmlFor="arc-name">Name</label><input id="arc-name" name="name" required />
             <label htmlFor="arc-description">Description (optional)</label><textarea id="arc-description" name="description" rows={5} />
             <button type="submit">Create arc</button>
@@ -242,7 +242,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {quest.deletedAt ? " · Trashed" : quest.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No quests yet.</p>}
           <h3>Create quest</h3>
-          <ActionForm action={createQuestAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createQuestAction.bind(null, campaignId)}>
             <label htmlFor="quest-name">Name</label><input id="quest-name" name="name" required />
             <label htmlFor="quest-description">Description (optional)</label><textarea id="quest-description" name="description" rows={5} />
             <input type="hidden" name="status" value="OPEN" />
@@ -254,7 +254,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         </section>
         <section id="continuity" aria-labelledby="continuity-heading" className="workspace-section">
           <h2 id="continuity-heading">Continuity</h2>
-          <ActionForm action={setIntelligencePreferencesAction.bind(null, campaignId)} reloadLabel="Reload preferences">
+          <ActionForm protectUnsaved action={setIntelligencePreferencesAction.bind(null, campaignId)} reloadLabel="Reload preferences">
             <p>Choose which preparation prompts appear in this campaign. Turning one off leaves your records intact.</p>
             <input type="hidden" name="revision" value={data.intelligencePreferences.revision} />
             <p><label><input type="checkbox" name="questContinuity" defaultChecked={data.intelligencePreferences.questContinuity} /> Quest threads</label></p>
@@ -295,7 +295,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/clues/${item.id}`}>{item.title}</Link>
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No clues yet.</p>}
-          {!data.campaign.deletedAt && <ActionForm action={createClueAction.bind(null, campaignId)}>
+          {!data.campaign.deletedAt && <ActionForm protectUnsaved leavesEditor action={createClueAction.bind(null, campaignId)}>
             <label htmlFor="new-clue-title">Clue</label><input id="new-clue-title" name="title" required maxLength={200} />
             <label htmlFor="new-clue-secret">Hidden information it reveals</label>
             <textarea id="new-clue-secret" name="secret" required maxLength={10000} rows={3} />
@@ -317,7 +317,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/secrets/${item.id}`}>{item.title}</Link>
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No secrets yet.</p>}
-          {!data.campaign.deletedAt && <ActionForm action={createSecretAction.bind(null, campaignId)}>
+          {!data.campaign.deletedAt && <ActionForm protectUnsaved leavesEditor action={createSecretAction.bind(null, campaignId)}>
             <label htmlFor="new-secret-title">Title</label><input id="new-secret-title" name="title" required maxLength={200} />
             <label htmlFor="new-secret-content">Hidden information</label>
             <textarea id="new-secret-content" name="content" required maxLength={10000} rows={4} />
@@ -332,7 +332,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {npc.deletedAt ? " · Trashed" : npc.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No NPCs yet.</p>}
           <h3>Create NPC</h3>
-          <ActionForm action={createNpcAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createNpcAction.bind(null, campaignId)}>
             <label htmlFor="npc-name">Name</label><input id="npc-name" name="name" required />
             <label htmlFor="npc-role">Role (optional)</label><input id="npc-role" name="role" />
             <label htmlFor="npc-description">Description (optional)</label><textarea id="npc-description" name="description" rows={5} />
@@ -348,7 +348,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {character.deletedAt ? " · Trashed" : character.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No player characters yet.</p>}
           <h3>Create player character</h3>
-          <ActionForm action={createPlayerCharacterAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createPlayerCharacterAction.bind(null, campaignId)}>
             <label htmlFor="pc-name">Character name</label><input id="pc-name" name="name" required />
             <label htmlFor="pc-player">Player name (optional)</label><input id="pc-player" name="playerName" />
             <label htmlFor="pc-description">Description (optional)</label><textarea id="pc-description" name="description" rows={4} />
@@ -365,7 +365,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {party.deletedAt ? " · Trashed" : party.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No parties yet.</p>}
           <h3>Create party</h3>
-          <ActionForm action={createPartyAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createPartyAction.bind(null, campaignId)}>
             <label htmlFor="party-name">Name</label><input id="party-name" name="name" required />
             <label htmlFor="party-description">Description (optional)</label><textarea id="party-description" name="description" rows={4} />
             <fieldset><legend>Members</legend>{data.characters.map(character => <label key={character.id}>
@@ -383,7 +383,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {faction.deletedAt ? " · Trashed" : faction.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No factions yet.</p>}
           <h3>Create faction</h3>
-          <ActionForm action={createFactionAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createFactionAction.bind(null, campaignId)}>
             <label htmlFor="faction-name">Name</label><input id="faction-name" name="name" required />
             <label htmlFor="faction-description">Description (optional)</label><textarea id="faction-description" name="description" rows={4} />
             <label htmlFor="faction-purpose">Purpose (optional)</label><textarea id="faction-purpose" name="purpose" rows={3} />
@@ -397,7 +397,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/locations/${location.id}`}>{location.name}</Link>{" "}<LocationStatus location={location} />
           </li>)}</ul> : <p>No locations yet. Add the first place your players might visit.</p>}
           <h3>Create location</h3>
-          <ActionForm action={createLocationAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createLocationAction.bind(null, campaignId)}>
             <label htmlFor="name">Name</label><input id="name" name="name" required />
             <label htmlFor="description">Description (optional)</label><textarea id="description" name="description" rows={5} />
             <button type="submit">Create location</button>
@@ -411,7 +411,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {route.deletedAt ? " · Trashed" : route.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No travel routes yet.</p>}
           <h3>Create travel route</h3>
-          <ActionForm action={createTravelRouteAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createTravelRouteAction.bind(null, campaignId)}>
             <label htmlFor="route-name">Name</label><input id="route-name" name="name" required />
             <label htmlFor="route-from">From</label><select id="route-from" name="fromLocationId" required><option value="">Choose location</option>{data.locations.filter(place => !place.deletedAt).map(place => <option key={place.id} value={place.id}>{place.name}</option>)}</select>
             <label htmlFor="route-to">To</label><select id="route-to" name="toLocationId" required><option value="">Choose location</option>{data.locations.filter(place => !place.deletedAt).map(place => <option key={place.id} value={place.id}>{place.name}</option>)}</select>
@@ -431,7 +431,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No items yet.</p>}
           <h3>Create item</h3>
-          <ActionForm action={createItemAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createItemAction.bind(null, campaignId)}>
             <label htmlFor="item-name">Name</label><input id="item-name" name="name" required />
             <label htmlFor="item-description">Description (optional)</label><textarea id="item-description" name="description" rows={4} />
             <label htmlFor="item-significance">Significance (optional)</label><textarea id="item-significance" name="significance" rows={3} />
@@ -455,7 +455,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             </Link>{relationship.deletedAt ? " · Trashed" : relationship.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No relationships yet.</p>}
           <h3>Create relationship</h3>
-          <ActionForm action={createRelationshipAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createRelationshipAction.bind(null, campaignId)}>
             <label htmlFor="relationship-source">From</label>
             <select id="relationship-source" name="sourceEntityId" required><option value="">Choose entity</option>
               {data.relationshipChoices.filter(choice => !choice.deletedAt).map(choice => <option key={choice.id} value={choice.id}>{choice.type}: {choice.name}</option>)}
@@ -478,7 +478,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             {event.deletedAt ? " · Trashed" : event.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No timeline events yet.</p>}
           <h3>Record event</h3>
-          <ActionForm action={createTimelineEventAction.bind(null, campaignId)}>
+          <ActionForm protectUnsaved leavesEditor action={createTimelineEventAction.bind(null, campaignId)}>
             <label htmlFor="timeline-title">Title</label><input id="timeline-title" name="title" required />
             <label htmlFor="timeline-description">What happened (optional)</label><textarea id="timeline-description" name="description" rows={4} />
             <label htmlFor="timeline-occurred">Real date (optional)</label><input id="timeline-occurred" name="occurredOn" type="date" />
@@ -492,7 +492,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
         <section id="export" aria-labelledby="export-heading" className="workspace-section">
           <h2 id="export-heading">Export campaign</h2>
           <p>Download a readable GM reference or a full JSON snapshot. The JSON includes archived and trashed records, connections, and hidden information. Keep these files private.</p>
-          <p><a href={`/campaigns/${campaignId}/export/pdf`}>Download campaign PDF</a> · <a href={`/campaigns/${campaignId}/export/quick-reference`}>Download quick-reference sheets</a> · <a href={`/campaigns/${campaignId}/export/module`}>Download campaign module</a> · <a href={`/campaigns/${campaignId}/export/overview`}>Download campaign overview</a> · <a href={`/campaigns/${campaignId}/export/md`}>Download Markdown</a> · <a href={`/campaigns/${campaignId}/export/json`}>Download JSON</a></p>
+          <p><a download href={`/campaigns/${campaignId}/export/pdf`}>Download campaign PDF</a> · <a download href={`/campaigns/${campaignId}/export/quick-reference`}>Download quick-reference sheets</a> · <a download href={`/campaigns/${campaignId}/export/module`}>Download campaign module</a> · <a download href={`/campaigns/${campaignId}/export/overview`}>Download campaign overview</a> · <a download href={`/campaigns/${campaignId}/export/md`}>Download Markdown</a> · <a download href={`/campaigns/${campaignId}/export/json`}>Download JSON</a></p>
         </section>
       </div>
     </div>

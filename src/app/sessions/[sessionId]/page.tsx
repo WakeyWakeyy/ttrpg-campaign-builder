@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { GuardedLink as Link } from "../../unsaved-navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { getOwnedSession, getPreviousSessionContext, listSessionAttendance, listSessionScenes } from "@/modules/sessions";
@@ -30,10 +30,10 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
     <h1>{item.title}</h1>
     <p><Link href={`/sessions/${item.id}/run`}>Open Run View</Link></p>
     <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
-    <p><a href={`/sessions/${item.id}/sheet`}>Download session sheet (Markdown)</a></p>
-    <p><a href={`/sessions/${item.id}/sheet?format=pdf`}>Download session sheet (PDF)</a></p>
+    <p><a download href={`/sessions/${item.id}/sheet`}>Download session sheet (Markdown)</a></p>
+    <p><a download href={`/sessions/${item.id}/sheet?format=pdf`}>Download session sheet (PDF)</a></p>
     <p>The sheet may contain GM-only plans. Keep it private.</p>
-    {!item.deletedAt && <ActionForm action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
+    {!item.deletedAt && <ActionForm protectUnsaved leavesEditor action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
       <input type="hidden" name="expectedRevision" value={item.revision} />
       <input type="hidden" name="idempotencyKey" value={randomUUID()} />
       <button type="submit">Reuse preparation in a new session</button>
@@ -55,7 +55,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <h2 id="attendance-heading">Attendance</h2>
       <p>{item.attendanceSet ? "Attendance recorded for this session." : "No attendance recorded yet."}
         {" "}This list only affects this session, not your parties.</p>
-      <ActionForm key={`attendance-${item.revision}`} action={setSessionAttendanceAction.bind(null, item.id)} reloadLabel="Reload session">
+      <ActionForm protectUnsaved key={`attendance-${item.revision}`} action={setSessionAttendanceAction.bind(null, item.id)} reloadLabel="Reload session">
           <input type="hidden" name="expectedRevision" value={item.revision} />
           <fieldset disabled={!!item.deletedAt}>
             <legend>Player characters who attended</legend>
@@ -96,12 +96,12 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       {placements.filter(placement => !placement.sceneId).map(placement => <div key={placement.id}>
         <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
         {placement.encounterDeletedAt ? " (definition in trash)" : ""}
-        {!item.deletedAt && <ActionForm action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
+        {!item.deletedAt && <ActionForm protectUnsaved action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
           <input type="hidden" name="expectedRevision" value={item.revision} />
           <button type="submit">Remove placement</button>
         </ActionForm>}
       </div>)}
-      {!item.deletedAt && <ActionForm action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
+      {!item.deletedAt && <ActionForm protectUnsaved action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
         <input type="hidden" name="expectedRevision" value={item.revision} />
         <label htmlFor="session-encounter">Encounter</label>
         <select id="session-encounter" name="encounterId" required>
@@ -120,12 +120,12 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         {placements.filter(placement => placement.sceneId === scene.id).map(placement => <div key={placement.id}>
           <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
           {placement.encounterDeletedAt ? " (definition in trash)" : ""}
-          {!item.deletedAt && <ActionForm action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
+          {!item.deletedAt && <ActionForm protectUnsaved action={removeEncounterPlacementAction.bind(null, item.id, placement.id)} reloadLabel="Reload session">
             <input type="hidden" name="expectedRevision" value={item.revision} />
             <button type="submit">Remove placement</button>
           </ActionForm>}
         </div>)}
-        {!item.deletedAt && !scene.deletedAt && <ActionForm action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
+        {!item.deletedAt && !scene.deletedAt && <ActionForm protectUnsaved action={placeEncounterAction.bind(null, item.id)} reloadLabel="Reload session">
           <input type="hidden" name="expectedRevision" value={item.revision} />
           <input type="hidden" name="sceneId" value={scene.id} />
           <label htmlFor={`scene-encounter-${scene.id}`}>Encounter</label>

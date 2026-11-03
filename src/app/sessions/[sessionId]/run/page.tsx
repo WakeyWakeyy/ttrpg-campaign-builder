@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "../../../unsaved-navigation";
 import { ActionForm } from "@/app/action-form";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
@@ -91,7 +91,7 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
       </li>)}</ol> : <p>No encounters recorded yet.</p>}
       {!session.deletedAt && <>
         {placements.filter(placement => !placement.encounterDeletedAt && !placement.sceneDeletedAt).map(placement =>
-          <ActionForm key={placement.id} action={recordEncounterRunAction.bind(null, session.id)} reloadLabel="Reload session">
+          <ActionForm protectUnsaved key={placement.id} action={recordEncounterRunAction.bind(null, session.id)} reloadLabel="Reload session">
             <input type="hidden" name="expectedRevision" value={session.revision} />
             <input type="hidden" name="placementId" value={placement.id} />
             <h3>Record {placement.title}</h3>
@@ -99,7 +99,7 @@ export default async function SessionRunPage({ params }: { params: Promise<{ ses
             <textarea id={`run-outcome-${placement.id}`} name="outcome" required maxLength={10000} rows={3} />
             <button type="submit">Save encounter run</button>
           </ActionForm>)}
-        <ActionForm action={recordEncounterRunAction.bind(null, session.id)} reloadLabel="Reload session">
+        <ActionForm protectUnsaved action={recordEncounterRunAction.bind(null, session.id)} reloadLabel="Reload session">
           <input type="hidden" name="expectedRevision" value={session.revision} />
           <h3>Record an improvised encounter</h3>
           <label htmlFor="improvised-run-title">Title</label>
