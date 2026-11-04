@@ -109,9 +109,17 @@ The current PDF rendering is temporary. A future iteration will likely source ed
 - quick-reference sheets (complete): a private Markdown download provides compact people, groups, places, travel routes, and item references with current states, party members, travel details, and holders. Only available records and available linked names appear; see [quick-reference scope](campaign-quick-reference.md);
 - PDF campaign module (complete): a private A4 download reuses the detailed module's editorial model and authorized snapshot, with a linked chapter index, bookmarks, embedded fonts, and page numbers. It keeps preparation and outcomes separate and includes only available material plus recorded history; see [PDF scope](campaign-pdf.md).
 
+## Campaign Home — CH01: choose and continue
+
+CH01 is the first Campaign Home delivery. The existing Campaign route starts with its current Compass direction and up to three active Sessions ordered by `updatedAt` descending, with ascending ID as a stable tie-breaker. Each Session links directly to preparation, Run and Recap. Grouped material links and same-page access to all Sessions and the existing creation form leave the workspace, anchors and editors in place. Home reads the workspace's already authorized data and executes no content commands. Modification time does not indicate play order, readiness or completion.
+
+This is a focused entry point, not a workspace replacement. Progressive creation disclosure (CH02), new associations, new navigation protection, D02 Phase 2 and D09 are not included. Existing D04 warnings and limitations remain unchanged; same-page anchors do not unmount forms or discard local drafts.
+
+Review captures of the new entry: [desktop](images/ch01-desktop.png) and [390px mobile](images/ch01-mobile.png). The existing Campaign heading and workspace remain outside the captured entry.
+
 ## Later, only after the core workflow proves useful
 
-The seven core stages above are complete. The latest follow-up adds printable Session sheets within Export. There is no automatically selected next stage: further work should validate a concrete GM need from the options below or another focused improvement to the existing workflow.
+The seven core stages above are complete. Follow-up work includes printable Session sheets, the documented UX Reliability slices and CH01's focused Campaign entry point. There is no automatically selected next stage: further work should validate a concrete GM need from the options below or another focused improvement to the existing workflow.
 
 Potential later work includes:
 

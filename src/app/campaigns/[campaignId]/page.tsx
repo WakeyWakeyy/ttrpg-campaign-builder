@@ -32,6 +32,7 @@ import { createArcAction, createClueAction, createEncounterAction, createFaction
 import { LocationStatus } from "../../location-status";
 import { ArcStatus } from "../../arc-status";
 import { readError } from "../../read-error";
+import { CampaignHome } from "../../campaign-home";
 
 export default async function CampaignPage({ params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
@@ -92,6 +93,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
       </div>
       <span className="status">{campaignStatus}</span>
     </div>
+    <CampaignHome campaignId={campaignId} premise={data.compass.currentPremise} sessions={data.sessions} />
     <div className="workspace-layout">
       <nav className="workspace-nav" aria-label="Campaign sections">
         <h2>In this campaign</h2>
@@ -188,7 +190,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
             <Link href={`/sessions/${item.id}`}>{item.title}</Link>{item.plannedFor ? ` · ${item.plannedFor}` : ""}
             {item.deletedAt ? " · Trashed" : item.archivedAt ? " · Archived" : ""}
           </li>)}</ul> : <p>No sessions yet.</p>}
-          <h3>Prepare session</h3>
+          <h3 id="prepare-session" tabIndex={-1}>Prepare session</h3>
           <ActionForm protectUnsaved leavesEditor action={createSessionAction.bind(null, campaignId)}>
             <label htmlFor="new-session-title">Title</label><input id="new-session-title" name="title" required />
             <label htmlFor="new-session-date">Planned date (optional)</label><input id="new-session-date" name="plannedFor" type="date" />
