@@ -77,21 +77,7 @@ Do not redesign accepted boundaries as part of an unrelated task. If implementat
 
 ## Current implementation scope
 
-The first architecture-proof slice is:
-
-```text
-Sign in
-  → internal user
-  → Campaign
-  → pinned Ruleset Version
-  → Location
-  → revision-safe edit
-  → Archive
-  → Trash
-  → Restore
-```
-
-Do not implement later Campaign Wizard, Blueprint, AI, export, encounter, or map features unless the task explicitly moves into those areas.
+The product supports Campaign creation and Compass, structured world and story records, Session and Scene preparation, Encounter planning and run history, Recap, Reward plans and grants, continuity, and private export. Demo Alpha validates these capabilities in a single reproducible GM workflow. See [Demo Alpha](docs/demo-alpha.md) for the journey and acceptance criteria.
 
 ## graphify
 
