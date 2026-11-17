@@ -77,6 +77,7 @@ If the previous app is compatible with the current schema and access settings, r
 
 ## Publication checklist
 
+- **P0** Resolve the current full-audit blocker for picomatch before release. See the validation record.
 - **P0** Approved provider, plan/spend, domain, tester roster and production Invite-only access. Verify preview denial and both positive and negative authenticated smoke cases.
 - **P0** Back up the exact target, rehearse restore, and pass migration and release-build gates. Investigate unexpected ledger gaps or partial schemas on a copy.
 - **P0** Candidate SHA passes CI and the local Golden Path on desktop and mobile. Approve staging and production promotion separately.
@@ -87,10 +88,14 @@ If the previous app is compatible with the current schema and access settings, r
 
 The combined candidate includes migration code from PR #88 and admission code from PR #87. Both PRs remain Draft.
 
-- Frozen install and audit passed. Unit tests passed 145 cases with two workers. PostgreSQL integration passed 211 cases, including all six migration scenarios. Lint, TypeScript and the production release build passed.
+- Frozen install passed. The earlier audit was clean, but the final full audit reports a high-severity picomatch advisory. Unit tests passed 145 cases with two workers. PostgreSQL integration passed 211 cases, including all six migration scenarios. Lint, TypeScript and the production release build passed.
 - The complete authenticated Chromium run passed 44 cases with one expected opt-in smoke skip. It includes both Golden Path viewports, campaign ownership, preservation, revision conflicts, lifecycle, grant retry and Blueprint materialization.
 - The opt-in smoke passed separately for a signed-in nonmember. A permitted tester passed the smoke and both Golden Path viewports under the configured roster and canonical origin.
 - A disposable PostgreSQL 18 cluster passed fresh migrations, a logical backup and restore with a fictional campaign, and release readiness using a runtime role without migration privileges. A database without migrations stopped the release build before compilation. Only disposable test targets were modified.
 - Earlier concurrent local validation hit three PDF unit timeouts and five browser navigation/Encounter failures. Their assertions and timeouts were retained. The final complete browser run and two-worker unit rerun passed. These earlier failures remain recorded as observations, with resource contention as a possible contributor.
 - The invited-user smoke exposed two concrete issues that were corrected and retested. Clerk needs its own session-transition POST to reach the framework handler, while application actions authorize through requireActor. Next normalized an alternate development hostname, so the gate now verifies the actual Host header as well as the normalized origin.
 - Production Invite-only enrollment, DNS/redirects, platform protection, service latency, costs and a restore rehearsal against the selected provider still require the real authorized environment. The local smoke uses the pre-existing Clerk development test identity.
+
+### Open dependency blocker
+
+The final audit on 2026-11-17 reports high-severity GHSA-fc5q-39xc-vjpf for picomatch 4.0.7 through Vitest/Vite and ESLint tooling. The registry still reports 4.0.7 as latest and 4.0.8 is unpublished. The advisory lists no fixed version. Production-only audit reports zero advisories, which narrows the affected dependency tree. The full audit remains a release gate. Revalidate when a supported fix is available or after a separately reviewed mitigation. [GitHub advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) · [Upstream releases](https://github.com/micromatch/picomatch/releases)
