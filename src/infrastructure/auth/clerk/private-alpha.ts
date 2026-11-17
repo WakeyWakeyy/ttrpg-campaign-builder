@@ -1,4 +1,4 @@
-type PrivateAlphaPolicy = { origin: string; allowedUsers: ReadonlySet<string> };
+type PrivateAlphaPolicy = { origin: string; host: string; allowedUsers: ReadonlySet<string> };
 export class PrivateAlphaConfigurationError extends Error {}
 
 export function privateAlphaPolicy(env: NodeJS.ProcessEnv = process.env): PrivateAlphaPolicy | null {
@@ -27,7 +27,7 @@ export function privateAlphaPolicy(env: NodeJS.ProcessEnv = process.env): Privat
   if (!ids.length || ids.some(id => !/^user_[a-zA-Z0-9]+$/.test(id))) {
     throw new PrivateAlphaConfigurationError("Configure the Private Alpha tester IDs.");
   }
-  return { origin: url.origin, allowedUsers: new Set(ids) };
+  return { origin: url.origin, host: url.host, allowedUsers: new Set(ids) };
 }
 
 export function canAccessAlpha(policy: PrivateAlphaPolicy | null, userId: string) {

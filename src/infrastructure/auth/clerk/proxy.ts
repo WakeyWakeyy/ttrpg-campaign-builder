@@ -18,7 +18,9 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
     return rejected(503);
   }
   if (!policy) return localMiddleware(request, event);
-  if (request.nextUrl.origin !== policy.origin) return rejected(404);
+  if (request.nextUrl.origin !== policy.origin || request.headers.get("host")?.toLowerCase() !== policy.host) {
+    return rejected(404);
+  }
 
   return clerkMiddleware(async auth => {
     const isSignInLanding = request.nextUrl.pathname === "/" && ["GET", "HEAD"].includes(request.method);

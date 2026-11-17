@@ -18,8 +18,8 @@ import { privateAlphaPolicy } from "../../src/infrastructure/auth/clerk/private-
 import { requestError } from "../../src/app/request-error";
 
 const origin = "https://alpha.example.com";
-function request(path: string, method = "GET", host = origin) {
-  return proxy({ method, nextUrl: new URL(path, host) } as NextRequest, {} as NextFetchEvent);
+function request(path: string, method = "GET", url = origin, host = new URL(url).host) {
+  return proxy({ method, nextUrl: new URL(path, url), headers: new Headers({ host }) } as NextRequest, {} as NextFetchEvent);
 }
 beforeEach(() => {
   clerk.userId = null;
@@ -64,6 +64,7 @@ test("signed-in users require an invitation and cannot use another host", async 
   clerk.userId = "user_Tester";
   expect(await request("/campaigns/example")).toBeUndefined();
   expect((await request("/campaigns/example", "GET", "https://preview.example.com"))?.status).toBe(404);
+  expect((await request("/campaigns/example", "GET", origin, "preview.example.com"))?.status).toBe(404);
 });
 
 test("local development keeps its original auth flow with blank sample settings", () => {
