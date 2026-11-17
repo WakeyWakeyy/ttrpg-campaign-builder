@@ -13,11 +13,11 @@ test("private alpha gates authenticated access and other deployment hosts", asyn
   expect(anonymousExport.status()).toBe(401);
 
   await clerk.signIn({ page, emailAddress: process.env.E2E_CLERK_EMAIL! });
-  const landing = await page.goto("/");
+  await page.goto("/");
   if (mode === "allowed") {
     await expect(page.getByRole("heading", { name: "Your campaigns" })).toBeVisible();
   } else {
-    expect(landing?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "Invitation required" })).toBeVisible();
     const denied = await page.request.get(`/sessions/${sampleId}/sheet?format=pdf`);
     expect(denied.status()).toBe(404);
     expect(denied.headers()["cache-control"]).toBe("private, no-store");

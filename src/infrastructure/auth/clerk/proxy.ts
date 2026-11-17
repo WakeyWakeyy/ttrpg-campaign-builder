@@ -21,9 +21,10 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
   if (request.nextUrl.origin !== policy.origin) return rejected(404);
 
   return clerkMiddleware(async auth => {
-    const { userId } = await auth();
-    if (userId) return canAccessAlpha(policy, userId) ? undefined : rejected(404);
     const isSignInLanding = request.nextUrl.pathname === "/" && ["GET", "HEAD"].includes(request.method);
-    return isSignInLanding ? undefined : rejected(401);
+    if (isSignInLanding) return;
+    const { userId } = await auth();
+    if (!userId) return rejected(401);
+    if (!canAccessAlpha(policy, userId)) return rejected(404);
   }, { authorizedParties: [policy.origin] })(request, event);
 }

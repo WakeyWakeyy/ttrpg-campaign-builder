@@ -54,7 +54,8 @@ test("the only anonymous application entry is the canonical sign-in landing", as
 
 test("signed-in users require an invitation and cannot use another host", async () => {
   clerk.userId = "user_NotInvited";
-  for (const [path, method] of [["/", "GET"], ["/", "POST"], ["/sessions/example/sheet", "GET"]]) {
+  expect(await request("/")).toBeUndefined();
+  for (const [path, method] of [["/", "POST"], ["/campaigns/example", "GET"], ["/sessions/example/sheet", "GET"]]) {
     const response = await request(path, method);
     expect(response?.status).toBe(404);
     expect(response?.headers.get("Cache-Control")).toBe("private, no-store");

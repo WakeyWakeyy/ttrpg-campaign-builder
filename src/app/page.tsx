@@ -1,4 +1,5 @@
 import { readError } from "./read-error";
+import { canAccessAlpha, privateAlphaPolicy } from "@/infrastructure/auth/clerk/private-alpha";
 import { SignInButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
@@ -17,6 +18,9 @@ export default async function Home() {
     <p>Organize your campaigns and locations.</p>
     <SignInButton mode="modal"><button>Sign in to your campaigns</button></SignInButton>
   </main>;
+  if (!canAccessAlpha(privateAlphaPolicy(), userId)) {
+    return <main><h1>Invitation required</h1><p>Contact the campaign maintainer to request access to the alpha.</p></main>;
+  }
   const [campaigns, drafts] = await (async () => {
     const db = getDatabase();
     const actor = await requireActor(db);
