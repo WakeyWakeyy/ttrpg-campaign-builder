@@ -125,7 +125,9 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await page.locator("#new-creature-xp").fill("25");
       await page.locator("#new-creature-quantity").fill("2");
       await page.getByRole("button", { name: "Add creature", exact: true }).click();
-      await expect(page.getByRole("region", { name: "XP budget" })).toContainText("Planned creatures: 50 XP.");
+      const budget = page.getByRole("region", { name: "XP budget" });
+      await expect(budget).toContainText("Low 200 · Moderate 300 · High 400 XP");
+      await expect(budget).toContainText("Planned creatures: 50 XP.");
 
       await page.goto(sessionPath);
       const placement = page.getByRole("region", { name: "Planned encounters" });
