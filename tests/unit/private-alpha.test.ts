@@ -45,9 +45,10 @@ test("production fails closed on absent configuration, dev keys and preview", as
   expect(clerk.bind).not.toHaveBeenCalled();
 });
 
-test("the only anonymous application entry is the canonical sign-in landing", async () => {
+test("the canonical landing and Clerk session setup reach their handlers", async () => {
   expect(await request("/")).toBeUndefined();
-  expect((await request("/", "POST"))?.status).toBe(401);
+  expect(await request("/", "POST")).toBeUndefined();
+  expect((await request("/", "POST", "https://preview.example.com"))?.status).toBe(404);
   expect((await request("/campaigns/example/export/pdf"))?.status).toBe(401);
   expect(clerk.bind).toHaveBeenCalledWith({ authorizedParties: [origin] });
 });
@@ -55,7 +56,7 @@ test("the only anonymous application entry is the canonical sign-in landing", as
 test("signed-in users require an invitation and cannot use another host", async () => {
   clerk.userId = "user_NotInvited";
   expect(await request("/")).toBeUndefined();
-  for (const [path, method] of [["/", "POST"], ["/campaigns/example", "GET"], ["/sessions/example/sheet", "GET"]]) {
+  for (const [path, method] of [["/campaigns/example", "GET"], ["/sessions/example/sheet", "GET"]]) {
     const response = await request(path, method);
     expect(response?.status).toBe(404);
     expect(response?.headers.get("Cache-Control")).toBe("private, no-store");

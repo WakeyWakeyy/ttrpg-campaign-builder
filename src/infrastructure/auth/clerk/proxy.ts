@@ -22,7 +22,8 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
 
   return clerkMiddleware(async auth => {
     const isSignInLanding = request.nextUrl.pathname === "/" && ["GET", "HEAD"].includes(request.method);
-    if (isSignInLanding) return;
+    // Clerk also uses Server Actions for session transitions. App actions authorize in requireActor.
+    if (isSignInLanding || request.method === "POST") return;
     const { userId } = await auth();
     if (!userId) return rejected(401);
     if (!canAccessAlpha(policy, userId)) return rejected(404);
