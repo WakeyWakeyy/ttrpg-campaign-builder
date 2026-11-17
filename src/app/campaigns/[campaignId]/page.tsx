@@ -94,7 +94,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
       <span className="status">{campaignStatus}</span>
     </div>
     <CampaignHome campaignId={campaignId} premise={data.compass.currentPremise} sessions={data.sessions} />
-    <div id="campaign-workspace" className="workspace-layout">
+    <div className="workspace-layout">
       <nav className="workspace-nav" aria-label="Campaign sections">
         <h2>In this campaign</h2>
         <a href="#overview">Overview</a>

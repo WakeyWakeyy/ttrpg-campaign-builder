@@ -19,6 +19,10 @@ export function CampaignHome({ campaignId, premise, sessions }: {
     <section aria-labelledby="recent-sessions-heading">
       <h2 id="recent-sessions-heading">Sesiones actualizadas recientemente</h2>
       <p>Sesiones activas, ordenadas por última modificación. Esa fecha no indica cuándo se jugaron ni su estado de preparación.</p>
+      <div className={styles.links}>
+        <a href="#prepare-session">Preparar una nueva sesión</a>
+        <a href="#sessions">Ver todas las sesiones</a>
+      </div>
       {recent.length ? <ul className={styles.sessions}>{recent.map(item => <li key={item.id}>
         <h3>{item.title}</h3>
         <p>Actualizada: <time dateTime={item.updatedAt.toISOString()}>{item.updatedAt.toISOString().slice(0, 10)} UTC</time></p>
@@ -28,10 +32,6 @@ export function CampaignHome({ campaignId, premise, sessions }: {
           <GuardedLink prefetch={false} href={`/sessions/${item.id}/recap`}>Recap</GuardedLink>
         </nav>
       </li>)}</ul> : <p>No hay sesiones activas. Podés comenzar a preparar una sin crear personajes, lugares ni otras entidades primero.</p>}
-      <div className={styles.links}>
-        <a href="#prepare-session">Preparar una nueva sesión</a>
-        <a href="#sessions">Ver todas las sesiones</a>
-      </div>
     </section>
     <details className={styles.material}>
       <summary>Explorar material de campaña</summary>

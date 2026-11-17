@@ -1,6 +1,7 @@
 .home { margin-bottom: 2rem; padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid #ddd; border-radius: .4rem; overflow-wrap: anywhere; }
 .home h2 { margin: 0 0 .5rem; font-size: 1.2rem; }
 .home > section, .material { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #ddd; }
+.home > div > a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .sessions { list-style: none; padding: 0; }
 .sessions > li { padding: .75rem 0; border-bottom: 1px solid #ddd; }
 .sessions h3 { margin: 0; }
@@ -12,6 +13,11 @@
 .groups { display: grid; padding-top: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
 .groups ul { list-style: none; padding: 0; margin: 0; }
 .groups li { margin: .25rem 0; }
+@media (min-width: 60rem) {
+  .home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); column-gap: 1.5rem; }
+  .home > section { margin: 0; padding: 0 0 0 1.5rem; border-top: 0; border-left: 1px solid #ddd; }
+  .material { grid-column: 1 / -1; }
+}
 @media (max-width: 42rem) {
   .groups { grid-template-columns: minmax(0, 1fr); }
 }
