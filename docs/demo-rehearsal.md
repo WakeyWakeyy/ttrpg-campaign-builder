@@ -28,3 +28,7 @@ Use a local development instance with a dedicated demo database if you want the 
 8. Under Export, download **campaign PDF**. Open it and verify the linked index, the World/Story material, the planned and played encounter, the accepted Session/Scene outcomes, and the grant.
 
 The browser test has the exact fixture text for each form. There is no automatic production seed.
+
+## Export visual debt
+
+The bundled font shows a missing glyph for the directional arrow in generated relationship headings. Both entity names and the relationship text remain visible. Keep the exported fixture as a visual regression reference when addressing font coverage.
