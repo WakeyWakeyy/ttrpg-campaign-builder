@@ -36,3 +36,15 @@ test("does not disguise authentication infrastructure failures as unauthenticate
   await expect(requireActor(db)).rejects.toBe(failure);
   expect(resolveIdentity).not.toHaveBeenCalled();
 });
+
+test("rejects an authenticated identity outside the alpha roster before persistence", async () => {
+  vi.stubEnv("PRIVATE_ALPHA_ORIGIN", "http://localhost:3100");
+  vi.stubEnv("PRIVATE_ALPHA_USER_IDS", "user_Invited");
+  try {
+    vi.mocked(auth).mockResolvedValue({ userId: "user_Uninvited" } as Awaited<ReturnType<typeof auth>>);
+    await expect(requireActor(db)).rejects.toBeInstanceOf(UnauthenticatedError);
+    expect(resolveIdentity).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

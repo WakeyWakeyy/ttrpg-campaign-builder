@@ -151,3 +151,15 @@ journey or its Clerk integration.
 On Windows, ensure `%SystemRoot%\System32` is on PATH so Playwright can
 terminate its owned server with `taskkill`. A missing system-tools PATH caused
 the first local run to hang after teardown; restoring PATH resolved it.
+
+## Private Alpha roster smoke
+
+Use the existing local Playwright database and Clerk development instance. Set `PRIVATE_ALPHA_ORIGIN` to `http://localhost:3100`. The server will reject protected requests on other origins. Use `PRIVATE_ALPHA_ACCESS_SMOKE=denied` with a valid-format Clerk ID outside the test user's identity to confirm that a signed-in nonmember cannot open the dashboard or download a Session PDF.
+
+For the positive run, set `PRIVATE_ALPHA_ACCESS_SMOKE=allowed` and set `PRIVATE_ALPHA_USER_IDS` to the development Clerk ID corresponding to `E2E_CLERK_EMAIL`. Keep identifiers and keys in the local environment. Run:
+
+```sh
+pnpm test:e2e tests/e2e/private-alpha.spec.ts tests/e2e/demo-alpha.spec.ts
+```
+
+For a denied run select only `tests/e2e/private-alpha.spec.ts`. With ordinary local settings the opt-in roster smoke is skipped. The allowed run covers signing in, the full Golden Path, and PDF export under the app's extra access policy. Verify actual Invite-only enrollment and protected host settings in the production smoke before opening access to the full roster.

@@ -1,18 +1,17 @@
+import { readError } from "@/app/read-error";
 import { GuardedLink as Link } from "../../unsaved-navigation";
-import { notFound } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { BlueprintNotFoundError, getOwnedBlueprint } from "@/modules/blueprints";
+import { getOwnedBlueprint } from "@/modules/blueprints";
 import { ActionForm } from "../../action-form";
 import { editBlueprintAction, startBlueprintReviewAction } from "../../actions";
 
 export default async function BlueprintPage({ params }: { params: Promise<{ blueprintId: string }> }) {
   const { blueprintId } = await params;
-  const db = getDatabase();
-  const actor = await requireActor(db);
-  let draft;
-  try { draft = await getOwnedBlueprint(db, actor, blueprintId); }
-  catch (error) { if (error instanceof BlueprintNotFoundError) notFound(); throw error; }
+  const draft = await (async () => {
+    const db = getDatabase();
+    return getOwnedBlueprint(db, await requireActor(db), blueprintId);
+  })().catch(readError);
   return <main>
     <Link href="/">All campaigns and drafts</Link>
     <h1>{draft.title}</h1>

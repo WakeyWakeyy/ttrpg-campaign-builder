@@ -1,3 +1,5 @@
+import { BlueprintNotFoundError } from "@/modules/blueprints";
+import { requestError } from "@/app/request-error";
 import { notFound, redirect } from "next/navigation";
 import { CampaignNotFoundError } from "@/modules/campaigns";
 import { LocationNotFoundError } from "@/modules/locations";
@@ -20,6 +22,6 @@ import { UnauthenticatedError } from "@/modules/identity";
 
 export function readError(error: unknown): never {
   if (error instanceof UnauthenticatedError) redirect("/");
-  if (error instanceof CampaignNotFoundError || error instanceof LocationNotFoundError || error instanceof ArcNotFoundError || error instanceof QuestNotFoundError || error instanceof NpcNotFoundError || error instanceof PlayerCharacterNotFoundError || error instanceof PartyNotFoundError || error instanceof FactionNotFoundError || error instanceof TravelRouteNotFoundError || error instanceof ItemNotFoundError || error instanceof RelationshipNotFoundError || error instanceof TimelineEventNotFoundError || error instanceof SessionNotFoundError || error instanceof EncounterNotFoundError || error instanceof RewardNotFoundError || error instanceof ClueNotFoundError || error instanceof SecretNotFoundError) notFound();
-  throw error;
+  if (error instanceof BlueprintNotFoundError || error instanceof CampaignNotFoundError || error instanceof LocationNotFoundError || error instanceof ArcNotFoundError || error instanceof QuestNotFoundError || error instanceof NpcNotFoundError || error instanceof PlayerCharacterNotFoundError || error instanceof PartyNotFoundError || error instanceof FactionNotFoundError || error instanceof TravelRouteNotFoundError || error instanceof ItemNotFoundError || error instanceof RelationshipNotFoundError || error instanceof TimelineEventNotFoundError || error instanceof SessionNotFoundError || error instanceof EncounterNotFoundError || error instanceof RewardNotFoundError || error instanceof ClueNotFoundError || error instanceof SecretNotFoundError) notFound();
+  throw requestError(error);
 }
