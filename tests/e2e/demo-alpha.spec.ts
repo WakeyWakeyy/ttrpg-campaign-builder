@@ -180,10 +180,11 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await rewards.getByLabel("Title", { exact: true }).fill(reward);
       await rewards.getByRole("button", { name: "Plan reward", exact: true }).click();
       await expect(page).toHaveURL(/\/rewards\/[0-9a-f-]+$/);
+      await page.locator("#new-component-kind").selectOption("ACCESS");
       await page.locator("#new-component-description").fill(component);
       await page.getByRole("button", { name: "Add component", exact: true }).click();
       const grant = page.getByRole("region", { name: "Record a grant" });
-      await grant.getByRole("checkbox", { name: new RegExp(component) }).check();
+      await grant.getByRole("checkbox", { name: `access: ${component}`, exact: true }).check();
       await grant.getByLabel("Given to").fill("The Lantern Crew");
       await grant.getByLabel("Session (optional)").selectOption({ label: session });
       await grant.getByRole("button", { name: "Record grant", exact: true }).click();
