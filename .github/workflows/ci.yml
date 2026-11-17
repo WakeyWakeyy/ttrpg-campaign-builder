@@ -48,7 +48,7 @@ jobs:
         run: npm install --global pnpm@12.8.1
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm exec --yes --package=pnpm@12.8.1 -- pnpm install --frozen-lockfile --prod=false
 
       - name: Audit dependencies
         run: pnpm audit
@@ -71,4 +71,6 @@ jobs:
         run: pnpm typecheck
 
       - name: Build
-        run: pnpm build
+        run: npm exec --yes --package=pnpm@12.8.1 -- pnpm release:build
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}

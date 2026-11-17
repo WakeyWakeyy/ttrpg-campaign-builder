@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": false
+  },
+  "installCommand": "npm exec --yes --package=pnpm@12.8.1 -- pnpm install --frozen-lockfile --prod=false",
+  "buildCommand": "npm exec --yes --package=pnpm@12.8.1 -- pnpm release:build"
+}

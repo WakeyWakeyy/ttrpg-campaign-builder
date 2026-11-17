@@ -81,6 +81,10 @@ pnpm dev
 
 Run `pnpm test` for unit tests. Integration tests use a dedicated PostgreSQL database: set `TEST_DATABASE_URL`, migrate that database with `DATABASE_URL` pointed to it, then run `pnpm test:integration`. Browser tests run with `pnpm test:e2e` after configuring their test environment; see [browser proof setup](docs/browser-proof.md).
 
+## Private Alpha
+
+See the [deployment guide](docs/private-alpha-deployment.md) for provider setup, migration and release checks, and recovery.
+
 ## Licensing
 
 A license for the repository's own software has not yet been selected. Rules content is handled separately: the current direction uses legally reusable SRD 5.2.1 material under CC BY 4.0. See [licensing details](docs/licensing.md).
