@@ -149,7 +149,7 @@ test("a Scene save leaves Session protected, and reuse preparation is confirmed 
     const area = page.getByRole("region", { name: "Sessions" });
     await area.getByLabel("Title", { exact: true }).fill("Original session");
     await area.getByText("Planned date and notes (optional)", { exact: true }).click();
-  await area.getByLabel("Preparation").fill("Persisted preparation");
+    await area.getByLabel("Preparation").fill("Persisted preparation");
     await area.getByRole("button", { name: "Create session", exact: true }).click();
     await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
     const id = page.url().split("/").pop()!;

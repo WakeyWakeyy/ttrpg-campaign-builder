@@ -33,7 +33,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <Link href={`/sessions/${item.id}/run`}>Open Run View</Link>
       <Link href={`/sessions/${item.id}/recap`}>Record what happened</Link>
     </nav>
-    <nav className="run-nav" aria-label="Preparation sections">
+    <nav className="run-nav" aria-label="Session sections">
       <a href="#session-scenes">Scenes</a>
       <a href="#session-encounters">Encounters</a>
       <a href="#session-context">Previous session</a>

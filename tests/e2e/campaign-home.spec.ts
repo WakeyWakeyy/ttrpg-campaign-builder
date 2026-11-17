@@ -179,7 +179,7 @@ test("preparation disclosure and section links preserve pending input at 390px",
   await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
   await expect(page.locator("#session-preparation")).toHaveValue("Visit the quay at low tide.");
   await page.locator("#session-preparation").fill("Revised local notes.");
-  await page.getByRole("navigation", { name: "Preparation sections" }).getByRole("link", { name: "Scenes", exact: true }).click();
+  await page.getByRole("navigation", { name: "Session sections" }).getByRole("link", { name: "Scenes", exact: true }).click();
   await expect(page).toHaveURL(/#session-scenes$/);
   await expect(page.locator("#session-preparation")).toHaveValue("Revised local notes.");
 });
