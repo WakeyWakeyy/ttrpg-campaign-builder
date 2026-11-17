@@ -28,20 +28,44 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
   return <main>
     <Link href={`/campaigns/${item.campaignId}#sessions`}>Back to campaign</Link>
     <h1>{item.title}</h1>
-    <p><Link href={`/sessions/${item.id}/run`}>Open Run View</Link></p>
-    <p><Link href={`/sessions/${item.id}/recap`}>Record what happened</Link></p>
+    <nav className="run-nav" aria-label="Session modes">
+      <a href="#session-plan">Preparation</a>
+      <Link href={`/sessions/${item.id}/run`}>Open Run View</Link>
+      <Link href={`/sessions/${item.id}/recap`}>Record what happened</Link>
+    </nav>
+    <nav className="run-nav" aria-label="Preparation sections">
+      <a href="#session-scenes">Scenes</a>
+      <a href="#session-encounters">Encounters</a>
+      <a href="#session-context">Previous session</a>
+      <a href="#session-attendance">Attendance</a>
+    </nav>
     <p><a download href={`/sessions/${item.id}/sheet`}>Download session sheet (Markdown)</a></p>
     <p><a download href={`/sessions/${item.id}/sheet?format=pdf`}>Download session sheet (PDF)</a></p>
     <p>The sheet may contain GM-only plans. Keep it private.</p>
-    {!item.deletedAt && <ActionForm protectUnsaved leavesEditor action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
-      <input type="hidden" name="expectedRevision" value={item.revision} />
-      <input type="hidden" name="idempotencyKey" value={randomUUID()} />
-      <button type="submit">Reuse preparation in a new session</button>
-      <p>Copies this plan, available scenes, and their encounter placements. Outcomes, attendance, and the planned date start empty.</p>
-    </ActionForm>}
     <p>{item.deletedAt ? "In trash" : item.archivedAt ? "Archived" : "Active"}</p>
     {item.deletedAt && <p>Restore returns this session to {item.archivedAt ? "Archived" : "Active"}.</p>}
-    <section aria-labelledby="previous-session-heading">
+    <section id="session-plan" className="run-section" aria-labelledby="session-plan-heading">
+      <h2 id="session-plan-heading">Session plan</h2>
+      <SessionDraftForm key={item.id} sessionId={item.id} target={{ kind: "session" }}
+        snapshot={sessionDraftSnapshot(item.revision, "session", item)} action={updateSessionAction.bind(null, item.id)}>
+        <label htmlFor="session-title">Title</label>
+        <input id="session-title" name="title" defaultValue={item.title} required readOnly={!!item.deletedAt} />
+        <label htmlFor="session-date">Planned date (optional)</label>
+        <input id="session-date" name="plannedFor" type="date" defaultValue={item.plannedFor ?? ""} readOnly={!!item.deletedAt} />
+        <label htmlFor="session-preparation">Preparation</label>
+        <textarea id="session-preparation" name="preparation" defaultValue={item.preparation ?? ""} rows={10} readOnly={!!item.deletedAt} />
+        <label htmlFor="session-outcome">What actually happened (optional)</label>
+        <textarea id="session-outcome" name="outcome" defaultValue={item.outcome ?? ""} rows={8} readOnly={!!item.deletedAt} />
+        <div className="actions">
+          {!item.deletedAt && <SessionDraftSubmit name="intent" value="save">Save session</SessionDraftSubmit>}
+          {!item.deletedAt && !item.archivedAt && <SessionDraftSubmit name="intent" value="archive" formNoValidate>Archive</SessionDraftSubmit>}
+          {!item.deletedAt && item.archivedAt && <SessionDraftSubmit name="intent" value="unarchive" formNoValidate>Return to active</SessionDraftSubmit>}
+          {!item.deletedAt && <SessionDraftSubmit name="intent" value="trash" formNoValidate>Trash</SessionDraftSubmit>}
+          {item.deletedAt && <SessionDraftSubmit name="intent" value="restore" formNoValidate>Restore</SessionDraftSubmit>}
+        </div>
+      </SessionDraftForm>
+    </section>
+    <section id="session-context" className="run-section" aria-labelledby="previous-session-heading">
       <h2 id="previous-session-heading">Previous session</h2>
       {previous ? <>
         <p><Link href={`/sessions/${previous.session.id}`}>{previous.session.title}</Link>
@@ -51,7 +75,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           <li key={index}><strong>{scene.title}:</strong> {scene.outcome}</li>)}</ul></>}
       </> : <p>This is the first available session in this campaign.</p>}
     </section>
-    <section aria-labelledby="attendance-heading">
+    <section id="session-attendance" className="run-section" aria-labelledby="attendance-heading">
       <h2 id="attendance-heading">Attendance</h2>
       <p>{item.attendanceSet ? "Attendance recorded for this session." : "No attendance recorded yet."}
         {" "}This list only affects this session, not your parties.</p>
@@ -73,27 +97,11 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           </div>}
       </ActionForm>
     </section>
-    <SessionDraftForm key={item.id} sessionId={item.id} target={{ kind: "session" }}
-      snapshot={sessionDraftSnapshot(item.revision, "session", item)} action={updateSessionAction.bind(null, item.id)}>
-      <label htmlFor="session-title">Title</label>
-      <input id="session-title" name="title" defaultValue={item.title} required readOnly={!!item.deletedAt} />
-      <label htmlFor="session-date">Planned date (optional)</label>
-      <input id="session-date" name="plannedFor" type="date" defaultValue={item.plannedFor ?? ""} readOnly={!!item.deletedAt} />
-      <label htmlFor="session-preparation">Preparation</label>
-      <textarea id="session-preparation" name="preparation" defaultValue={item.preparation ?? ""} rows={10} readOnly={!!item.deletedAt} />
-      <label htmlFor="session-outcome">What actually happened (optional)</label>
-      <textarea id="session-outcome" name="outcome" defaultValue={item.outcome ?? ""} rows={8} readOnly={!!item.deletedAt} />
-      <div className="actions">
-        {!item.deletedAt && <SessionDraftSubmit name="intent" value="save">Save session</SessionDraftSubmit>}
-        {!item.deletedAt && !item.archivedAt && <SessionDraftSubmit name="intent" value="archive" formNoValidate>Archive</SessionDraftSubmit>}
-        {!item.deletedAt && item.archivedAt && <SessionDraftSubmit name="intent" value="unarchive" formNoValidate>Return to active</SessionDraftSubmit>}
-        {!item.deletedAt && <SessionDraftSubmit name="intent" value="trash" formNoValidate>Trash</SessionDraftSubmit>}
-        {item.deletedAt && <SessionDraftSubmit name="intent" value="restore" formNoValidate>Restore</SessionDraftSubmit>}
-      </div>
-    </SessionDraftForm>
-    <section aria-labelledby="session-encounters-heading">
+    <section id="session-encounters" className="run-section" aria-labelledby="session-encounters-heading">
       <h2 id="session-encounters-heading">Planned encounters</h2>
-      <p>Use the same encounter more than once. Removing a placement keeps its reusable definition.</p>
+      {encounters.some(encounter => !encounter.deletedAt)
+        ? <p>Use the same encounter more than once. Removing a placement keeps its reusable definition.</p>
+        : <p><Link href={`/campaigns/${item.campaignId}#encounters`}>Build an encounter in the campaign</Link> before placing it here.</p>}
       {placements.filter(placement => !placement.sceneId).map(placement => <div key={placement.id}>
         <Link href={`/encounters/${placement.encounterId}`}>{placement.title}</Link>
         {placement.encounterDeletedAt ? " (definition in trash)" : ""}
@@ -113,9 +121,9 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         <button type="submit">Place in session</button>
       </ActionForm>}
     </section>
-    <section aria-labelledby="scenes-heading">
+    <section id="session-scenes" className="run-section" aria-labelledby="scenes-heading">
       <h2 id="scenes-heading">Scenes</h2>
-      <p>Plan beats in order and record what happened without replacing the plan.</p>
+      <p>{scenes.length ? "Plan beats in order and keep outcomes alongside the plan." : "Add a scene for the first situation the players will face."}</p>
       {scenes.length ? <ol>{scenes.map(scene => <li key={scene.id}>
         <h3>{scene.title}{scene.deletedAt ? " · In trash" : ""}</h3>
         {placements.filter(placement => placement.sceneId === scene.id).map(placement => <div key={placement.id}>
@@ -170,5 +178,14 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         </SessionDraftForm>
       </>
     </section>
+    {!item.deletedAt && <details className="preparation-options">
+      <summary>Reuse this preparation</summary>
+      <ActionForm protectUnsaved leavesEditor action={reuseSessionPreparationAction.bind(null, item.id)} reloadLabel="Reload session">
+        <input type="hidden" name="expectedRevision" value={item.revision} />
+        <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+        <button type="submit">Reuse preparation in a new session</button>
+        <p>Copies this plan, available scenes, and their encounter placements. Outcomes, attendance, and the planned date start empty.</p>
+      </ActionForm>
+    </details>}
   </main>;
 }

@@ -87,41 +87,44 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
     <Link href="/">All campaigns</Link>
     <div className="workspace-heading">
       <div>
-        <p className="workspace-eyebrow">Campaign workspace</p>
+        <p className="workspace-eyebrow">Campaign</p>
         <h1>{data.campaign.name}</h1>
         {data.campaign.description && <p>{data.campaign.description}</p>}
       </div>
       <span className="status">{campaignStatus}</span>
     </div>
     <CampaignHome campaignId={campaignId} premise={data.compass.currentPremise} sessions={data.sessions} />
-    <div className="workspace-layout">
+    <div id="campaign-workspace" className="workspace-layout">
       <nav className="workspace-nav" aria-label="Campaign sections">
         <h2>In this campaign</h2>
         <a href="#overview">Overview</a>
         <a href="#compass">Campaign Compass</a>
+        <a href="#sessions">Sessions</a>
         <a href="#arcs">Arcs</a>
         <a href="#quests">Quests</a>
-        <Link href={`/campaigns/${campaignId}/threads`}>Threads to review</Link>
-        <a href="#continuity">Continuity</a>
-        <a href="#suggestions">Suggestions</a>
-        <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
-        <a href="#export">Export</a>
-        <a href="#clues">Clues</a>
-        <a href="#secrets">Secrets</a>
-        <a href="#npcs">NPCs</a>
-        <a href="#player-characters">Player Characters</a>
-        <a href="#parties">Parties</a>
-        <a href="#factions">Factions</a>
         <a href="#locations">Locations</a>
-        <a href="#travel-routes">Travel routes</a>
-        <a href="#items">Items</a>
-        <a href="#relationships">Relationships</a>
-        <a href="#timeline">Timeline</a>
-        <a href="#sessions">Sessions</a>
         <a href="#encounters">Encounters</a>
         <a href="#rewards">Rewards</a>
-        <a href="#grant-ledger">Grant ledger</a>
-        <a href="#rules-reference">Rules reference</a>
+        <a href="#export">Export</a>
+        <details className="workspace-more">
+          <summary>More campaign sections</summary>
+          <Link href={`/campaigns/${campaignId}/threads`}>Threads to review</Link>
+          <Link href={`/campaigns/${campaignId}/summary`}>What happened</Link>
+          <a href="#continuity">Continuity</a>
+          <a href="#suggestions">Suggestions</a>
+          <a href="#clues">Clues</a>
+          <a href="#secrets">Secrets</a>
+          <a href="#npcs">NPCs</a>
+          <a href="#player-characters">Player Characters</a>
+          <a href="#parties">Parties</a>
+          <a href="#factions">Factions</a>
+          <a href="#travel-routes">Travel routes</a>
+          <a href="#items">Items</a>
+          <a href="#relationships">Relationships</a>
+          <a href="#timeline">Timeline</a>
+          <a href="#grant-ledger">Grant ledger</a>
+          <a href="#rules-reference">Rules reference</a>
+        </details>
       </nav>
       <div className="workspace-content">
         <section id="rules-reference" aria-labelledby="rules-reference-heading" className="workspace-section">
@@ -193,8 +196,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ campa
           <h3 id="prepare-session" tabIndex={-1}>Prepare session</h3>
           <ActionForm protectUnsaved waitForHydration leavesEditor action={createSessionAction.bind(null, campaignId)}>
             <label htmlFor="new-session-title">Title</label><input id="new-session-title" name="title" required />
-            <label htmlFor="new-session-date">Planned date (optional)</label><input id="new-session-date" name="plannedFor" type="date" />
-            <label htmlFor="new-session-preparation">Preparation</label><textarea id="new-session-preparation" name="preparation" rows={5} />
+            <details className="preparation-options">
+              <summary>Planned date and notes (optional)</summary>
+              <label htmlFor="new-session-date">Planned date (optional)</label><input id="new-session-date" name="plannedFor" type="date" />
+              <label htmlFor="new-session-preparation">Preparation</label><textarea id="new-session-preparation" name="preparation" rows={5} />
+            </details>
             <button type="submit">Create session</button>
           </ActionForm>
         </section>

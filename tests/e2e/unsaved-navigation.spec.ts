@@ -166,6 +166,7 @@ test("a Scene save leaves Session protected, and reuse preparation is confirmed 
     await page.getByRole("link", { name: "Record what happened", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/sessions/${id}$`));
     await expect(session.locator('input[name="expectedRevision"]')).toHaveValue("2");
+    await page.getByText("Reuse this preparation", { exact: true }).click();
     await page.getByRole("button", { name: "Reuse preparation in a new session", exact: true }).click();
     expect(dialogs).toHaveLength(2);
     expect((await pool.query("SELECT count(*)::int AS count FROM session WHERE campaign_id=$1", [campaignId])).rows[0].count).toBe(1);
