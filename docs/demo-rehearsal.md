@@ -12,6 +12,8 @@ pnpm exec playwright test tests/e2e/demo-alpha.spec.ts --reporter=list,html
 
 Playwright applies the committed migrations to its own temporary schema and creates the campaign through the same screens a GM uses. The two viewport runs create independent campaigns. The report attaches Campaign Home, Session Recap, and the downloaded module PDF for each viewport. Open the PDF to review the table of contents and the expected story, encounter, outcome, and reward sections. These artifacts are local test output. Export only fictional campaign material when preparing evidence for sharing.
 
+Campaign Home review captures from the authenticated Chromium rehearsal at [1440px](images/demo-alpha-home-desktop.png) and [390px](images/demo-alpha-home-mobile.png).
+
 ## Presenter walkthrough
 
 Use a local development instance with a dedicated demo database if you want the campaign to persist after rehearsal. Start a new campaign each time.
