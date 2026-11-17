@@ -18,6 +18,7 @@ test("prepare a session, record its outcome, and restore it", async ({ page }) =
 
     const sessions = page.getByRole("region", { name: "Sessions" });
     await sessions.getByLabel("Title").fill("The crossing");
+    await sessions.getByText("Planned date and notes (optional)", { exact: true }).click();
     await sessions.getByLabel("Planned date (optional)").fill("2026-10-08");
     await sessions.getByLabel("Preparation").fill("Meet the ferryman.");
     await sessions.getByRole("button", { name: "Create session" }).click();

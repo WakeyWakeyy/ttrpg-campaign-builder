@@ -148,6 +148,7 @@ test("a Scene save leaves Session protected, and reuse preparation is confirmed 
     const campaignId = await planningCampaign(page);
     const area = page.getByRole("region", { name: "Sessions" });
     await area.getByLabel("Title", { exact: true }).fill("Original session");
+    await area.getByText("Planned date and notes (optional)", { exact: true }).click();
     await area.getByLabel("Preparation").fill("Persisted preparation");
     await area.getByRole("button", { name: "Create session", exact: true }).click();
     await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
@@ -166,6 +167,7 @@ test("a Scene save leaves Session protected, and reuse preparation is confirmed 
     await page.getByRole("link", { name: "Record what happened", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/sessions/${id}$`));
     await expect(session.locator('input[name="expectedRevision"]')).toHaveValue("2");
+    await page.getByText("Reuse this preparation", { exact: true }).click();
     await page.getByRole("button", { name: "Reuse preparation in a new session", exact: true }).click();
     expect(dialogs).toHaveLength(2);
     expect((await pool.query("SELECT count(*)::int AS count FROM session WHERE campaign_id=$1", [campaignId])).rows[0].count).toBe(1);

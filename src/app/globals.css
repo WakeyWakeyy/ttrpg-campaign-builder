@@ -45,7 +45,12 @@ main {
 .workspace-nav { position: sticky; top: 1.5rem; display: grid; gap: .25rem; padding: 1rem; border: 1px solid #ddd; border-radius: .4rem; }
 .workspace-nav h2 { margin: 0 0 .5rem; font-size: 1rem; }
 .workspace-nav a { display: block; padding: .5rem .65rem; border-radius: .25rem; }
+.workspace-more, .preparation-options { margin-top: .75rem; padding: .5rem .65rem; }
+.workspace-more { grid-column: 1 / -1; }
+.workspace-more summary, .preparation-options summary { padding-block: .5rem; }
 .workspace-nav a:hover, .workspace-nav a:focus-visible { background: #edf2ff; }
+.workspace-content { overflow-wrap: anywhere; }
+.workspace-content input[type="checkbox"] { width: auto; }
 .workspace-section { scroll-margin-top: 1.5rem; padding: 1.5rem 0 2rem; border-top: 1px solid #ddd; }
 .workspace-section:first-child { padding-top: 0; border-top: 0; }
 .workspace-section:target { border-top-color: #254aa5; }

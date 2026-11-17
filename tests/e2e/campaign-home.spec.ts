@@ -95,6 +95,7 @@ test("anchors keep mounted drafts, canceled Home links keep values/revisions, an
     await premise.evaluate(node=>node.setAttribute("data-ch01-draft","mounted"));
     let accept=false; const dialogs:string[]=[];
     page.on("dialog",async dialog=>{dialogs.push(dialog.type());if(accept)await dialog.accept();else await dialog.dismiss();});
+    await home(page).getByText("Explorar material de campaña", { exact: true }).click();
     for (const anchor of await home(page).locator('a[href^="#"]').all()) {
       const href=await anchor.getAttribute("href");
       expect(await page.locator(href!).count()).toBe(1);
@@ -144,4 +145,41 @@ test("Home is Campaign-scoped and a foreign Campaign never reveals its session o
     await expect(home(page)).toHaveCount(0);
     await expect(page.getByText(/PRIVATE (CAMPAIGN|DIRECTION|SESSION)/)).toHaveCount(0);
   } finally {await pool.end();}
+});
+
+test("preparation disclosure and section links preserve pending input at 390px", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await planningCampaign(page);
+  const entry = home(page);
+  await entry.getByRole("link", { name: "Preparar una nueva sesión", exact: true }).click();
+  const sessions = page.getByRole("region", { name: "Sessions", exact: true });
+  const title = sessions.getByLabel("Title", { exact: true });
+  const options = sessions.getByText("Planned date and notes (optional)", { exact: true });
+  const notes = sessions.getByLabel("Preparation", { exact: true });
+  await expect(notes).toBeHidden();
+  await title.fill("The pending plan");
+  await options.focus();
+  await page.keyboard.press("Enter");
+  await notes.fill("Visit the quay at low tide.");
+  await options.click();
+  await expect(notes).toBeHidden();
+
+  const sections = page.getByRole("navigation", { name: "Campaign sections" });
+  await sections.getByText("More campaign sections", { exact: true }).click();
+  await sections.getByRole("link", { name: "Relationships", exact: true }).click();
+  await expect(page).toHaveURL(/#relationships$/);
+  await entry.getByRole("link", { name: "Preparar una nueva sesión", exact: true }).click();
+  await expect(page.locator("#prepare-session")).toBeFocused();
+  await options.click();
+  await expect(title).toHaveValue("The pending plan");
+  await expect(notes).toHaveValue("Visit the quay at low tide.");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  await sessions.getByRole("button", { name: "Create session", exact: true }).click();
+  await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
+  await expect(page.locator("#session-preparation")).toHaveValue("Visit the quay at low tide.");
+  await page.locator("#session-preparation").fill("Revised local notes.");
+  await page.getByRole("navigation", { name: "Session sections" }).getByRole("link", { name: "Scenes", exact: true }).click();
+  await expect(page).toHaveURL(/#session-scenes$/);
+  await expect(page.locator("#session-preparation")).toHaveValue("Revised local notes.");
 });
