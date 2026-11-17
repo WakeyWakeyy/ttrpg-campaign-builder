@@ -33,7 +33,7 @@ TTRPG Campaign Builder follows the campaign from an initial idea through its wor
 - **Keep a quick reference at hand:** download Markdown sheets of available people, groups, places, travel routes, and important items, with current states, travel details, holders, and links back to their records.
 - **Take a session to the table:** download a focused Markdown or printable PDF sheet with preparation, attendance, previous outcomes, scenes, and planned encounters.
 
-These features are backed by persistent storage and automated tests. The current interface is a working foundation for campaign preparation, with more of the play-at-the-table workflow still to come.
+The current product supports private campaign creation, preparation, table use, recap, reward grants, and export. The [Demo Alpha](docs/demo-alpha.md) milestone connects these capabilities in a reproducible GM journey.
 
 ## Milestones reached
 

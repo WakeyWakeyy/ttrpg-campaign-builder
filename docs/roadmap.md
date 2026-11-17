@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap is an implementation sequence, not a promise of dates. Later work moves forward only when it helps validate the core product.
+The [Demo Alpha](demo-alpha.md) milestone is next. The stages below record how the current product was built.
 
 ## 1. Architecture proof — complete
 
@@ -119,7 +119,7 @@ Review captures of the new entry: [desktop](images/ch01-desktop.png) and [390px 
 
 ## Later, only after the core workflow proves useful
 
-The seven core stages above are complete. Follow-up work includes printable Session sheets, the documented UX Reliability slices and CH01's focused Campaign entry point. There is no automatically selected next stage: further work should validate a concrete GM need from the options below or another focused improvement to the existing workflow.
+Recent deliveries include printable Session sheets, draft recovery, unsaved-navigation warnings, return to active for Location, Session, Encounter, and Reward, and CH01's Campaign Home. The options below are candidates after Demo Alpha.
 
 Potential later work includes:
 
