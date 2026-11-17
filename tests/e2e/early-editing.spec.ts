@@ -160,3 +160,29 @@ test("Recap blocks pre-hydration input and saves exact replacement outcomes with
     await expect(outcome).toBeEditable();
   } finally { release?.(); await early.close(); await pool.end(); }
 });
+
+test("Campaign Compass and session creation wait for hydration before accepting a draft", async ({ page, context }) => {
+  const id = await planningCampaign(page);
+  const early = await context.newPage();
+  let release: (() => void) | undefined;
+  try {
+    release = await delayScripts(early, `/campaigns/${id}`);
+    const premise = early.getByLabel("Current premise", { exact: true });
+    const title = early.locator("#new-session-title");
+    await expect(premise).toBeDisabled();
+    await expect(title).toBeDisabled();
+    expect(await premise.evaluate(node => { node.focus(); return document.activeElement === node; })).toBe(false);
+    await early.keyboard.insertText("Early input");
+    await expect(premise).toHaveValue("Preserve independent GM ideas.");
+
+    release();
+    await premise.fill("A new direction for the campaign.");
+    await title.fill("A pending session");
+    await early.getByRole("link", { name: "Ver Campaign Compass", exact: true }).click();
+    await expect(premise).toHaveValue("A new direction for the campaign.");
+    await expect(title).toHaveValue("A pending session");
+  } finally {
+    release?.();
+    await early.close();
+  }
+});
