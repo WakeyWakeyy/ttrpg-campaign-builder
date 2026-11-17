@@ -163,3 +163,5 @@ pnpm test:e2e tests/e2e/private-alpha.spec.ts tests/e2e/demo-alpha.spec.ts
 ```
 
 For a denied run select only `tests/e2e/private-alpha.spec.ts`. With ordinary local settings the opt-in roster smoke is skipped. The allowed run covers signing in, the full Golden Path, and PDF export under the app's extra access policy. Verify actual Invite-only enrollment and protected host settings in the production smoke before opening access to the full roster.
+
+Local validation on 2026-11-17 passed the nonmember smoke and, with the permitted test identity, the positive smoke and both Golden Path viewports. The combined candidate passed 145 unit tests, 211 PostgreSQL integration tests and the complete Chromium suite with 44 passed and the opt-in roster smoke skipped. The final full audit reports the high-severity picomatch advisory GHSA-fc5q-39xc-vjpf in development tooling, with no fixed version published. Keep the full audit gate enabled before releasing the alpha. [Advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
