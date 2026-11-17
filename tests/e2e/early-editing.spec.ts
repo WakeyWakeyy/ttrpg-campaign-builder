@@ -19,6 +19,7 @@ async function createSession(page: Page) {
   await planningCampaign(page);
   const area = page.getByRole("region", { name: "Sessions" });
   await area.getByLabel("Title", { exact: true }).fill("Early session");
+  await area.getByText("Planned date and notes (optional)", { exact: true }).click();
   await area.getByLabel("Preparation").fill("Original session preparation");
   await area.getByRole("button", { name: "Create session", exact: true }).click();
   await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);

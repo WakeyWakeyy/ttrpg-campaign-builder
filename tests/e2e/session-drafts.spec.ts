@@ -17,6 +17,7 @@ async function openSession(page: Page) {
   await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]+$/);
   const sessions = page.getByRole("region", { name: "Sessions" });
   await sessions.getByLabel("Title", { exact: true }).fill("Crossing");
+  await sessions.getByText("Planned date and notes (optional)", { exact: true }).click();
   await sessions.getByLabel("Preparation").fill("Session plan");
   await sessions.getByRole("button", { name: "Create session", exact: true }).click();
   await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);

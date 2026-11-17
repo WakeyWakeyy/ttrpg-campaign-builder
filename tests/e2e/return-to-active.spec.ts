@@ -13,7 +13,10 @@ async function open(page: Page, item: typeof cases[number]) {
   const area = page.getByRole("region", { name: item.area });
   await area.getByLabel(item.kind === "Location" ? "Name" : "Title", { exact: true }).fill(`Lifecycle ${item.kind}`);
   if (item.kind === "Location") await area.getByLabel("Description (optional)").fill("Persisted text");
-  if (item.kind === "Session") await area.getByLabel("Preparation").fill("Persisted text");
+  if (item.kind === "Session") {
+    await area.getByText("Planned date and notes (optional)", { exact: true }).click();
+    await area.getByLabel("Preparation").fill("Persisted text");
+  }
   await area.getByRole("button", { name: item.create, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/${item.table}s/[0-9a-f-]+$`));
   const id = page.url().split("/").pop()!;
