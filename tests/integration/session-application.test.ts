@@ -4,7 +4,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { campaign, campaignEntity, commandExecution, scene, session, sessionAttendance, userAccount } from "../../src/infrastructure/db/schema";
-import { CampaignNotFoundError } from "../../src/modules/campaigns";
+import { CampaignNotFoundError, getOwnedCampaign, getOwnedCompass } from "../../src/modules/campaigns";
+import { recentActiveSessions } from "../../src/app/campaign-home-data";
 import type { Actor } from "../../src/modules/identity";
 import { createParty, listPartyMemberIds } from "../../src/modules/parties";
 import { createPlayerCharacter } from "../../src/modules/player-characters";
@@ -38,6 +39,33 @@ beforeEach(async () => {
   campaignId = owned.id; foreignCampaignId = foreign.id;
 });
 afterAll(async () => { try { await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally { await pool.end(); } });
+
+test("Campaign Home reuses authorized reads without changing content, revisions or timestamps", async () => {
+  const second = (await pool.query("INSERT INTO campaign(owner_user_id,name) VALUES($1,'Second owned') RETURNING id", [actor.userId])).rows[0].id;
+  await pool.query("INSERT INTO campaign_compass(campaign_id,original_premise,current_premise) VALUES($1,'Original','Current'),($2,'Private original','Private current')", [campaignId,foreignCampaignId]);
+  const sessions = await Promise.all(["A", "B", "C", "Older", "Archived", "Trash"].map(title => createSession(db, actor, {campaignId,title})));
+  await archiveSession(db, actor, sessions[4].id, 1);
+  await trashSession(db, actor, sessions[5].id, 1);
+  await pool.query("UPDATE campaign_entity SET updated_at='2026-10-01' WHERE campaign_id=$1", [campaignId]);
+  await pool.query("UPDATE campaign_entity SET updated_at='2026-09-01' WHERE id=$1", [sessions[3].id]);
+  const differentCampaign = await createSession(db, actor, {campaignId:second,title:"Another owned campaign"});
+  await createSession(db, other, {campaignId:foreignCampaignId,title:"Private session"});
+  async function snapshot() {
+    return (await pool.query("SELECT id,xmin::text,to_jsonb(ce) AS record FROM campaign_entity ce ORDER BY id")).rows;
+  }
+  const before = await snapshot();
+  const compassBefore = (await pool.query("SELECT xmin::text,to_jsonb(c) AS record FROM campaign_compass c ORDER BY campaign_id")).rows;
+  expect((await getOwnedCampaign(db, actor, campaignId)).id).toBe(campaignId);
+  expect((await getOwnedCompass(db, actor, campaignId)).currentPremise).toBe("Current");
+  expect(recentActiveSessions(await listOwnedSessions(db, actor, campaignId)).map(row => row.id))
+    .toEqual(sessions.slice(0,3).map(row => row.id).sort());
+  expect(recentActiveSessions(await listOwnedSessions(db, actor, second)).map(row => row.id)).toEqual([differentCampaign.id]);
+  await expect(listOwnedSessions(db, other, campaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(getOwnedCampaign(db, actor, foreignCampaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
+  await expect(getOwnedCompass(db, actor, foreignCampaignId)).rejects.toBeInstanceOf(CampaignNotFoundError);
+  expect(await snapshot()).toEqual(before);
+  expect((await pool.query("SELECT xmin::text,to_jsonb(c) AS record FROM campaign_compass c ORDER BY campaign_id")).rows).toEqual(compassBefore);
+});
 
 test("campaign outcome scene query respects ownership and unavailable records", async () => {
   const current = await createSession(db, actor, { campaignId, title: "Current" });

@@ -1,0 +1,15 @@
+.home { margin-bottom: 2rem; padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid #ddd; border-radius: .4rem; overflow-wrap: anywhere; }
+.home h2 { margin: 0 0 .5rem; font-size: 1.2rem; }
+.home > section, .groups { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #ddd; }
+.sessions { list-style: none; padding: 0; }
+.sessions > li { padding: .75rem 0; border-bottom: 1px solid #ddd; }
+.sessions h3 { margin: 0; }
+.sessions p { margin: .25rem 0; }
+.links { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+.links a, .groups a { display: inline-flex; align-items: center; min-height: 2.75rem; min-width: 2.75rem; }
+.groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.groups ul { list-style: none; padding: 0; margin: 0; }
+.groups li { margin: .25rem 0; }
+@media (max-width: 42rem) {
+  .groups { grid-template-columns: minmax(0, 1fr); }
+}

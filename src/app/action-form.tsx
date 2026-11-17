@@ -1,18 +1,20 @@
 "use client";
 
-import { useActionState, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useActionState, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { ActionState } from "./action-state";
 import { useConfirmDeparture, usePendingForm } from "./unsaved-navigation";
 import { readNativeValues } from "./unsaved-navigation-state";
 
-export function ActionForm({ action, children, reloadLabel = "Reload location", protectUnsaved = false, leavesEditor = false }: {
+export function ActionForm({ action, children, reloadLabel = "Reload location", protectUnsaved = false, leavesEditor = false, waitForHydration = false }: {
   action: (state: ActionState, form: FormData) => Promise<ActionState>;
   children: ReactNode;
   reloadLabel?: string;
   protectUnsaved?: boolean;
   leavesEditor?: boolean;
+  waitForHydration?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, { message: "" });
+  const [ready, setReady] = useState(!waitForHydration);
   const form = useRef<HTMLFormElement>(null);
   const baseline = useRef<string | null>(null);
   const dirty = useRef(false);
@@ -21,13 +23,19 @@ export function ActionForm({ action, children, reloadLabel = "Reload location", 
   useLayoutEffect(() => {
     if (protectUnsaved && form.current && !dirty.current) baseline.current = readNativeValues(form.current);
   });
+  useLayoutEffect(() => {
+    if (waitForHydration) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Enable editing after hydration and baseline capture.
+      setReady(true);
+    }
+  }, [waitForHydration]);
   function changed() {
     if (protectUnsaved && form.current && baseline.current !== null) {
       dirty.current = readNativeValues(form.current) !== baseline.current;
       report(dirty.current);
     }
   }
-  return <form ref={form} action={formAction} onChange={changed} onReset={() => {
+  return <form ref={form} aria-busy={!ready || pending} action={formAction} onChange={changed} onReset={() => {
     // Observe React/native reset after it completes; never reset a form here.
     queueMicrotask(() => {
       if (protectUnsaved && form.current) {
@@ -41,7 +49,8 @@ export function ActionForm({ action, children, reloadLabel = "Reload location", 
   }}>
     {state.message && <p role="alert">{state.message}</p>}
     {state.conflict && <p><button type="button" onClick={() => window.location.reload()}>{reloadLabel}</button></p>}
-    <fieldset disabled={pending || state.conflict}>{children}</fieldset>
+    {waitForHydration && <noscript><p>Enable JavaScript to edit and save this form.</p></noscript>}
+    <fieldset disabled={!ready || pending || state.conflict}>{children}</fieldset>
     {pending && <p role="status">Saving…</p>}
   </form>;
 }

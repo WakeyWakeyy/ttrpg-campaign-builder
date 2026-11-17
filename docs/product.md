@@ -135,7 +135,11 @@ The MVP is expected to cover:
 
 ## Evidence on Hand
 
-The current application and its tests provide evidence for the architecture-proof slice only: authentication to an internal Actor, Campaign creation and reopening, pinned Ruleset Version, Location creation and revision-safe editing, and Archive, Trash, and Restore. See `docs/a10-validation.md` and `docs/browser-proof.md` for the recorded local validation and its CI limitation. The broader MVP capabilities above remain intended scope, not claims of implementation.
+The application has progressed beyond the original architecture-proof slice. Implemented capabilities include authenticated Campaign creation (direct or guided), editable Compass, private Blueprint drafts and explicit review/materialization of Location proposals; structured world, character, Arc/Quest, relationship and Timeline records; Session/Scene preparation, attendance, Run View, Recap and reusable preparation; SRD 5.2.1 Encounter planning/placements/run history; Reward plans and idempotent grants; deterministic continuity prompts, thread review and source-linked outcome reading; and private Markdown/JSON/PDF exports. See `docs/roadmap.md` and the linked feature contracts for their individual limits. The Blueprint workflow does not call AI; contextual AI proposals remain future scope.
+
+CH01 adds Campaign Home at the beginning of the existing workspace: a brief current Compass direction, up to three active Sessions ordered by update time, direct preparation/Run/Recap links and grouped access to existing material. Update time is neither a play date nor a readiness/completion state. Creation still uses the existing forms. No new entities, routes or automatic decisions are introduced.
+
+Reliability work preserves drafts in Location, Session/Recap, Encounter, Reward and Blueprint proposal review, with explicit conflict recovery. Navigation protection has the documented D04 Phase 1 limits, and Return to active covers D02 Phase 1 only; other editors and D02 Phase 2 remain pending. See `docs/ux-reliability-unsaved-navigation.md`, `docs/ux-reliability-planning-drafts.md`, `docs/ux-reliability-blueprint-drafts.md` and `docs/ux-reliability-return-to-active.md`. D09 remains separate. Existing test suites and recorded feature validations are evidence for their covered paths, not a claim that every browser journey or future MVP capability is complete. `docs/a10-validation.md` and `docs/browser-proof.md` remain the historical architecture-proof record.
 
 ## Important product concepts
 
