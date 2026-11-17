@@ -1,3 +1,5 @@
+import { readError } from "./read-error";
+import { canAccessAlpha, privateAlphaPolicy } from "@/infrastructure/auth/clerk/private-alpha";
 import { SignInButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
@@ -10,15 +12,20 @@ import { createBlueprintAction, createCampaignAction } from "./actions";
 import { CampaignWizard } from "./campaign-wizard";
 
 export default async function Home() {
-  const { userId } = await auth();
+  const { userId } = await auth().catch(readError);
   if (!userId) return <main>
     <h1>TTRPG Campaign Builder</h1>
     <p>Organize your campaigns and locations.</p>
     <SignInButton mode="modal"><button>Sign in to your campaigns</button></SignInButton>
   </main>;
-  const db = getDatabase();
-  const actor = await requireActor(db);
-  const [campaigns, drafts] = await Promise.all([listOwnedCampaigns(db, actor), listOwnedBlueprints(db, actor)]);
+  if (!canAccessAlpha(privateAlphaPolicy(), userId)) {
+    return <main><h1>Invitation required</h1><p>Contact the campaign maintainer to request access to the alpha.</p></main>;
+  }
+  const [campaigns, drafts] = await (async () => {
+    const db = getDatabase();
+    const actor = await requireActor(db);
+    return Promise.all([listOwnedCampaigns(db, actor), listOwnedBlueprints(db, actor)]);
+  })().catch(readError);
   const active = campaigns.filter(campaign => !campaign.deletedAt && !campaign.archivedAt);
   const archived = campaigns.filter(campaign => !campaign.deletedAt && campaign.archivedAt);
   const trashed = campaigns.filter(campaign => campaign.deletedAt);

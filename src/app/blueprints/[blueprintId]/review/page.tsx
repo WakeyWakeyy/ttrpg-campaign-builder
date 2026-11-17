@@ -1,9 +1,10 @@
+import { readError } from "@/app/read-error";
 import { randomUUID } from "node:crypto";
 import { GuardedLink as Link } from "../../../unsaved-navigation";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
-import { BlueprintNotFoundError, getBlueprintReview } from "@/modules/blueprints";
+import { getBlueprintReview } from "@/modules/blueprints";
 import { ActionForm } from "../../../action-form";
 import { PlanningDraftForm, PlanningSubmit } from "../../../planning-draft-form";
 import { blueprintProposalSnapshot } from "../../../blueprint-proposal-draft";
@@ -12,11 +13,10 @@ import { decideBlueprintProposalAction, materializeBlueprintAction } from "../..
 
 export default async function BlueprintReviewPage({ params }: { params: Promise<{ blueprintId: string }> }) {
   const { blueprintId } = await params;
-  const db = getDatabase();
-  const actor = await requireActor(db);
-  let review;
-  try { review = await getBlueprintReview(db, actor, blueprintId); }
-  catch (error) { if (error instanceof BlueprintNotFoundError) notFound(); throw error; }
+  const review = await (async () => {
+    const db = getDatabase();
+    return getBlueprintReview(db, await requireActor(db), blueprintId);
+  })().catch(readError);
   const { draft, proposals, materialization } = review;
   if (!draft.reviewStartedAt) notFound();
   const accepted = proposals.filter(proposal => proposal.decision === "ACCEPTED");

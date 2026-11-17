@@ -1,3 +1,4 @@
+import { requestError } from "@/app/request-error";
 import { requireActor } from "@/infrastructure/auth/clerk/require-actor";
 import { getDatabase } from "@/infrastructure/db/server";
 import { buildSessionSheet, renderSessionSheet } from "@/modules/export/session-sheet";
@@ -22,6 +23,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
   } catch (error) {
     if (error instanceof UnauthenticatedError) return new Response("Authentication required", { status: 401 });
     if (error instanceof SessionNotFoundError) return new Response("Not found", { status: 404 });
-    throw error;
+    throw requestError(error);
   }
 }
