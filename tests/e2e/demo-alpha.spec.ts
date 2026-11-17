@@ -97,6 +97,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await expect(page.locator("#prepare-session")).toBeFocused();
       const sessions = page.getByRole("region", { name: "Sessions", exact: true });
       await sessions.getByLabel("Title", { exact: true }).fill(session);
+      await sessions.getByText("Planned date and notes (optional)", { exact: true }).click();
       await sessions.getByLabel("Preparation", { exact: true }).fill(plan);
       await sessions.getByRole("button", { name: "Create session", exact: true }).click();
       await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]+$/);
